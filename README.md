@@ -42,7 +42,7 @@ make setup
 make build && ./dune-admin
 ```
 
-Open the hosted frontend at **https://dune-admin.pages.dev** and point it at `http://localhost:8080`.
+Open the hosted frontend at **https://dune-admin.layout.tools** and point it at `http://localhost:8080`.
 
 ---
 
