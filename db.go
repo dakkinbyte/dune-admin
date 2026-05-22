@@ -293,7 +293,7 @@ func cmdGiveItem(playerID int64, template string, qty, quality int64) Cmd {
 			if pos > maxPos {
 				maxPos = pos
 			}
-			if quality == 0 && qLevel == 0 && tmpl == template {
+			if qLevel == quality && tmpl == template {
 				stacks = append(stacks, stackSlot{id: id, size: stackSize})
 			}
 			if hasVolumeCap {
@@ -354,7 +354,7 @@ func cmdGiveItem(playerID int64, template string, qty, quality int64) Cmd {
 			add int64
 		}
 		var updates []stackUpdate
-		if quality == 0 && stackMax > 1 {
+		if stackMax > 1 {
 			for _, st := range stacks {
 				if remaining == 0 {
 					break
@@ -746,9 +746,6 @@ func cmdFetchStructureCounts() Msg {
 // ── private helpers ───────────────────────────────────────────────────────────
 
 func resolveStackMax(ctx context.Context, template string, quality int64) (int64, error) {
-	if quality > 0 {
-		return 1, nil
-	}
 	if itemData.Items != nil {
 		if rule, ok := itemData.Items[strings.ToLower(template)]; ok && rule.StackMax > 0 {
 			return rule.StackMax, nil
@@ -758,7 +755,7 @@ func resolveStackMax(ctx context.Context, template string, quality int64) (int64
 	err := globalDB.QueryRow(ctx, `
 		SELECT COALESCE(MAX(stack_size), 0)
 		FROM dune.items
-		WHERE template_id = $1::text AND quality_level = 0`, template).Scan(&maxStack)
+		WHERE template_id = $1::text AND quality_level = $2::bigint`, template, quality).Scan(&maxStack)
 	if err != nil {
 		return 0, err
 	}
