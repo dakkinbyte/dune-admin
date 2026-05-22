@@ -42,7 +42,7 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
   return res.json()
 }
 
-export type Status = { ssh_connected: boolean; db_connected: boolean; pod_ns: string; pod_ip: string; ssh_host: string }
+export type Status = { ssh_connected: boolean; db_connected: boolean; pod_ns: string; pod_ip: string; ssh_host: string; version?: string }
 export type Player = { id: number; account_id: number; controller_id: number; fls_id: string; name: string; class: string; map: string; faction_id: number; online_status: string }
 export type InventoryItem = { id: number; template_id: string; name: string; stack_size: number; quality: number; durability: string; max_durability: string }
 export type CurrencyRow = { player_id: number; currency_id: number; balance: number }
@@ -61,15 +61,29 @@ export type GameEvent = { actor_id: number; universe_time: string; map: string; 
 export type DungeonRecord = { dungeon_id: string; difficulty: string; duration_ms: number; players_num: number; completion_id: number }
 export type TeleportLocation = { name: string; x: number; y: number; z: number }
 export type OnlineRow = { player_id: number; name: string; map: string; status: string; last_seen: string }
+export type BackupFile = { name: string; size_bytes: number; modified: string; has_yaml: boolean }
 
 export const api = {
   status: () => req<Status>('GET', '/status'),
   reconnect: () => req<Status>('POST', '/reconnect'),
 
   battlegroup: {
-    status: () => req<BGOutput>('GET', '/battlegroup/status'),
+    status: () => req<unknown>('GET', '/battlegroup/status'),
     exec: (cmd: string) => req<BGOutput>('POST', '/battlegroup/exec', { cmd }),
     pods: () => req<{ pods: string[]; namespace: string }>('GET', '/battlegroup/pods'),
+    backupFiles: () => req<BackupFile[]>('GET', '/battlegroup/backup-files'),
+    backupDownloadUrl: (file: string) => `${BASE}/battlegroup/backup-files/download?file=${encodeURIComponent(file)}`,
+    backupUpload: async (file: File): Promise<{ name: string }> => {
+      const form = new FormData()
+      form.append('backup', file)
+      const token = await window.Clerk?.session?.getToken()
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      const res = await fetch(`${BASE}/battlegroup/backup-files/upload`, { method: 'POST', headers, body: form })
+      if (!res.ok) { const e = await res.json().catch(() => ({ error: res.statusText })); throw new ApiError(res.status, e.error) }
+      return res.json()
+    },
+    restore: (file: string) => req<BGOutput>('POST', '/battlegroup/restore', { file }),
   },
 
   players: {
@@ -97,7 +111,12 @@ export const api = {
       req<MutateResult>('POST', '/players/award-char-xp', { player_id, amount }),
     awardIntel: (player_id: number, amount: number) =>
       req<MutateResult>('POST', '/players/award-intel', { player_id, amount }),
-    kick: (player_id: number) => req<MutateResult>('POST', '/players/kick', { player_id }),
+    rename: (account_id: number, name: string) => req<MutateResult>('POST', '/players/rename', { account_id, name }),
+    tags: (account_id: number) => req<string[]>('GET', `/players/${account_id}/tags`),
+    updateTags: (account_id: number, add: string[], remove: string[]) => req<MutateResult>('POST', '/players/update-tags', { account_id, add, remove }),
+    returningPlayerAward: (account_id: number) => req<MutateResult>('POST', '/players/returning-player-award', { account_id }),
+    exportUrl: (account_id: number) => `${BASE}/players/${account_id}/export`,
+    deleteAccount: (account_id: number, reason: string) => req<MutateResult>('POST', '/players/delete-account', { account_id, reason }),
     deleteItem: (id: number) => req<MutateResult>('DELETE', `/players/item/${id}`),
     resetSpec: (player_id: number, track_type: string) =>
       req<MutateResult>('POST', '/players/reset-spec', { player_id, track_type }),
@@ -122,7 +141,7 @@ export const api = {
       req<MutateResult>('POST', '/players/grant-max-spec', { player_id, track_type }),
     grantAllKeystones: (player_id: number) =>
       req<MutateResult>('POST', '/players/grant-all-keystones', { player_id }),
-    vehicles: (account_id: number) => req<VehicleRow[]>('GET', `/players/${account_id}/vehicles`),
+    vehicles: (controller_id: number) => req<VehicleRow[]>('GET', `/players/${controller_id}/vehicles`),
     repairItem: (id: number) => req<MutateResult>('POST', '/players/repair-item', { id }),
     partitions: () => req<TeleportLocation[]>('GET', '/players/partitions'),
     teleport: (fls_id: string, partition_label: string) =>

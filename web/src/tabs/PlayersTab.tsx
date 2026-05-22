@@ -1,6 +1,16 @@
 import { useState, useEffect, useMemo, type ReactNode } from 'react'
 import { Button, Modal, Spinner, toast, Select, ListBox } from '@heroui/react'
 import { api } from '../api/client'
+import allGameplayTags from '../data/gameplayTags.json'
+
+function useDebounce<T>(value: T, delay = 300): T {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay)
+    return () => clearTimeout(t)
+  }, [value, delay])
+  return debounced
+}
 import type {
   Player, InventoryItem, JourneyNode,
   CurrencyRow, FactionRep, SpecTrack, KeystoneRow, OnlineRow,
@@ -8,13 +18,14 @@ import type {
 } from '../api/client'
 
 type Sidebar = 'players' | 'currency' | 'factions' | 'specs' | 'online'
-type ActionSection = 'resources' | 'specs' | 'journey' | 'admin' | 'history'
+type ActionSection = 'resources' | 'specs' | 'journey' | 'admin' | 'tags' | 'history'
 
 const ACTION_SECTIONS: { key: ActionSection; label: string }[] = [
   { key: 'resources', label: 'Stats' },
   { key: 'specs', label: 'Specs' },
   { key: 'journey', label: 'Journey' },
   { key: 'admin', label: 'Admin' },
+  { key: 'tags', label: 'Tags' },
   { key: 'history', label: 'History' },
 ]
 
@@ -435,11 +446,11 @@ function InventoryModal({ player, open, onClose }: { player: Player; open: boole
       .then(setItems)
       .catch((e: unknown) => toast.danger(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false))
-    api.players.vehicles(player.account_id)
+    api.players.vehicles(player.controller_id)
       .then(setVehicles)
       .catch(() => {})
       .finally(() => setVehiclesLoading(false))
-  }, [open, player.id, player.account_id])
+  }, [open, player.id, player.controller_id])
 
   const handleDelete = async (itemId: number) => {
     if (player.online_status === 'Online') {
@@ -455,7 +466,7 @@ function InventoryModal({ player, open, onClose }: { player: Player; open: boole
     }
   }
 
-  const handleRepair = async (item: InventoryItem) => {
+const handleRepair = async (item: InventoryItem) => {
     try {
       await api.players.repairItem(item.id)
       setItems(prev => prev.map(i => i.id === item.id ? { ...i, durability: i.max_durability } : i))
@@ -720,8 +731,16 @@ function PlayerActionsModal({ player, open, onClose }: { player: Player; open: b
   const [nodesLoaded, setNodesLoaded] = useState(false)
   const [nodesLoading, setNodesLoading] = useState(false)
   const [nodeSearch, setNodeSearch] = useState('')
+  const debouncedNodeSearch = useDebounce(nodeSearch)
   const [unlockFaction, setUnlockFaction] = useState('atreides')
-  const [unlockPreset, setUnlockPreset] = useState('rank19_eligible')
+  const [unlockPreset, setUnlockPreset] = useState('ch3_start')
+
+  // Tags
+  const [tags, setTags] = useState<string[]>([])
+  const [tagsLoaded, setTagsLoaded] = useState(false)
+  const [tagsLoading, setTagsLoading] = useState(false)
+  const [newTag, setNewTag] = useState('')
+  const [pendingTags, setPendingTags] = useState<string[]>([])
 
   // Admin / Teleport
   const [partitions, setPartitions] = useState<TeleportLocation[]>([])
@@ -745,9 +764,13 @@ function PlayerActionsModal({ player, open, onClose }: { player: Player; open: b
       setEvents([])
       setDungeons([])
       setCharXPCurrent(null)
+      setTagsLoaded(false)
+      setTags([])
+      setPendingTags([])
+      setNewTag('')
     } else {
       setFactionId(player.faction_id > 0 ? player.faction_id : 1)
-      api.players.partitions().then(setPartitions).catch(() => {})
+api.players.partitions().then(setPartitions).catch(() => {})
       api.players.charXPCurrent(player.id).then(setCharXPCurrent).catch(() => {})
     }
   }, [open, player.faction_id])
@@ -793,6 +816,15 @@ function PlayerActionsModal({ player, open, onClose }: { player: Player; open: b
     }
   }, [section, historyLoaded, open, player.id])
 
+  useEffect(() => {
+    if (section !== 'tags' || tagsLoaded || !open) return
+    setTagsLoading(true)
+    api.players.tags(player.account_id)
+      .then(t => { setTags(t); setTagsLoaded(true) })
+      .catch(() => {})
+      .finally(() => setTagsLoading(false))
+  }, [section, tagsLoaded, open, player.account_id])
+
   const run = async (fn: () => Promise<unknown>, label: string) => {
     setBusy(true)
     try {
@@ -806,10 +838,10 @@ function PlayerActionsModal({ player, open, onClose }: { player: Player; open: b
   }
 
   const filteredNodes = useMemo(() => {
-    if (!nodeSearch) return nodes
-    const q = nodeSearch.toLowerCase()
+    if (!debouncedNodeSearch) return nodes
+    const q = debouncedNodeSearch.toLowerCase()
     return nodes.filter(n => n.node_id.toLowerCase().includes(q))
-  }, [nodes, nodeSearch])
+  }, [nodes, debouncedNodeSearch])
 
   const numInput = (val: number, set: (v: number) => void, min = 1, max = 9999999) => (
     <input
@@ -1026,7 +1058,7 @@ function PlayerActionsModal({ player, open, onClose }: { player: Player; open: b
                     {/* ── Progression Unlock ─────────────────────────────────── */}
                     <div className="rounded-lg p-3 shrink-0 flex flex-col gap-2" style={{ background: '#0f0d09', border: '1px solid #2a2418' }}>
                       <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-primary)' }}>Progression Unlock</div>
-                      <div className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Atomically applies faction journey flags from BP_ProgressionUnlockComponent presets.</div>
+                      <div className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Completes DA_FQ_ClimbTheRanks journey nodes and writes faction tier tags.</div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <Select selectedKey={unlockFaction} onSelectionChange={k => setUnlockFaction(String(k))} className="w-36">
                           <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
@@ -1141,8 +1173,18 @@ function PlayerActionsModal({ player, open, onClose }: { player: Player; open: b
                       () => run(() => api.players.deleteTutorials(player.id), `Deleted tutorials for ${player.name}`), true)}
                     {actionRow('Wipe Codex', <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Clears all codex discoveries</span>, 'Wipe',
                       () => run(() => api.players.wipeCodex(player.account_id), `Wiped codex for ${player.name}`), true)}
-                    {actionRow('Kick Player', <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Force-disconnect from server</span>, 'Kick',
-                      () => run(() => api.players.kick(player.id), `Kicked ${player.name}`), true)}
+                    {actionRow('Returning Player Award', <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Reset returning player status — triggers award on next login</span>, 'Grant',
+                      () => run(() => api.players.returningPlayerAward(player.account_id), `Returning player award reset for ${player.name}`), true)}
+                    {/* Character Export */}
+                    <div className="flex items-end gap-3 py-3" style={{ borderBottom: '1px solid #1a1610' }}>
+                      <div className="w-36 shrink-0 text-sm" style={{ color: 'var(--color-text-dim)' }}>Character Export</div>
+                      <div className="flex items-end gap-2 flex-1">
+                        <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Download character data as JSON</span>
+                      </div>
+                      <a href={api.players.exportUrl(player.account_id)} download>
+                        <Button size="sm" variant="ghost" isDisabled={busy}>Download</Button>
+                      </a>
+                    </div>
                     {/* Teleport */}
                     <div className="flex items-end gap-3 py-3" style={{ borderBottom: '1px solid #1a1610' }}>
                       <div className="w-36 shrink-0 text-sm" style={{ color: 'var(--color-text-dim)' }}>Teleport</div>
@@ -1167,6 +1209,99 @@ function PlayerActionsModal({ player, open, onClose }: { player: Player; open: b
                         <span className="text-xs" style={{ color: '#888' }}>Player must be offline</span>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {section === 'tags' && (
+                  <div className="flex flex-col gap-3 flex-1 min-h-0">
+                    {/* Add tags — type/select to stage, then submit all at once */}
+                    <div className="flex flex-col gap-2 shrink-0">
+                      <datalist id="gameplay-tags-list">
+                        {(allGameplayTags as string[])
+                          .filter(t => !tags.includes(t) && !pendingTags.includes(t))
+                          .map(t => <option key={t} value={t} />)}
+                      </datalist>
+                      <div className="flex gap-2">
+                        <input
+                          className="rounded px-2 py-1.5 text-xs border flex-1"
+                          style={{ background: '#0d0b07', color: 'var(--color-text)', borderColor: '#2a2418', outline: 'none' }}
+                          placeholder="Type or select a tag to stage…"
+                          list="gameplay-tags-list"
+                          value={newTag}
+                          onChange={e => {
+                            const val = e.target.value
+                            setNewTag(val)
+                            if ((allGameplayTags as string[]).includes(val) && !tags.includes(val) && !pendingTags.includes(val)) {
+                              setPendingTags(prev => [...prev, val])
+                              setNewTag('')
+                            }
+                          }}
+                          onKeyDown={e => {
+                            const val = newTag.trim()
+                            if (e.key === 'Enter' && val && !tags.includes(val) && !pendingTags.includes(val)) {
+                              setPendingTags(prev => [...prev, val])
+                              setNewTag('')
+                            }
+                          }}
+                        />
+                        <Button
+                          size="sm"
+                          isDisabled={pendingTags.length === 0}
+                          onPress={() => {
+                            const toAdd = pendingTags
+                            run(() => api.players.updateTags(player.account_id, toAdd, []), `Added ${toAdd.length} tag${toAdd.length > 1 ? 's' : ''}`)
+                              .then(() => { setTags(prev => [...new Set([...prev, ...toAdd])].sort()); setPendingTags([]) })
+                          }}
+                        >Add {pendingTags.length > 0 ? `(${pendingTags.length})` : ''}</Button>
+                      </div>
+                      {/* Pending pills */}
+                      {pendingTags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {pendingTags.map(tag => (
+                            <span
+                              key={tag}
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                padding: '2px 8px', borderRadius: '9999px', fontSize: '11px',
+                                background: '#0f1a10', color: '#88cc88', border: '1px solid #2a4028',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              <span style={{ fontFamily: 'monospace' }}>{tag}</span>
+                              <button
+                                onClick={() => setPendingTags(prev => prev.filter(t => t !== tag))}
+                                style={{ background: 'transparent', border: 'none', color: '#558855', cursor: 'pointer', fontSize: '11px', lineHeight: 1, padding: 0 }}
+                              >✕</button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Existing tags */}
+                    {tagsLoading ? (
+                      <div className="flex justify-center py-8"><Spinner size="lg" /></div>
+                    ) : (
+                      <div className="overflow-y-auto flex-1 rounded-lg" style={{ border: '1px solid #2a2418' }}>
+                        {tags.length === 0 && (
+                          <div className="px-3 py-2 text-xs" style={{ color: 'var(--color-text-dim)' }}>No tags</div>
+                        )}
+                        {tags.map((tag, i) => (
+                          <div
+                            key={tag}
+                            className="flex items-center justify-between px-3 py-1.5 text-xs"
+                            style={{ borderTop: i > 0 ? '1px solid #1e1c14' : undefined, fontFamily: 'monospace', color: 'var(--color-text)' }}
+                          >
+                            {tag}
+                            <button
+                              onClick={() => run(() => api.players.updateTags(player.account_id, [], [tag]), `Removed tag`)
+                                .then(() => setTags(prev => prev.filter(t => t !== tag)))}
+                              style={{ background: 'transparent', border: 'none', color: '#6666aa', cursor: 'pointer', fontSize: '11px', lineHeight: 1, padding: '0 0 0 8px', flexShrink: 0 }}
+                            >✕</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 

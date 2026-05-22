@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Show, SignInButton, UserButton, useAuth } from '@clerk/react'
 import { Toast } from '@heroui/react'
 import { Tabs } from '@heroui/react'
@@ -22,10 +22,32 @@ export default function App() {
   return hasClerk ? <AppWithAuth /> : <AppCore isSignedIn={true} />
 }
 
+function parseVer(v: string): [number, number, number] {
+  const [a, b, c] = v.replace(/^v/, '').split('.').map(Number)
+  return [a || 0, b || 0, c || 0]
+}
+
+function isNewer(latest: string, current: string): boolean {
+  if (current === 'dev') return false
+  const [la, lb, lc] = parseVer(latest)
+  const [ca, cb, cc] = parseVer(current)
+  if (la !== ca) return la > ca
+  if (lb !== cb) return lb > cb
+  return lc > cc
+}
+
 function AppCore({ isSignedIn }: { isSignedIn: boolean }) {
   const status = useStatus()
   const [showBackendConfig, setShowBackendConfig] = useState(false)
   const [backendUrl, setBackendUrl] = useState(() => localStorage.getItem('dune_admin_backend') || '')
+  const [latestVersion, setLatestVersion] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('https://api.github.com/repos/Icehunter/dune-admin/releases/latest')
+      .then(r => r.json())
+      .then(d => setLatestVersion(d.tag_name || null))
+      .catch(() => {})
+  }, [])
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--color-background)' }}>
@@ -48,6 +70,22 @@ function AppCore({ isSignedIn }: { isSignedIn: boolean }) {
             <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>
               {status.ssh_host}
             </span>
+          )}
+          {status?.version && (
+            <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>
+              v{status.version}
+            </span>
+          )}
+          {latestVersion && status?.version && isNewer(latestVersion, status.version) && (
+            <a
+              href="https://github.com/Icehunter/dune-admin/releases/latest"
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs px-2 py-0.5 rounded"
+              style={{ background: '#2a1a00', color: '#f0a830', border: '1px solid #4a3a00', textDecoration: 'none' }}
+            >
+              ↑ {latestVersion}
+            </a>
           )}
         </div>
         <div className="flex items-center gap-4 text-xs">

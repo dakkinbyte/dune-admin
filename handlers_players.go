@@ -364,15 +364,126 @@ func handleAwardIntel(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
-func handleKick(w http.ResponseWriter, r *http.Request) {
+func handleRenameCharacter(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		PlayerID int64 `json:"player_id"`
+		AccountID int64  `json:"account_id"`
+		Name      string `json:"name"`
 	}
 	if err := decode(r, &req); err != nil {
 		jsonErr(w, err, 400)
 		return
 	}
-	msg, ok := cmdKickPlayer(req.PlayerID)().(msgMutate)
+	msg, ok := cmdRenameCharacter(req.AccountID, req.Name)().(msgMutate)
+	if !ok {
+		jsonErr(w, fmt.Errorf("internal error"), 500)
+		return
+	}
+	if msg.err != nil {
+		jsonErr(w, msg.err, 500)
+		return
+	}
+	jsonOK(w, map[string]string{"ok": msg.ok})
+}
+
+func handleGetPlayerTags(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		jsonErr(w, fmt.Errorf("invalid id"), 400)
+		return
+	}
+	msg, ok := cmdGetPlayerTags(id)().(msgTags)
+	if !ok {
+		jsonErr(w, fmt.Errorf("internal error"), 500)
+		return
+	}
+	if msg.err != nil {
+		jsonErr(w, msg.err, 500)
+		return
+	}
+	tags := msg.rows
+	if tags == nil {
+		tags = []string{}
+	}
+	jsonOK(w, tags)
+}
+
+func handleUpdatePlayerTags(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		AccountID int64    `json:"account_id"`
+		Add       []string `json:"add"`
+		Remove    []string `json:"remove"`
+	}
+	if err := decode(r, &req); err != nil {
+		jsonErr(w, err, 400)
+		return
+	}
+	msg, ok := cmdUpdatePlayerTags(req.AccountID, req.Add, req.Remove)().(msgMutate)
+	if !ok {
+		jsonErr(w, fmt.Errorf("internal error"), 500)
+		return
+	}
+	if msg.err != nil {
+		jsonErr(w, msg.err, 500)
+		return
+	}
+	jsonOK(w, map[string]string{"ok": msg.ok})
+}
+
+func handleGrantReturningPlayerAward(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		AccountID int64 `json:"account_id"`
+	}
+	if err := decode(r, &req); err != nil {
+		jsonErr(w, err, 400)
+		return
+	}
+	msg, ok := cmdGrantReturningPlayerAward(req.AccountID)().(msgMutate)
+	if !ok {
+		jsonErr(w, fmt.Errorf("internal error"), 500)
+		return
+	}
+	if msg.err != nil {
+		jsonErr(w, msg.err, 500)
+		return
+	}
+	jsonOK(w, map[string]string{"ok": msg.ok})
+}
+
+func handleCharacterExport(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	accountID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		jsonErr(w, fmt.Errorf("invalid id"), 400)
+		return
+	}
+	ctx := r.Context()
+	rawID, err := rawFuncomID(ctx, accountID)
+	if err != nil {
+		jsonErr(w, fmt.Errorf("account not found: %w", err), 404)
+		return
+	}
+	var result string
+	err = globalDB.QueryRow(ctx, `SELECT dune.character_transfer_export($1)::text`, rawID).Scan(&result)
+	if err != nil {
+		jsonErr(w, fmt.Errorf("export failed: %w", err), 500)
+		return
+	}
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="character-%d.json"`, accountID))
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprint(w, result)
+}
+
+func handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		AccountID int64  `json:"account_id"`
+		Reason    string `json:"reason"`
+	}
+	if err := decode(r, &req); err != nil {
+		jsonErr(w, err, 400)
+		return
+	}
+	msg, ok := cmdDeleteAccount(req.AccountID, req.Reason)().(msgMutate)
 	if !ok {
 		jsonErr(w, fmt.Errorf("internal error"), 500)
 		return
@@ -467,6 +578,7 @@ func handleProgressionUnlock(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
+
 
 func handleJourneyComplete(w http.ResponseWriter, r *http.Request) {
 	var req struct {
@@ -718,6 +830,7 @@ func handleGetPlayerVehicles(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, rows)
 }
 
+
 func handleRepairItem(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ID int64 `json:"id"`
@@ -825,3 +938,4 @@ func handleGetPlayerDungeons(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonOK(w, rows)
 }
+

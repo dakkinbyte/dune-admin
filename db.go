@@ -561,30 +561,130 @@ func cmdAwardXP(playerID int64, trackType string, delta int32) Cmd {
 	}
 }
 
-func cmdKickPlayer(playerID int64) Cmd {
+func cmdRenameCharacter(accountID int64, name string) Cmd {
 	return func() Msg {
 		if globalDB == nil {
 			return msgMutate{err: fmt.Errorf("not connected")}
 		}
-		if playerID == 0 {
-			return msgMutate{err: fmt.Errorf("player ID required")}
+		if accountID == 0 {
+			return msgMutate{err: fmt.Errorf("account ID required")}
+		}
+		name = strings.TrimSpace(name)
+		if name == "" {
+			return msgMutate{err: fmt.Errorf("name required")}
+		}
+		_, err := globalDB.Exec(context.Background(), `SELECT dune.set_character_name($1, $2)`, accountID, name)
+		if err != nil {
+			return msgMutate{err: fmt.Errorf("rename character: %w", err)}
+		}
+		return msgMutate{ok: fmt.Sprintf("Renamed to %s", name)}
+	}
+}
+
+func cmdGetPlayerTags(accountID int64) Cmd {
+	return func() Msg {
+		if globalDB == nil {
+			return msgTags{err: fmt.Errorf("not connected")}
+		}
+		rows, err := globalDB.Query(context.Background(),
+			`SELECT tag FROM dune.player_tags WHERE account_id=$1 ORDER BY tag`, accountID)
+		if err != nil {
+			return msgTags{err: err}
+		}
+		defer rows.Close()
+		var tags []string
+		for rows.Next() {
+			var tag string
+			if err := rows.Scan(&tag); err != nil {
+				continue
+			}
+			tags = append(tags, tag)
+		}
+		if err := rows.Err(); err != nil {
+			return msgTags{err: err}
+		}
+		return msgTags{rows: tags}
+	}
+}
+
+func cmdUpdatePlayerTags(accountID int64, add []string, remove []string) Cmd {
+	return func() Msg {
+		if globalDB == nil {
+			return msgMutate{err: fmt.Errorf("not connected")}
+		}
+		var addArg, removeArg interface{}
+		if len(add) > 0 {
+			addArg = add
+		} else {
+			addArg = []string{}
+		}
+		if len(remove) > 0 {
+			removeArg = remove
+		} else {
+			removeArg = []string{}
+		}
+		_, err := globalDB.Exec(context.Background(),
+			`SELECT dune.update_player_tags($1, $2::text[], $3::text[])`, accountID, addArg, removeArg)
+		if err != nil {
+			return msgMutate{err: fmt.Errorf("update player tags: %w", err)}
+		}
+		return msgMutate{ok: "Tags updated"}
+	}
+}
+
+// rawFuncomID returns the accounts."user" value (hex Funcom ID) for a given
+// account_id. This is the ID format expected by character_transfer_export,
+// complete_journey_story_nodes_for_player, update_returning_player_status,
+// delete_account, and other procs — distinct from encrypted_funcom_id which
+// stores the human-readable display name (e.g. "Icehunter#55381").
+func rawFuncomID(ctx context.Context, accountID int64) (string, error) {
+	var id string
+	err := globalDB.QueryRow(ctx, `SELECT "user" FROM dune.accounts WHERE id = $1`, accountID).Scan(&id)
+	return id, err
+}
+
+func cmdGrantReturningPlayerAward(accountID int64) Cmd {
+	return func() Msg {
+		if globalDB == nil {
+			return msgMutate{err: fmt.Errorf("not connected")}
 		}
 		ctx := context.Background()
-
-		// Set online_status to LoggingOut on the player_state row.
-		// The server reads this on its next heartbeat and disconnects the session
-		// without touching any game data (inventory, buildings, etc. are untouched).
-		res, err := globalDB.Exec(ctx, `
-			UPDATE dune.player_state
-			SET online_status = 'LoggingOut'::dune.playerconnectionstatus
-			WHERE player_controller_id = $1::bigint`, playerID)
+		rawID, err := rawFuncomID(ctx, accountID)
 		if err != nil {
-			return msgMutate{err: fmt.Errorf("kick: %w", err)}
+			return msgMutate{err: fmt.Errorf("look up funcom id: %w", err)}
 		}
-		if res.RowsAffected() == 0 {
-			return msgMutate{err: fmt.Errorf("no player_state found for actor %d", playerID)}
+		_, err = globalDB.Exec(ctx, `
+			UPDATE dune.encrypted_player_state
+			SET last_returning_player_awarded_time = NULL,
+			    last_returning_player_event_time = NULL
+			WHERE account_id = $1`, accountID)
+		if err != nil {
+			return msgMutate{err: fmt.Errorf("reset returning player timestamps: %w", err)}
 		}
-		return msgMutate{ok: fmt.Sprintf("Set actor %d → LoggingOut — server will disconnect on next heartbeat", playerID)}
+		_, err = globalDB.Exec(ctx, `SELECT dune.update_returning_player_status($1, 0)`, rawID)
+		if err != nil {
+			return msgMutate{err: fmt.Errorf("update_returning_player_status: %w", err)}
+		}
+		return msgMutate{ok: "Returning player award reset — will trigger on next login"}
+	}
+}
+
+func cmdDeleteAccount(accountID int64, reason string) Cmd {
+	return func() Msg {
+		if globalDB == nil {
+			return msgMutate{err: fmt.Errorf("not connected")}
+		}
+		ctx := context.Background()
+		rawID, err := rawFuncomID(ctx, accountID)
+		if err != nil {
+			return msgMutate{err: fmt.Errorf("look up funcom id: %w", err)}
+		}
+		var result bool
+		err = globalDB.QueryRow(ctx, `SELECT dune.delete_account($1, $2)`, rawID, reason).Scan(&result)
+		if err != nil {
+			return msgMutate{err: fmt.Errorf("delete account: %w", err)}
+		}
+		return msgMutate{ok: "Account deleted"}
 	}
 }
 
@@ -596,13 +696,9 @@ func cmdDeleteItem(itemID int64) Cmd {
 		if itemID == 0 {
 			return msgMutate{err: fmt.Errorf("item ID required")}
 		}
-		ctx := context.Background()
-		res, err := globalDB.Exec(ctx, `DELETE FROM dune.items WHERE id = $1::bigint`, itemID)
+		_, err := globalDB.Exec(context.Background(), `SELECT dune.delete_item($1::bigint)`, itemID)
 		if err != nil {
 			return msgMutate{err: fmt.Errorf("delete item: %w", err)}
-		}
-		if res.RowsAffected() == 0 {
-			return msgMutate{err: fmt.Errorf("item %d not found", itemID)}
 		}
 		return msgMutate{ok: fmt.Sprintf("Deleted item %d", itemID)}
 	}
@@ -618,38 +714,24 @@ func cmdResetSpecializations(playerID int64, trackType string) Cmd {
 		}
 		ctx := context.Background()
 
-		var tracksDeleted, keystonesDeleted int64
 		if trackType == "" || strings.EqualFold(trackType, "all") {
-			res, err := globalDB.Exec(ctx,
-				`DELETE FROM dune.specialization_tracks WHERE player_id = $1::bigint`, playerID)
-			if err != nil {
+			if _, err := globalDB.Exec(ctx, `SELECT dune.reset_specialization_tracks($1)`, playerID); err != nil {
 				return msgMutate{err: fmt.Errorf("reset tracks: %w", err)}
 			}
-			tracksDeleted = res.RowsAffected()
-
-			res, err = globalDB.Exec(ctx,
-				`DELETE FROM dune.purchased_specialization_keystones WHERE player_id = $1::bigint`, playerID)
-			if err != nil {
+			if _, err := globalDB.Exec(ctx, `SELECT dune.reset_specialization_keystones($1)`, playerID); err != nil {
 				return msgMutate{err: fmt.Errorf("reset keystones: %w", err)}
 			}
-			keystonesDeleted = res.RowsAffected()
-		} else {
-			res, err := globalDB.Exec(ctx, `
-				DELETE FROM dune.specialization_tracks
-				WHERE player_id = $1::bigint AND track_type::text = $2::text`, playerID, trackType)
-			if err != nil {
-				return msgMutate{err: fmt.Errorf("reset track: %w", err)}
-			}
-			tracksDeleted = res.RowsAffected()
+			return msgMutate{ok: fmt.Sprintf("Reset all spec tracks + keystones for player %d", playerID)}
 		}
 
-		if trackType == "" || strings.EqualFold(trackType, "all") {
-			return msgMutate{ok: fmt.Sprintf(
-				"Reset player %d: %d track(s) + %d keystone(s) cleared",
-				playerID, tracksDeleted, keystonesDeleted)}
+		res, err := globalDB.Exec(ctx, `
+			DELETE FROM dune.specialization_tracks
+			WHERE player_id = $1::bigint AND track_type::text = $2::text`, playerID, trackType)
+		if err != nil {
+			return msgMutate{err: fmt.Errorf("reset track: %w", err)}
 		}
 		return msgMutate{ok: fmt.Sprintf(
-			"Reset %s track for player %d (%d row(s) cleared)", trackType, playerID, tracksDeleted)}
+			"Reset %s track for player %d (%d row(s) cleared)", trackType, playerID, res.RowsAffected())}
 	}
 }
 
@@ -1248,12 +1330,33 @@ func cmdWipeJourneyNodes(accountID int64) Cmd {
 	}
 }
 
-// cmdProgressionUnlock atomically completes the journey nodes that
-// BP_ProgressionUnlockComponent sets via AddPlayerFlags, and for the
-// rank19_eligible preset also sets the faction tier to 19.
+// climbTheRanksNodes are the journey nodes that gate access to Landsraad
+// rank 5–20 progression (DA_FQ = Dune Awakening Faction Quest).
+// Both parent and child nodes must be completed — confirmed by in-game observation.
+// These are faction-independent.
+var climbTheRanksNodes = []string{
+	"DA_FQ_ClimbTheRanks.Rank5To20.MeetSponsor",
+	"DA_FQ_ClimbTheRanks.Rank5To20.MeetSponsor.TalkToSponsor",
+	"DA_FQ_ClimbTheRanks.Rank5To20.StartLandsraadOnboarding",
+	"DA_FQ_ClimbTheRanks.Rank5To20.StartLandsraadOnboarding.ReportToMasterOfAssassins",
+	"DA_FQ_ClimbTheRanks.Rank5To20.CompleteLandsraadMission",
+	"DA_FQ_ClimbTheRanks.Rank5To20.CompleteLandsraadMission.CompleteOnboardingJourney1",
+	"DA_FQ_ClimbTheRanks.Rank5To20.CraftAugmentation",
+	"DA_FQ_ClimbTheRanks.Rank5To20.CraftAugmentation.CompleteOnboardingJourney2",
+}
+
+// factionJourneyNodes returns the journey node IDs to complete for a preset.
+// Both presets complete the same Rank5To20 onboarding nodes (faction-independent).
+// The presets differ only in which tags and rep tier are written.
+func factionJourneyNodes(_ string) []string {
+	return climbTheRanksNodes
+}
+
+// cmdProgressionUnlock completes all prerequisite faction story journey nodes
+// and writes the corresponding gameplay tags, optionally setting faction tier.
 //
 // faction: "atreides" | "harkonnen"
-// preset:  "ch3_start" | "rank19_eligible"
+// preset:  "ch3_start" (through Rank03) | "rank19_eligible" (through Rank04 + tier 19)
 func cmdProgressionUnlock(actorID int64, faction, preset string) Cmd {
 	return func() Msg {
 		if globalDB == nil {
@@ -1284,8 +1387,6 @@ func cmdProgressionUnlock(actorID int64, faction, preset string) Cmd {
 
 		ctx := context.Background()
 
-		// Faction rep lives on the controller actor, not the character actor.
-		// Journey nodes are keyed by account_id.
 		var accountID, controllerID int64
 		err := globalDB.QueryRow(ctx, `
 			SELECT COALESCE(a.owner_account_id, 0),
@@ -1298,22 +1399,26 @@ func cmdProgressionUnlock(actorID int64, faction, preset string) Cmd {
 			return msgMutate{err: fmt.Errorf("player %d not found or has no account", actorID)}
 		}
 		if controllerID == 0 {
-			return msgMutate{err: fmt.Errorf("player %d has no controller actor — cannot set faction tier", actorID)}
+			return msgMutate{err: fmt.Errorf("player %d has no controller actor", actorID)}
+		}
+		flsID, err := rawFuncomID(ctx, accountID)
+		if err != nil || flsID == "" {
+			return msgMutate{err: fmt.Errorf("player %d has no FLS ID", actorID)}
 		}
 
-		// These are gameplay tags (AddPlayerFlags in BP_ProgressionUnlockComponent).
-		// They belong in player_tags, not journey_story_node.
-		playerTags := []string{
-			"Contract.Tracking.FactionStory.R4C1Completed",
-			"Contract.Tracking.FactionStory.R4C2Completed",
-			"Contract.Tracking.FactionStory.R4C3Completed",
-			"Contract.Tracking.FactionStory.R4C4Completed",
-			"Contract.Tracking.FactionStory.R4C5Completed",
-			"Contract.Tracking.FactionStory.R4C6Completed",
-			dialogueFlag,
-		}
+		journeyNodes := factionJourneyNodes(faction)
+
+		factionName := factionDisplayName(factionID)
+		maxTier := 5
 		if setTier {
-			playerTags = append(playerTags, "Journey.LandsraadContractsUnlocked")
+			maxTier = 19
+		}
+		allTags := []string{dialogueFlag}
+		if setTier {
+			allTags = append(allTags, "Journey.LandsraadContractsUnlocked")
+		}
+		for t := 0; t <= maxTier; t++ {
+			allTags = append(allTags, fmt.Sprintf("Faction.%s.Tier%d", factionName, t))
 		}
 
 		tx, err := globalDB.Begin(ctx)
@@ -1322,39 +1427,21 @@ func cmdProgressionUnlock(actorID int64, faction, preset string) Cmd {
 		}
 		defer tx.Rollback(ctx)
 
-		for _, tag := range playerTags {
-			_, err = tx.Exec(ctx,
-				`INSERT INTO dune.player_tags (account_id, tag) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-				accountID, tag)
-			if err != nil {
-				return msgMutate{err: fmt.Errorf("insert player tag %s: %w", tag, err)}
-			}
+		if _, err = tx.Exec(ctx,
+			`SELECT dune.complete_journey_story_nodes_for_player($1, $2::text[])`,
+			flsID, journeyNodes); err != nil {
+			return msgMutate{err: fmt.Errorf("complete journey nodes: %w", err)}
 		}
 
-		// Insert faction tier tags up to the appropriate tier.
-		// ch3_start = tier 5 (completing rank 4 faction story)
-		// rank19_eligible = tier 19
-		factionName := factionDisplayName(factionID)
-		maxTier := 5
-		if setTier {
-			maxTier = 19
-		}
-		for t := 0; t <= maxTier; t++ {
-			_, err = tx.Exec(ctx,
-				`INSERT INTO dune.player_tags (account_id, tag)
-				 VALUES ($1, $2)
-				 ON CONFLICT DO NOTHING`,
-				accountID, fmt.Sprintf("Faction.%s.Tier%d", factionName, t))
-			if err != nil {
-				return msgMutate{err: fmt.Errorf("insert tier tag %d: %w", t, err)}
-			}
+		if _, err = tx.Exec(ctx,
+			`SELECT dune.update_player_tags($1, $2::text[], '{}'::text[])`, accountID, allTags); err != nil {
+			return msgMutate{err: fmt.Errorf("update player tags: %w", err)}
 		}
 
 		if setTier {
-			_, err = tx.Exec(ctx,
+			if _, err = tx.Exec(ctx,
 				`SELECT dune.set_player_faction_reputation($1, $2, $3)`,
-				controllerID, factionID, factionTierThresholds[19])
-			if err != nil {
+				controllerID, factionID, factionTierThresholds[19]); err != nil {
 				return msgMutate{err: fmt.Errorf("set faction tier: %w", err)}
 			}
 		}
@@ -1363,13 +1450,13 @@ func cmdProgressionUnlock(actorID int64, faction, preset string) Cmd {
 			return msgMutate{err: err}
 		}
 
-		tierMsg := fmt.Sprintf(" + %s tier tags 0–%d written", factionName, maxTier)
+		tierMsg := fmt.Sprintf("%s tier tags 0–%d", factionName, maxTier)
 		if setTier {
-			tierMsg += fmt.Sprintf(" + rep set to tier 19 on controller %d", controllerID)
+			tierMsg += fmt.Sprintf(" + rep tier 19 on controller %d", controllerID)
 		}
 		return msgMutate{ok: fmt.Sprintf(
-			"Progression unlock (%s/%s) applied to actor %d: %d tags%s — takes effect on next login",
-			preset, faction, actorID, len(playerTags), tierMsg)}
+			"Progression unlock (%s/%s): %d journey nodes completed + %s — takes effect on next login",
+			preset, faction, len(journeyNodes), tierMsg)}
 	}
 }
 
@@ -1998,24 +2085,11 @@ func cmdGrantMaxSpec(playerID int64, trackType string) Cmd {
 		if globalDB == nil {
 			return msgMutate{err: fmt.Errorf("not connected")}
 		}
-		const maxXP = 44182
-		const maxLevel = 100
-		res, err := globalDB.Exec(context.Background(), `
-			UPDATE dune.specialization_tracks
-			SET xp_amount = $1::integer, level = $2::real
-			WHERE player_id = $3::bigint AND track_type::text = $4::text`,
-			maxXP, maxLevel, playerID, trackType)
+		_, err := globalDB.Exec(context.Background(),
+			`SELECT dune.set_specialization_xp_and_level($1, $2::dune.specializationtracktype, $3, $4)`,
+			playerID, trackType, 44182, 100.0)
 		if err != nil {
 			return msgMutate{err: err}
-		}
-		if res.RowsAffected() == 0 {
-			_, err = globalDB.Exec(context.Background(), `
-				INSERT INTO dune.specialization_tracks (player_id, track_type, xp_amount, level)
-				VALUES ($1::bigint, $2::dune.specializationtracktype, $3::integer, $4::real)`,
-				playerID, trackType, maxXP, maxLevel)
-			if err != nil {
-				return msgMutate{err: err}
-			}
 		}
 		return msgMutate{ok: fmt.Sprintf("Granted max %s spec to player %d", trackType, playerID)}
 	}
@@ -2050,19 +2124,115 @@ func cmdFetchPlayerSpecs(playerID int64) Cmd {
 	}
 }
 
+// keystoneSPBonus returns the total extra skill points granted by a set of keystone IDs.
+// SkillPoint = +1, SkillPoint_Major = +3, SkillPoint_Super = +5 (Combat track only).
+func keystoneSPBonus(ids []int16) int64 {
+	var total int64
+	for _, id := range ids {
+		info, ok := keystoneMap[id]
+		if !ok {
+			continue
+		}
+		switch {
+		case strings.HasSuffix(info.Name, "_SkillPoint_Super"):
+			total += 5
+		case strings.HasSuffix(info.Name, "_SkillPoint_Major"):
+			total += 3
+		case strings.HasSuffix(info.Name, "_SkillPoint"):
+			total += 1
+		}
+	}
+	return total
+}
+
 func cmdGrantAllKeystones(playerID int64) Cmd {
 	return func() Msg {
 		if globalDB == nil {
 			return msgMutate{err: fmt.Errorf("not connected")}
 		}
-		_, err := globalDB.Exec(context.Background(), `
+		ctx := context.Background()
+
+		if err := checkPlayerOffline(ctx, playerID); err != nil {
+			return msgMutate{err: err}
+		}
+
+		var err error
+		_, err = globalDB.Exec(ctx, `
 			INSERT INTO dune.purchased_specialization_keystones (player_id, keystone_id)
 			SELECT $1::bigint, generate_series(1, 205)
 			ON CONFLICT DO NOTHING`, playerID)
 		if err != nil {
 			return msgMutate{err: err}
 		}
-		return msgMutate{ok: fmt.Sprintf("Granted all keystones to player %d", playerID)}
+
+		// Compute the SP bonus all 205 purchased keystones should give.
+		allIDs := make([]int16, 205)
+		for i := range allIDs {
+			allIDs[i] = int16(i + 1)
+		}
+		keystoneBonus := keystoneSPBonus(allIDs)
+
+		// Read XP, current TotalSkillPoints, and SP spent in non-starter modules.
+		// Uses pawn actor id (purchased_specialization_keystones uses controller id).
+		var xp, currentTotal, spentSP int64
+		err = globalDB.QueryRow(ctx, `
+			SELECT
+				(fe.components->'FLevelComponent'->1->>'TotalXPEarned')::bigint,
+				(fe.components->'FLevelComponent'->1->>'TotalSkillPoints')::bigint,
+				COALESCE((
+					SELECT SUM((v->>'SkillPointsSpent')::int)
+					FROM jsonb_each(fe.components->'FLevelComponent'->1->'ModuleData') AS kv(k, v)
+					WHERE k != format('(TagName="%s")',
+						fe.components->'FLevelComponent'->1->'StarterSkillTreeTag'->>'TagName')
+				), 0)
+			FROM dune.fgl_entities fe
+			JOIN dune.actor_fgl_entities afe ON afe.entity_id = fe.entity_id
+			WHERE afe.slot_name = 'DuneCharacter'
+			  AND afe.actor_id = (
+				SELECT player_pawn_id FROM dune.player_state
+				WHERE player_controller_id = $1 LIMIT 1
+			  )`, playerID).Scan(&xp, &currentTotal, &spentSP)
+		if err != nil {
+			return msgMutate{err: fmt.Errorf("read FLevelComponent: %w", err)}
+		}
+
+		level := int64(xpToLevel(xp))
+		expectedTotal := level + keystoneBonus
+		// UnspentSkillPoints = total - non-starter spent - 1 (starter job always occupies 1 SP).
+		expectedUnspent := expectedTotal - spentSP - 1
+		if expectedUnspent < 0 {
+			expectedUnspent = 0
+		}
+
+		if currentTotal >= expectedTotal {
+			return msgMutate{ok: fmt.Sprintf(
+				"Granted all keystones to player %d — SP already correct (%d total, %d unspent)",
+				playerID, currentTotal, expectedUnspent)}
+		}
+
+		_, err = globalDB.Exec(ctx, `
+			UPDATE dune.fgl_entities
+			SET components = jsonb_set(jsonb_set(
+				components,
+				'{FLevelComponent,1,TotalSkillPoints}',
+				to_jsonb($2::bigint)),
+				'{FLevelComponent,1,UnspentSkillPoints}',
+				to_jsonb($3::bigint))
+			WHERE entity_id = (
+				SELECT entity_id FROM dune.actor_fgl_entities
+				WHERE slot_name = 'DuneCharacter'
+				  AND actor_id = (
+					SELECT player_pawn_id FROM dune.player_state
+					WHERE player_controller_id = $1 LIMIT 1
+				  )
+			)`, playerID, expectedTotal, expectedUnspent)
+		if err != nil {
+			return msgMutate{err: fmt.Errorf("update skill points: %w", err)}
+		}
+
+		return msgMutate{ok: fmt.Sprintf(
+			"Granted all keystones to player %d — SP %d → %d total, %d unspent (+%d keystone bonus)",
+			playerID, currentTotal, expectedTotal, expectedUnspent, keystoneBonus)}
 	}
 }
 
@@ -2090,21 +2260,31 @@ func cmdFetchPlayerKeystones(playerID int64) Cmd {
 	}
 }
 
-func cmdGetPlayerVehicles(accountID int64) Cmd {
+func cmdGetPlayerVehicles(controllerID int64) Cmd {
 	return func() Msg {
 		if globalDB == nil {
 			return msgVehicles{err: fmt.Errorf("not connected")}
 		}
+		// Look up account_id from controller_id — vehicle actors don't use owner_account_id.
+		var accountID int64
+		err := globalDB.QueryRow(context.Background(),
+			`SELECT ps.account_id FROM dune.player_state ps WHERE ps.player_controller_id = $1 LIMIT 1`,
+			controllerID).Scan(&accountID)
+		if err != nil {
+			return msgVehicles{err: fmt.Errorf("look up account: %w", err)}
+		}
+
 		rows, err := globalDB.Query(context.Background(), `
-			SELECT a.id, a.class, COALESCE(a.map, ''),
+			SELECT pa.actor_id, a.class, COALESCE(a.map, ''),
 			       COALESCE(rv.chassis_durability::float8, 1.0),
 			       COALESCE(rv.vehicle_name, ''),
 			       (rv.vehicle_id IS NOT NULL) AS is_recovered,
 			       false AS is_backup
-			FROM dune.vehicles v
-			JOIN dune.actors a ON a.id = v.id
-			LEFT JOIN dune.recovered_vehicles rv ON rv.vehicle_id = v.id
-			WHERE a.owner_account_id = $1::bigint
+			FROM dune.permission_actor pa
+			JOIN dune.permission_actor_rank par ON par.permission_actor_id = pa.actor_id
+			JOIN dune.actors a ON a.id = pa.actor_id
+			LEFT JOIN dune.recovered_vehicles rv ON rv.vehicle_id = pa.actor_id AND rv.account_id = $2
+			WHERE par.player_id = $1 AND pa.actor_type = 2
 
 			UNION ALL
 
@@ -2115,9 +2295,9 @@ func cmdGetPlayerVehicles(accountID int64) Cmd {
 			       true AS is_backup
 			FROM dune.backup_vehicles bv
 			JOIN dune.actors a ON a.id = bv.vehicle_id
-			WHERE bv.account_id = $1::bigint
+			WHERE bv.account_id = $2
 
-			ORDER BY class`, accountID)
+			ORDER BY class`, controllerID, accountID)
 		if err != nil {
 			return msgVehicles{err: err}
 		}
@@ -2137,6 +2317,7 @@ func cmdGetPlayerVehicles(accountID int64) Cmd {
 		return msgVehicles{rows: out}
 	}
 }
+
 
 func cmdRepairItem(itemID int64) Cmd {
 	return func() Msg {
@@ -2281,6 +2462,7 @@ func cmdListPartitions() Cmd {
 		return msgPartitions{rows: cheatLocations}
 	}
 }
+
 
 func cmdTeleportPlayer(flsID string, locationName string) Cmd {
 	return func() Msg {

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strings"
@@ -197,6 +198,21 @@ func sshExec(cmd string) (string, error) {
 	defer sess.Close()
 	out, err := sess.CombinedOutput(cmd)
 	return strings.TrimSpace(string(out)), err
+}
+
+// sshPipeToWriter runs cmd over SSH and streams stdout directly into w.
+// Intended for binary file downloads where buffering the whole output is wasteful.
+func sshPipeToWriter(cmd string, w io.Writer) error {
+	if globalSSH == nil {
+		return fmt.Errorf("not connected")
+	}
+	sess, err := globalSSH.NewSession()
+	if err != nil {
+		return err
+	}
+	defer sess.Close()
+	sess.Stdout = w
+	return sess.Run(cmd)
 }
 
 // sshStream opens a remote command and returns a channel that receives one

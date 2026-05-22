@@ -57,6 +57,10 @@ func startServer(addr string) {
 	mux.HandleFunc("GET /api/v1/battlegroup/status", handleBGStatus)
 	mux.HandleFunc("POST /api/v1/battlegroup/exec", handleBGExec)
 	mux.HandleFunc("GET /api/v1/battlegroup/pods", handleBGPods)
+	mux.HandleFunc("GET /api/v1/battlegroup/backup-files", handleBGBackupFiles)
+	mux.HandleFunc("GET /api/v1/battlegroup/backup-files/download", handleBGBackupDownload)
+	mux.HandleFunc("POST /api/v1/battlegroup/backup-files/upload", handleBGBackupUpload)
+	mux.HandleFunc("POST /api/v1/battlegroup/restore", handleBGRestore)
 
 	// ── players ───────────────────────────────────────────────────────────────
 	mux.HandleFunc("GET /api/v1/players", handleGetPlayers)
@@ -75,7 +79,12 @@ func startServer(addr string) {
 	mux.HandleFunc("POST /api/v1/players/award-xp", handleAwardXP)
 	mux.HandleFunc("POST /api/v1/players/award-char-xp", handleAwardCharXP)
 	mux.HandleFunc("POST /api/v1/players/award-intel", handleAwardIntel)
-	mux.HandleFunc("POST /api/v1/players/kick", handleKick)
+	mux.HandleFunc("POST /api/v1/players/rename", handleRenameCharacter)
+	mux.HandleFunc("GET /api/v1/players/{id}/tags", handleGetPlayerTags)
+	mux.HandleFunc("POST /api/v1/players/update-tags", handleUpdatePlayerTags)
+	mux.HandleFunc("POST /api/v1/players/returning-player-award", handleGrantReturningPlayerAward)
+	mux.HandleFunc("GET /api/v1/players/{id}/export", handleCharacterExport)
+	mux.HandleFunc("POST /api/v1/players/delete-account", handleDeleteAccount)
 	mux.HandleFunc("DELETE /api/v1/players/item/{id}", handleDeleteItem)
 	mux.HandleFunc("POST /api/v1/players/reset-spec", handleResetSpec)
 	mux.HandleFunc("POST /api/v1/players/set-faction-tier", handleSetFactionTier)
@@ -131,7 +140,7 @@ func startServer(addr string) {
 		Handler:           corsMiddleware(mux),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      60 * time.Second,
+		WriteTimeout:      10 * time.Minute, // backup/restore/download can take several minutes
 		IdleTimeout:       60 * time.Second,
 	}
 	log.Printf("dune-admin listening on %s", addr)
@@ -163,6 +172,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 		"pod_ns":        globalPodNS,
 		"pod_ip":        globalPodIP,
 		"ssh_host":      sshHost,
+		"version":       version,
 	})
 }
 

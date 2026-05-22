@@ -212,6 +212,12 @@ type msgKeystones struct {
 	err error
 }
 
+type msgTags struct {
+	rows []string
+	err  error
+}
+
+
 // ── item template merge (called after connect) ────────────────────────────────
 
 func mergeItemTemplates(dbTemplates []string) {
