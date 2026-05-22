@@ -1283,12 +1283,21 @@ func cmdProgressionUnlock(actorID int64, faction, preset string) Cmd {
 
 		ctx := context.Background()
 
-		var accountID int64
-		err := globalDB.QueryRow(ctx,
-			`SELECT COALESCE(owner_account_id, 0) FROM dune.actors WHERE id = $1`, actorID,
-		).Scan(&accountID)
+		// Faction rep lives on the controller actor, not the character actor.
+		// Journey nodes are keyed by account_id.
+		var accountID, controllerID int64
+		err := globalDB.QueryRow(ctx, `
+			SELECT COALESCE(a.owner_account_id, 0),
+			       COALESCE(ps.player_controller_id, 0)
+			FROM dune.actors a
+			LEFT JOIN dune.player_state ps ON ps.account_id = a.owner_account_id
+			WHERE a.id = $1`, actorID,
+		).Scan(&accountID, &controllerID)
 		if err != nil || accountID == 0 {
 			return msgMutate{err: fmt.Errorf("player %d not found or has no account", actorID)}
+		}
+		if controllerID == 0 {
+			return msgMutate{err: fmt.Errorf("player %d has no controller actor — cannot set faction tier", actorID)}
 		}
 
 		nodes := []string{
@@ -1341,7 +1350,7 @@ func cmdProgressionUnlock(actorID int64, faction, preset string) Cmd {
 		if setTier {
 			_, err = tx.Exec(ctx,
 				`SELECT dune.set_player_faction_reputation($1, $2, $3)`,
-				actorID, factionID, factionTierThresholds[19])
+				controllerID, factionID, factionTierThresholds[19])
 			if err != nil {
 				return msgMutate{err: fmt.Errorf("set faction tier: %w", err)}
 			}
@@ -1353,7 +1362,7 @@ func cmdProgressionUnlock(actorID int64, faction, preset string) Cmd {
 
 		tierMsg := ""
 		if setTier {
-			tierMsg = fmt.Sprintf(" + %s set to tier 19", factionDisplayName(factionID))
+			tierMsg = fmt.Sprintf(" + %s tier 19 set on controller %d", factionDisplayName(factionID), controllerID)
 		}
 		return msgMutate{ok: fmt.Sprintf(
 			"Progression unlock (%s/%s) applied to actor %d: %d nodes%s — takes effect on next login",
