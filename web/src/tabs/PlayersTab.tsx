@@ -1173,8 +1173,10 @@ api.players.partitions().then(setPartitions).catch(() => {})
                       () => run(() => api.players.deleteTutorials(player.id), `Deleted tutorials for ${player.name}`), true)}
                     {actionRow('Wipe Codex', <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Clears all codex discoveries</span>, 'Wipe',
                       () => run(() => api.players.wipeCodex(player.account_id), `Wiped codex for ${player.name}`), true)}
-                    {actionRow('Returning Player Award', <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Reset returning player status — triggers award on next login</span>, 'Grant',
-                      () => run(() => api.players.returningPlayerAward(player.account_id), `Returning player award reset for ${player.name}`), true)}
+                    <div style={{ display: 'none' }}>
+                      {actionRow('Returning Player Award', <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Reset returning player status — triggers award on next login</span>, 'Grant',
+                        () => run(() => api.players.returningPlayerAward(player.account_id), `Returning player award reset for ${player.name}`), true)}
+                    </div>
                     {/* Character Export */}
                     <div className="flex items-end gap-3 py-3" style={{ borderBottom: '1px solid #1a1610' }}>
                       <div className="w-36 shrink-0 text-sm" style={{ color: 'var(--color-text-dim)' }}>Character Export</div>
