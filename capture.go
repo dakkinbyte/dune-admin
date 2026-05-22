@@ -112,7 +112,7 @@ func dialAMQP(internalAddr, user, pass string, useTLS bool) (*amqp.Connection, e
 		},
 	}
 	if useTLS {
-		cfg.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		cfg.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402 -- internal RabbitMQ tunnel over SSH, self-signed cert
 		return amqp.DialConfig("amqps://"+internalAddr+"/", cfg)
 	}
 	return amqp.DialConfig("amqp://"+internalAddr+"/", cfg)

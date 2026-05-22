@@ -39,7 +39,7 @@ func mqGameChannel() (*amqp.Channel, error) {
 		SASL:            []amqp.Authentication{&amqp.PlainAuth{Username: capUser, Password: capPass}},
 		Vhost:           "/",
 		Heartbeat:       10 * time.Second,
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec G402 -- internal RabbitMQ tunnel over SSH, self-signed cert
 		Dial: func(_, _ string) (net.Conn, error) {
 			if globalSSH == nil {
 				return nil, fmt.Errorf("SSH not connected")

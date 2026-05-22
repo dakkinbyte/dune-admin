@@ -1,4 +1,10 @@
-.PHONY: build web go linux dev-server setup deploy-web
+.PHONY: build web go linux dev-server setup deploy-web \
+        vulncheck gosec npm-audit \
+        test test-race vet fmt fmt-check \
+        tools verify \
+        version version-patch version-minor version-major
+
+# ── Build ─────────────────────────────────────────────────────────────────────
 
 build: go
 
@@ -14,8 +20,87 @@ dev-server:
 setup:
 	go run . -setup
 
+# ── Web ───────────────────────────────────────────────────────────────────────
+
 web:
 	cd web && npm ci && npm run build
 
 deploy-web:
 	cd web && npm ci && npm run build && wrangler pages deploy dist --project-name dune-admin
+
+# ── Test ──────────────────────────────────────────────────────────────────────
+
+test:
+	go test ./...
+
+test-race:
+	go test -race ./...
+
+# ── Quality ───────────────────────────────────────────────────────────────────
+
+vet:
+	go vet ./...
+
+fmt:
+	go fmt ./...
+	gofmt -s -w .
+
+fmt-check:
+	@test -z "$$(gofmt -l .)" || (echo "Code is not formatted. Run 'make fmt'" && exit 1)
+
+vulncheck:
+	go tool golang.org/x/vuln/cmd/govulncheck ./...
+
+gosec:
+	go tool github.com/securego/gosec/v2/cmd/gosec -severity high -confidence high ./...
+
+npm-audit:
+	cd web && npm audit --audit-level=high
+
+verify:
+	@$(MAKE) fmt-check && \
+	$(MAKE) vet && \
+	$(MAKE) test-race && \
+	$(MAKE) vulncheck && \
+	$(MAKE) gosec && \
+	echo "All checks passed!"
+
+# ── Tools ─────────────────────────────────────────────────────────────────────
+
+tools:
+	@echo "Caching dev tools (versions pinned in go.mod)..."
+	@go tool golang.org/x/vuln/cmd/govulncheck -version || true
+	@go tool github.com/securego/gosec/v2/cmd/gosec --version || true
+	@echo "Done!"
+
+# ── Version ───────────────────────────────────────────────────────────────────
+
+version:
+	@cat VERSION
+
+version-patch:
+	@V=$$(cat VERSION); \
+	MAJOR=$$(echo $$V | cut -d. -f1); \
+	MINOR=$$(echo $$V | cut -d. -f2); \
+	PATCH=$$(echo $$V | cut -d. -f3); \
+	NEW="$$MAJOR.$$MINOR.$$((PATCH + 1))"; \
+	echo $$NEW > VERSION; \
+	git add VERSION && git commit -m "chore: bump version to $$NEW" && git tag "v$$NEW"; \
+	echo "Bumped $$V -> $$NEW (tagged v$$NEW — push when ready)"
+
+version-minor:
+	@V=$$(cat VERSION); \
+	MAJOR=$$(echo $$V | cut -d. -f1); \
+	MINOR=$$(echo $$V | cut -d. -f2); \
+	NEW="$$MAJOR.$$((MINOR + 1)).0"; \
+	echo $$NEW > VERSION; \
+	git add VERSION && git commit -m "chore: bump version to $$NEW" && git tag "v$$NEW"; \
+	echo "Bumped $$V -> $$NEW (tagged v$$NEW — push when ready)"
+
+version-major:
+	@V=$$(cat VERSION); \
+	MAJOR=$$(echo $$V | cut -d. -f1); \
+	NEW="$$((MAJOR + 1)).0.0"; \
+	echo $$NEW > VERSION; \
+	git add VERSION && git commit -m "chore: bump version to $$NEW" && git tag "v$$NEW"; \
+	echo "Bumped $$V -> $$NEW (tagged v$$NEW — push when ready)"

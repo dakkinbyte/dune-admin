@@ -105,7 +105,7 @@ func resolveKeyPath() string {
 		"./sshKey",
 	}
 	for _, p := range candidates {
-		if _, err := os.Stat(p); err == nil {
+		if _, err := os.Stat(p); err == nil { // #nosec G703 -- paths are hardcoded candidates, not user input
 			return p
 		}
 	}
