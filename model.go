@@ -207,6 +207,11 @@ type msgPartitions struct {
 	err  error
 }
 
+type msgKeystones struct {
+	ids []int16
+	err error
+}
+
 // ── item template merge (called after connect) ────────────────────────────────
 
 func mergeItemTemplates(dbTemplates []string) {

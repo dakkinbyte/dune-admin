@@ -3,7 +3,7 @@ import { Button, Modal, Spinner, toast, Select, ListBox } from '@heroui/react'
 import { api } from '../api/client'
 import type {
   Player, InventoryItem, JourneyNode,
-  CurrencyRow, FactionRep, SpecTrack, OnlineRow,
+  CurrencyRow, FactionRep, SpecTrack, KeystoneRow, OnlineRow,
   VehicleRow, TeleportLocation, GameEvent, DungeonRecord
 } from '../api/client'
 
@@ -711,6 +711,7 @@ function PlayerActionsModal({ player, open, onClose }: { player: Player; open: b
 
   // Specs
   const [playerSpecs, setPlayerSpecs] = useState<SpecTrack[]>([])
+  const [playerKeystones, setPlayerKeystones] = useState<KeystoneRow[]>([])
   const [specsLoaded, setSpecsLoaded] = useState(false)
   const [specsLoading, setSpecsLoading] = useState(false)
 
@@ -736,6 +737,7 @@ function PlayerActionsModal({ player, open, onClose }: { player: Player; open: b
       setNodesLoaded(false)
       setNodes([])
       setPlayerSpecs([])
+      setPlayerKeystones([])
       setSpecsLoaded(false)
       setHistoryLoaded(false)
       setEvents([])
@@ -761,11 +763,14 @@ function PlayerActionsModal({ player, open, onClose }: { player: Player; open: b
   useEffect(() => {
     if (section === 'specs' && !specsLoaded && open) {
       setSpecsLoading(true)
-      api.players.specs_for(player.controller_id)
-        .then(s => {
-          setPlayerSpecs(s)
-          setSpecsLoaded(true)
-        })
+      Promise.all([
+        api.players.specs_for(player.controller_id),
+        api.players.keystones(player.controller_id),
+      ]).then(([s, k]) => {
+        setPlayerSpecs(s)
+        setPlayerKeystones(k)
+        setSpecsLoaded(true)
+      })
         .catch((e: unknown) => toast.danger(e instanceof Error ? e.message : String(e)))
         .finally(() => setSpecsLoading(false))
     }
@@ -951,11 +956,24 @@ function PlayerActionsModal({ player, open, onClose }: { player: Player; open: b
                               const found = playerSpecs.find(s => s.track_type === track)
                               const currentXP = found ? found.xp : 0
                               const currentLevel = found ? found.level : 0
+                              const trackKeystones = playerKeystones.filter(k => k.track === track)
                               return (
                                 <tr key={track} style={{ borderBottom: '1px solid #1a1610', background: i % 2 === 0 ? '#0d0b07' : '#0f0d09' }}>
-                                  <td className="px-3 py-2 font-semibold" style={{ color: 'var(--color-text)' }}>{track}</td>
-                                  <td className="px-3 py-2 font-mono" style={{ color: 'var(--color-text-dim)' }}>{currentXP.toLocaleString()}</td>
-                                  <td className="px-3 py-2 font-mono" style={{ color: 'var(--color-text-dim)' }}>{currentLevel}</td>
+                                  <td className="px-3 py-2 font-semibold" style={{ color: 'var(--color-text)', verticalAlign: 'top' }}>
+                                    <div>{track}</div>
+                                    {trackKeystones.length > 0 && (
+                                      <div className="flex flex-col gap-0.5 mt-1">
+                                        {trackKeystones.map(k => (
+                                          <div key={k.id} className="text-xs font-mono" style={{ color: 'var(--color-text-dim)' }}>
+                                            ↳ {k.name.replace(/^DA_\w+Keystone_/, '').replace(/_/g, ' ')}
+                                            {k.cost > 0 && <span style={{ color: '#5a4a2a', marginLeft: 4 }}>{k.cost}m</span>}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="px-3 py-2 font-mono" style={{ color: 'var(--color-text-dim)', verticalAlign: 'top' }}>{currentXP.toLocaleString()}</td>
+                                  <td className="px-3 py-2 font-mono" style={{ color: 'var(--color-text-dim)', verticalAlign: 'top' }}>{currentLevel}</td>
                                   <td className="px-3 py-2">
                                     <Button size="sm" variant="ghost" isDisabled={busy}
                                       onPress={() => run(

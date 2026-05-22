@@ -568,6 +568,47 @@ func handleGetCharXP(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]any{"xp": msg.xp, "level": msg.level})
 }
 
+func handleGetPlayerKeystones(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		jsonErr(w, fmt.Errorf("invalid id"), 400)
+		return
+	}
+	msg, ok := cmdFetchPlayerKeystones(id)().(msgKeystones)
+	if !ok {
+		jsonErr(w, fmt.Errorf("internal error"), 500)
+		return
+	}
+	if msg.err != nil {
+		jsonErr(w, msg.err, 500)
+		return
+	}
+	type keystoneRow struct {
+		ID    int16  `json:"id"`
+		Track string `json:"track"`
+		Name  string `json:"name"`
+		Level int    `json:"level"`
+		Cost  int    `json:"cost"`
+	}
+	var result []keystoneRow
+	for _, id := range msg.ids {
+		if info, ok := keystoneMap[id]; ok {
+			result = append(result, keystoneRow{
+				ID:    id,
+				Track: info.Track,
+				Name:  info.Name,
+				Level: info.Level,
+				Cost:  info.Cost,
+			})
+		}
+	}
+	if result == nil {
+		result = []keystoneRow{}
+	}
+	jsonOK(w, result)
+}
+
 func handleGetPlayerSpecs(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)

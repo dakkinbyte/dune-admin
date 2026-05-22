@@ -1921,6 +1921,30 @@ func cmdFetchPlayerSpecs(playerID int64) Cmd {
 	}
 }
 
+func cmdFetchPlayerKeystones(playerID int64) Cmd {
+	return func() Msg {
+		if globalDB == nil {
+			return msgKeystones{err: fmt.Errorf("not connected")}
+		}
+		rows, err := globalDB.Query(context.Background(), `
+			SELECT keystone_id FROM dune.purchased_specialization_keystones
+			WHERE player_id = $1::bigint ORDER BY keystone_id`, playerID)
+		if err != nil {
+			return msgKeystones{err: err}
+		}
+		defer rows.Close()
+		var ids []int16
+		for rows.Next() {
+			var id int16
+			if err := rows.Scan(&id); err != nil {
+				continue
+			}
+			ids = append(ids, id)
+		}
+		return msgKeystones{ids: ids}
+	}
+}
+
 func cmdGetPlayerVehicles(accountID int64) Cmd {
 	return func() Msg {
 		if globalDB == nil {

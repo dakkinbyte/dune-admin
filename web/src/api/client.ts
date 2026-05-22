@@ -48,6 +48,7 @@ export type InventoryItem = { id: number; template_id: string; name: string; sta
 export type CurrencyRow = { player_id: number; currency_id: number; balance: number }
 export type FactionRep = { actor_id: number; faction_id: number; faction_name: string; reputation: number; scrips: number }
 export type SpecTrack = { player_id: number; track_type: string; xp: number; level: number }
+export type KeystoneRow = { id: number; track: string; name: string; level: number; cost: number }
 export type JourneyNode = { node_id: string; is_complete: boolean; is_revealed: boolean; has_pending_reward: boolean }
 export type BlueprintRow = { id: number; owner_name: string; item_id: number; pieces: number; placeables: number; name?: string }
 export type BaseRow = { id: number; name: string; pieces: number; placeables: number }
@@ -114,6 +115,7 @@ export const api = {
       req<MutateResult>('POST', '/players/wipe-codex', { account_id }),
     charXPCurrent: (id: number) => req<{xp: number; level: number}>('GET', `/players/${id}/char-xp`),
     specs_for: (id: number) => req<SpecTrack[]>('GET', `/players/${id}/specs`),
+    keystones: (id: number) => req<KeystoneRow[]>('GET', `/players/${id}/keystones`),
     grantMaxSpec: (player_id: number, track_type: string) =>
       req<MutateResult>('POST', '/players/grant-max-spec', { player_id, track_type }),
     vehicles: (account_id: number) => req<VehicleRow[]>('GET', `/players/${account_id}/vehicles`),
