@@ -8,6 +8,7 @@ import PlayersTab from './tabs/PlayersTab'
 import DatabaseTab from './tabs/DatabaseTab'
 import LogsTab from './tabs/LogsTab'
 import BlueprintsTab from './tabs/BlueprintsTab'
+import BasesTab from './tabs/BasesTab'
 import StorageTab from './tabs/StorageTab'
 
 const hasClerk = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
@@ -220,6 +221,7 @@ function AppCore({ isSignedIn }: { isSignedIn: boolean }) {
               <Tabs.Tab id="database">Database<Tabs.Indicator /></Tabs.Tab>
               <Tabs.Tab id="logs">Logs<Tabs.Indicator /></Tabs.Tab>
               {isSignedIn && <Tabs.Tab id="blueprints">Blueprints<Tabs.Indicator /></Tabs.Tab>}
+              {isSignedIn && <Tabs.Tab id="bases">Bases<Tabs.Indicator /></Tabs.Tab>}
               <Tabs.Tab id="storage">Storage<Tabs.Indicator /></Tabs.Tab>
             </Tabs.List>
           </Tabs.ListContainer>
@@ -238,6 +240,11 @@ function AppCore({ isSignedIn }: { isSignedIn: boolean }) {
           {isSignedIn && (
             <Tabs.Panel id="blueprints" className="flex-1 overflow-hidden flex flex-col p-4">
               <BlueprintsTab />
+            </Tabs.Panel>
+          )}
+          {isSignedIn && (
+            <Tabs.Panel id="bases" className="flex-1 overflow-hidden flex flex-col p-4">
+              <BasesTab />
             </Tabs.Panel>
           )}
           <Tabs.Panel id="storage" className="flex-1 overflow-hidden flex flex-col p-4">

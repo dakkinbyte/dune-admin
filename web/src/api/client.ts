@@ -16,6 +16,15 @@ export function getWsBase(): string {
 
 const BASE = getApiBase()
 
+export class ApiError extends Error {
+  status: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = await window.Clerk?.session?.getToken()
   const headers: Record<string, string> = {}
@@ -28,7 +37,7 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }))
-    throw new Error(err.error ?? res.statusText)
+    throw new ApiError(res.status, err.error ?? res.statusText)
   }
   return res.json()
 }
@@ -40,7 +49,8 @@ export type CurrencyRow = { player_id: number; currency_id: number; balance: num
 export type FactionRep = { actor_id: number; faction_id: number; faction_name: string; reputation: number; scrips: number }
 export type SpecTrack = { player_id: number; track_type: string; xp: number; level: number }
 export type JourneyNode = { node_id: string; is_complete: boolean; is_revealed: boolean; has_pending_reward: boolean }
-export type BlueprintRow = { id: number; owner_name: string; item_id: number; pieces: number; placeables: number }
+export type BlueprintRow = { id: number; owner_name: string; item_id: number; pieces: number; placeables: number; name?: string }
+export type BaseRow = { id: number; name: string; pieces: number; placeables: number }
 export type LogPod = { namespace: string; name: string }
 export type MutateResult = { ok: string }
 export type BGOutput = { output: string }
@@ -148,5 +158,10 @@ export const api = {
       return fetch(`${BASE}/blueprints/import`, { method: 'POST', headers, body: fd })
         .then(r => r.json())
     },
+  },
+
+  bases: {
+    list: () => req<BaseRow[]>('GET', '/bases'),
+    exportUrl: (id: number) => `${BASE}/bases/${id}/export`,
   },
 }

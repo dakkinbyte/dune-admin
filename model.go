@@ -81,6 +81,14 @@ type blueprintRow struct {
 	ItemID     int64  `json:"item_id"`
 	Pieces     int64  `json:"pieces"`
 	Placeables int64  `json:"placeables"`
+	Name       string `json:"name"`
+}
+
+type baseRow struct {
+	ID         int64  `json:"id"`
+	Name       string `json:"name"`
+	Pieces     int64  `json:"pieces"`
+	Placeables int64  `json:"placeables"`
 }
 
 // ── message types (used by db.go cmd* functions) ──────────────────────────────
@@ -121,6 +129,10 @@ type msgJourney struct {
 }
 type msgBlueprintList struct {
 	rows []blueprintRow
+	err  error
+}
+type msgBaseList struct {
+	rows []baseRow
 	err  error
 }
 type msgBlueprintExport struct {

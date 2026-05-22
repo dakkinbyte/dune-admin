@@ -93,6 +93,10 @@ func startServer(addr string) {
 	mux.HandleFunc("GET /api/v1/blueprints/{id}/export", handleExportBlueprint)
 	mux.HandleFunc("POST /api/v1/blueprints/import", handleImportBlueprint)
 
+	// ── bases ─────────────────────────────────────────────────────────────────
+	mux.HandleFunc("GET /api/v1/bases", handleListBases)
+	mux.HandleFunc("GET /api/v1/bases/{id}/export", handleExportBase)
+
 	log.Printf("dune-admin listening on %s", addr)
 	log.Fatal(http.ListenAndServe(addr, corsMiddleware(mux)))
 }

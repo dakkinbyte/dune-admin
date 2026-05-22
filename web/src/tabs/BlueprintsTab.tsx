@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button, Modal, Spinner, toast, Label } from '@heroui/react'
 import { api } from '../api/client'
-import type { BlueprintRow } from '../api/client'
+import type { BlueprintRow, Player } from '../api/client'
 
 export default function BlueprintsTab() {
   const [blueprints, setBlueprints] = useState<BlueprintRow[]>([])
@@ -56,7 +56,7 @@ export default function BlueprintsTab() {
           <table className="w-full text-sm">
               <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: '#1a1610' }}>
                 <tr style={{ borderBottom: '1px solid #2a2418' }}>
-                  {['ID', 'Owner', 'Item ID', 'Pieces', 'Placeables', 'Actions'].map(h => (
+                  {['ID', 'Owner', 'Name', 'Item ID', 'Pieces', 'Placeables', 'Actions'].map(h => (
                     <th key={h} className="text-left px-4 py-2 font-semibold text-xs uppercase tracking-wide" style={{ color: 'var(--color-primary)' }}>
                       {h}
                     </th>
@@ -68,13 +68,14 @@ export default function BlueprintsTab() {
                   <tr key={bp.id} style={{ borderBottom: '1px solid #1a1610', background: i % 2 === 0 ? '#0d0b07' : '#111009' }}>
                     <td className="px-4 py-2 font-mono text-xs" style={{ color: 'var(--color-text)' }}>{bp.id}</td>
                     <td className="px-4 py-2 text-xs" style={{ color: 'var(--color-text)' }}>{bp.owner_name}</td>
+                    <td className="px-4 py-2 text-xs" style={{ color: 'var(--color-text)' }}>{bp.name || '—'}</td>
                     <td className="px-4 py-2 font-mono text-xs" style={{ color: 'var(--color-text-dim)' }}>{bp.item_id}</td>
                     <td className="px-4 py-2 text-xs" style={{ color: 'var(--color-text-dim)' }}>{bp.pieces}</td>
                     <td className="px-4 py-2 text-xs" style={{ color: 'var(--color-text-dim)' }}>{bp.placeables}</td>
                     <td className="px-4 py-2">
                       <a
                         href={api.blueprints.exportUrl(bp.id)}
-                        download={`blueprint-${bp.id}-${bp.owner_name}.json`}
+                        download={bp.name ? `${bp.name}.json` : `blueprint-${bp.id}-${bp.owner_name}.json`}
                       >
                         <Button size="sm" variant="outline">
                           Export
@@ -85,7 +86,7 @@ export default function BlueprintsTab() {
                 ))}
                 {blueprints.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--color-text-dim)' }}>
+                    <td colSpan={7} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--color-text-dim)' }}>
                       No blueprints found.
                     </td>
                   </tr>
@@ -117,16 +118,31 @@ function ImportModal({
   players: { id: number; name: string }[]
 }) {
   const [file, setFile] = useState<File | null>(null)
-  const [playerId, setPlayerId] = useState('')
+  const [search, setSearch] = useState('')
+  const [players, setPlayers] = useState<Player[]>([])
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
+  const [showDropdown, setShowDropdown] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    setFile(null)
+    setSearch('')
+    setSelectedPlayer(null)
+    api.players.list().then(setPlayers).catch(() => {})
+  }, [open])
+
+  const filtered = search.trim()
+    ? players.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+    : players
 
   const handleSubmit = async () => {
     if (!file) { toast.warning('Select a blueprint file'); return }
-    const pid = Number(playerId)
-    if (!pid) { toast.warning('Enter a valid player ID'); return }
+    if (!selectedPlayer) { toast.warning('Select a player'); return }
     setSubmitting(true)
     try {
-      const res = await api.blueprints.import(file, pid)
+      const res = await api.blueprints.import(file, selectedPlayer.id)
       if (res.ok) {
         toast.success('Blueprint imported successfully')
         onSuccess()
@@ -164,24 +180,51 @@ function ImportModal({
                     onChange={e => setFile(e.target.files?.[0] ?? null)}
                   />
                 </div>
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1" style={{ position: 'relative' }}>
                   <Label className="text-sm" style={{ color: 'var(--color-text-dim)' }}>
-                    Player ID
+                    Player
                   </Label>
                   <input
+                    ref={searchRef}
                     className="rounded px-3 py-1.5 text-sm border"
                     style={{ background: 'var(--color-surface)', color: 'var(--color-text)', borderColor: '#2a2418', outline: 'none' }}
-                    type="number"
-                    value={playerId}
-                    onChange={e => setPlayerId(e.target.value)}
-                    placeholder="e.g. 12345"
+                    placeholder="Search by name…"
+                    value={selectedPlayer ? selectedPlayer.name : search}
+                    onChange={e => { setSearch(e.target.value); setSelectedPlayer(null); setShowDropdown(true) }}
+                    onFocus={() => setShowDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
                   />
+                  {showDropdown && filtered.length > 0 && (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+                      background: '#0d0b07', border: '1px solid #2a2418', borderRadius: 6,
+                      maxHeight: 200, overflowY: 'auto', marginTop: 2,
+                    }}>
+                      {filtered.slice(0, 20).map(p => (
+                        <div
+                          key={p.id}
+                          onMouseDown={() => { setSelectedPlayer(p); setSearch(''); setShowDropdown(false) }}
+                          style={{ padding: '6px 12px', cursor: 'pointer', borderBottom: '1px solid #1a1610' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = '#1a1610')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          <span className="text-sm" style={{ color: 'var(--color-text)' }}>{p.name}</span>
+                          <span className="text-xs ml-2" style={{ color: 'var(--color-text-dim)' }}>#{p.id}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {selectedPlayer && (
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-dim)' }}>
+                      Actor ID: {selectedPlayer.id}
+                    </p>
+                  )}
                 </div>
               </div>
             </Modal.Body>
             <Modal.Footer>
               <Button variant="tertiary" onPress={onClose}>Cancel</Button>
-              <Button onPress={handleSubmit} isDisabled={submitting || !file}>
+              <Button onPress={handleSubmit} isDisabled={submitting || !file || !selectedPlayer}>
                 {submitting ? <Spinner size="sm" color="current" /> : null}
                 Import
               </Button>

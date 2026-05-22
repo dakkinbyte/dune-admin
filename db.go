@@ -1552,7 +1552,8 @@ func cmdListBlueprints() Msg {
 		       COALESCE(ps.character_name, '') AS owner,
 		       COALESCE(bb.item_id, 0),
 		       COALESCE(inst.cnt, 0) AS pieces,
-		       COALESCE(plac.cnt, 0) AS placeables
+		       COALESCE(plac.cnt, 0) AS placeables,
+		       COALESCE(i.stats->'FBuildingBlueprintItemStats'->1->>'BuildingBlueprintName', '') AS name
 		FROM dune.building_blueprints bb
 		LEFT JOIN dune.items i ON i.id = bb.item_id
 		LEFT JOIN dune.inventories inv ON inv.id = i.inventory_id
@@ -1576,7 +1577,7 @@ func cmdListBlueprints() Msg {
 	var out []blueprintRow
 	for rows.Next() {
 		var r blueprintRow
-		if err := rows.Scan(&r.ID, &r.OwnerName, &r.ItemID, &r.Pieces, &r.Placeables); err != nil {
+		if err := rows.Scan(&r.ID, &r.OwnerName, &r.ItemID, &r.Pieces, &r.Placeables, &r.Name); err != nil {
 			continue
 		}
 		out = append(out, r)
@@ -2276,4 +2277,47 @@ func cmdGiveItemToContainer(actorID int64, templateID string, qty, quality int64
 		}
 		return msgMutate{ok: fmt.Sprintf("Added %dx %s (quality %d) to container %d", qty, templateID, quality, actorID)}
 	}
+}
+
+func cmdListBases() Msg {
+	if globalDB == nil {
+		return msgBaseList{err: fmt.Errorf("not connected")}
+	}
+	rows, err := globalDB.Query(context.Background(), `
+		SELECT b.id,
+		       COALESCE(pa.actor_name, '') AS name,
+		       COALESCE(inst.cnt, 0) AS pieces,
+		       COALESCE(plac.cnt, 0) AS placeables
+		FROM dune.buildings b
+		LEFT JOIN (
+		    SELECT building_id, MIN(owner_entity_id) AS owner_entity_id, COUNT(*) AS cnt
+		    FROM dune.building_instances
+		    GROUP BY building_id
+		) inst ON inst.building_id = b.id
+		LEFT JOIN dune.actor_fgl_entities afe ON afe.entity_id = inst.owner_entity_id
+		LEFT JOIN dune.actors t ON t.id = afe.actor_id AND t.class ILIKE '%Totem%'
+		LEFT JOIN dune.permission_actor pa ON pa.actor_id = t.id
+		LEFT JOIN (
+		    SELECT bi.building_id, COUNT(*) AS cnt
+		    FROM dune.building_instances bi
+		    JOIN dune.placeables p ON p.owner_entity_id = bi.owner_entity_id
+		    GROUP BY bi.building_id
+		) plac ON plac.building_id = b.id
+		ORDER BY b.id`)
+	if err != nil {
+		return msgBaseList{err: err}
+	}
+	defer rows.Close()
+	var out []baseRow
+	for rows.Next() {
+		var r baseRow
+		if err := rows.Scan(&r.ID, &r.Name, &r.Pieces, &r.Placeables); err != nil {
+			continue
+		}
+		out = append(out, r)
+	}
+	if err := rows.Err(); err != nil {
+		return msgBaseList{err: err}
+	}
+	return msgBaseList{rows: out}
 }
