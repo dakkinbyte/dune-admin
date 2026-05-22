@@ -20,3 +20,6 @@ dune-admin-linux
 **/.DS_Store
 
 blueprint.json
+
+# Local Go build cache (used when system cache is unavailable)
+.go-cache/

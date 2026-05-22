@@ -3,8 +3,28 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 )
+
+var (
+	sqlLineComment      = regexp.MustCompile(`--[^\n]*`)
+	sqlBlockComment     = regexp.MustCompile(`(?s)/\*.*?\*/`)
+	sqlReadOnlyPrefixes = []string{"select", "explain", "show"}
+)
+
+func isReadOnlySQL(sql string) bool {
+	s := sqlBlockComment.ReplaceAllString(sql, " ")
+	s = sqlLineComment.ReplaceAllString(s, " ")
+	s = strings.ToLower(strings.TrimSpace(s))
+	for _, prefix := range sqlReadOnlyPrefixes {
+		if strings.HasPrefix(s, prefix) {
+			return true
+		}
+	}
+	return false
+}
 
 func handleDBTables(w http.ResponseWriter, r *http.Request) {
 	msg, ok := cmdFetchTables().(msgTables)
@@ -103,6 +123,7 @@ func handleDBSearch(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleDBSQL(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	var req struct {
 		SQL string `json:"sql"`
 	}
@@ -112,6 +133,10 @@ func handleDBSQL(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.SQL == "" {
 		jsonErr(w, fmt.Errorf("sql required"), 400)
+		return
+	}
+	if !isReadOnlySQL(req.SQL) {
+		jsonErr(w, fmt.Errorf("only SELECT, EXPLAIN, and SHOW statements are allowed"), 400)
 		return
 	}
 	msg, ok := cmdRunSQL(req.SQL)().(msgSQL)
