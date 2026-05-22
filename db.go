@@ -1536,6 +1536,7 @@ type blueprintPentashield struct {
 }
 
 type blueprintFile struct {
+	Name         string                 `json:"name,omitempty"`
 	Instances    []blueprintInstance    `json:"instances"`
 	Placeables   []blueprintPlaceable   `json:"placeables"`
 	Pentashields []blueprintPentashield `json:"pentashields,omitempty"`

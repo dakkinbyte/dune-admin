@@ -91,6 +91,14 @@ func fetchBlueprintData(ctx context.Context, blueprintID int64) (blueprintFile, 
 		return blueprintFile{}, fmt.Errorf("not connected")
 	}
 
+	// Fetch the blueprint name from the item stats.
+	var name string
+	_ = globalDB.QueryRow(ctx, `
+		SELECT COALESCE(i.stats->'FBuildingBlueprintItemStats'->1->>'BuildingBlueprintName', '')
+		FROM dune.building_blueprints bb
+		JOIN dune.items i ON i.id = bb.item_id
+		WHERE bb.id = $1`, blueprintID).Scan(&name)
+
 	// Fetch instances.
 	iRows, err := globalDB.Query(ctx, `
 		SELECT building_type, transform
@@ -190,6 +198,7 @@ func fetchBlueprintData(ctx context.Context, blueprintID int64) (blueprintFile, 
 	}
 
 	return blueprintFile{
+		Name:         name,
 		Instances:    instances,
 		Placeables:   placeables,
 		Pentashields: pentashields,
@@ -229,8 +238,8 @@ func importBlueprintData(ctx context.Context, playerPawnID int64, bf blueprintFi
 		SELECT COALESCE(MAX(position_index), -1) + 1
 		FROM dune.items WHERE inventory_id = $1`, invID).Scan(&nextPos)
 
-	// Placeholder stats — will be updated with blueprint ID after insert.
-	placeholderStats := `{"FCustomizationStats":[[], {}],"FBuildingBlueprintItemStats":[[], {"PlayerBlueprintId":"!!bbp#0","PlayerBaseBackupId":{}}],"FItemStackAndDurabilityStats":[[], {"DecayedMaxDurability":0.0}]}`
+	// Placeholder stats — will be updated with real blueprint ID after insert.
+	placeholderStats := `{"FCustomizationStats":[[], {}],"FBuildingBlueprintItemStats":[[], {"PlayerBlueprintId":"!!bbp#0"}],"FItemStackAndDurabilityStats":[[], {"DecayedMaxDurability":0.0}]}`
 
 	var itemID int64
 	err = tx.QueryRow(ctx, `
@@ -253,10 +262,14 @@ func importBlueprintData(ctx context.Context, playerPawnID int64, bf blueprintFi
 		return msgMutate{err: fmt.Errorf("create blueprint: %w", err)}
 	}
 
-	// Update item stats with real blueprint ID.
+	// Update item stats with real blueprint ID and name (no PlayerBaseBackupId — crashes the game).
+	nameJSON := ""
+	if bf.Name != "" {
+		nameJSON = fmt.Sprintf(`,"BuildingBlueprintName":%q`, bf.Name)
+	}
 	fullStats := fmt.Sprintf(
-		`{"FCustomizationStats":[[], {}],"FBuildingBlueprintItemStats":[[], {"PlayerBlueprintId":"!!bbp#%d","PlayerBaseBackupId":{}}],"FItemStackAndDurabilityStats":[[], {"DecayedMaxDurability":0.0}]}`,
-		blueprintID)
+		`{"FCustomizationStats":[[], {}],"FBuildingBlueprintItemStats":[[], {"PlayerBlueprintId":"!!bbp#%d"%s}],"FItemStackAndDurabilityStats":[[], {"DecayedMaxDurability":0.0}]}`,
+		blueprintID, nameJSON)
 	if _, err = tx.Exec(ctx, `UPDATE dune.items SET stats = $1::jsonb WHERE id = $2`,
 		fullStats, itemID); err != nil {
 		return msgMutate{err: fmt.Errorf("update item stats: %w", err)}
