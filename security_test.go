@@ -64,3 +64,30 @@ func TestIsValidK8sName(t *testing.T) {
 		})
 	}
 }
+
+func TestOriginAllowed(t *testing.T) {
+	orig := allowedOrigins
+	allowedOrigins = []string{"https://dune-admin.layout.tools", "http://localhost:5173"}
+	t.Cleanup(func() { allowedOrigins = orig })
+
+	tests := []struct {
+		name   string
+		origin string
+		want   bool
+	}{
+		{"production origin", "https://dune-admin.layout.tools", true},
+		{"local vite dev", "http://localhost:5173", true},
+		{"malicious site", "https://evil.com", false},
+		{"empty origin", "", false},
+		{"subdomain variation", "https://evil.dune-admin.layout.tools", false},
+		{"http instead of https", "http://dune-admin.layout.tools", false},
+		{"extra path", "https://dune-admin.layout.tools/extra", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := originAllowed(tt.origin); got != tt.want {
+				t.Errorf("originAllowed(%q) = %v, want %v", tt.origin, got, tt.want)
+			}
+		})
+	}
+}

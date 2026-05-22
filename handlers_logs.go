@@ -10,7 +10,9 @@ import (
 )
 
 var wsUpgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+	CheckOrigin: func(r *http.Request) bool {
+		return originAllowed(r.Header.Get("Origin"))
+	},
 }
 
 // logPod is a discovered kubernetes pod available for log streaming.

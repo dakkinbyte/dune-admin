@@ -5,15 +5,41 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
+	"time"
 )
+
+var allowedOrigins []string
+
+func init() {
+	raw := envOr("ALLOWED_ORIGINS", "https://dune-admin.layout.tools,http://localhost:5173")
+	for _, o := range strings.Split(raw, ",") {
+		if o = strings.TrimSpace(o); o != "" {
+			allowedOrigins = append(allowedOrigins, o)
+		}
+	}
+}
+
+func originAllowed(origin string) bool {
+	for _, o := range allowedOrigins {
+		if o == origin {
+			return true
+		}
+	}
+	return false
+}
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		origin := r.Header.Get("Origin")
+		w.Header().Set("Vary", "Origin")
+		if originAllowed(origin) {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		}
 		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -99,8 +125,16 @@ func startServer(addr string) {
 	mux.HandleFunc("GET /api/v1/bases", handleListBases)
 	mux.HandleFunc("GET /api/v1/bases/{id}/export", handleExportBase)
 
+	srv := &http.Server{
+		Addr:              addr,
+		Handler:           corsMiddleware(mux),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
 	log.Printf("dune-admin listening on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, corsMiddleware(mux)))
+	log.Fatal(srv.ListenAndServe())
 }
 
 // ── JSON helpers ──────────────────────────────────────────────────────────────
