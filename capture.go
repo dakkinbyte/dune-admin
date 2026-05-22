@@ -151,7 +151,8 @@ func runCapture() {
 	ensureCaptureUser()
 
 	fmt.Println("=== Dune Admin — RabbitMQ Message Capture ===")
-	fmt.Println("Press Ctrl-C to stop.\n")
+	fmt.Println("Press Ctrl-C to stop.")
+	fmt.Println()
 
 	// Get valid JWT credentials via BGD pod.
 	hostID, token, err := captureJWT()
