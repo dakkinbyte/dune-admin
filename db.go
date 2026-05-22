@@ -1347,6 +1347,25 @@ func cmdProgressionUnlock(actorID int64, faction, preset string) Cmd {
 			}
 		}
 
+		// Insert faction tier tags up to the appropriate tier.
+		// ch3_start = tier 5 (completing rank 4 faction story)
+		// rank19_eligible = tier 19
+		factionName := factionDisplayName(factionID)
+		maxTier := 5
+		if setTier {
+			maxTier = 19
+		}
+		for t := 0; t <= maxTier; t++ {
+			_, err = tx.Exec(ctx,
+				`INSERT INTO dune.player_tags (account_id, tag)
+				 VALUES ($1, $2)
+				 ON CONFLICT DO NOTHING`,
+				accountID, fmt.Sprintf("Faction.%s.Tier%d", factionName, t))
+			if err != nil {
+				return msgMutate{err: fmt.Errorf("insert tier tag %d: %w", t, err)}
+			}
+		}
+
 		if setTier {
 			_, err = tx.Exec(ctx,
 				`SELECT dune.set_player_faction_reputation($1, $2, $3)`,
@@ -1360,9 +1379,9 @@ func cmdProgressionUnlock(actorID int64, faction, preset string) Cmd {
 			return msgMutate{err: err}
 		}
 
-		tierMsg := ""
+		tierMsg := fmt.Sprintf(" + %s tier tags 0–%d written", factionName, maxTier)
 		if setTier {
-			tierMsg = fmt.Sprintf(" + %s tier 19 set on controller %d", factionDisplayName(factionID), controllerID)
+			tierMsg += fmt.Sprintf(" + rep set to tier 19 on controller %d", controllerID)
 		}
 		return msgMutate{ok: fmt.Sprintf(
 			"Progression unlock (%s/%s) applied to actor %d: %d nodes%s — takes effect on next login",
