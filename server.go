@@ -72,6 +72,7 @@ func startServer(addr string) {
 	mux.HandleFunc("GET /api/v1/players/{id}/inventory", handleGetInventory)
 	mux.HandleFunc("GET /api/v1/players/{id}/journey", handleGetJourney)
 	mux.HandleFunc("POST /api/v1/players/give-item", handleGiveItem)
+	mux.HandleFunc("POST /api/v1/players/give-items", handleGiveItems)
 	mux.HandleFunc("POST /api/v1/players/give-currency", handleGiveCurrency)
 	mux.HandleFunc("POST /api/v1/players/grant-live", handleGrantLive)
 	mux.HandleFunc("POST /api/v1/players/give-faction-rep", handleGiveFactionRep)
@@ -126,6 +127,7 @@ func startServer(addr string) {
 	mux.HandleFunc("GET /api/v1/storage", handleListStorage)
 	mux.HandleFunc("GET /api/v1/storage/{id}/items", handleGetStorageItems)
 	mux.HandleFunc("POST /api/v1/storage/{id}/give-item", handleGiveItemToStorage)
+	mux.HandleFunc("POST /api/v1/storage/{id}/give-items", handleGiveItemsToStorage)
 
 	// ── blueprints ────────────────────────────────────────────────────────────
 	mux.HandleFunc("GET /api/v1/blueprints", handleListBlueprints)
