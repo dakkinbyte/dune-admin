@@ -67,6 +67,7 @@ export default function PlayersTab() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
   const [showInventory, setShowInventory] = useState(false)
   const [showGiveItem, setShowGiveItem] = useState(false)
+  const [showGiveItems, setShowGiveItems] = useState(false)
   const [showActions, setShowActions] = useState(false)
   const [sideLoading, setSideLoading] = useState(false)
 
@@ -242,6 +243,7 @@ export default function PlayersTab() {
                           <div className="flex gap-1 flex-wrap">
                             <Button size="sm" variant="ghost" onPress={() => { setSelectedPlayer(player); setShowInventory(true) }}>Inventory</Button>
                             <Button size="sm" variant="ghost" onPress={() => { setSelectedPlayer(player); setShowGiveItem(true) }}>Give Item</Button>
+                            <Button size="sm" variant="ghost" onPress={() => { setSelectedPlayer(player); setShowGiveItems(true) }}>Give Items</Button>
                             <Button size="sm" variant="ghost" onPress={() => { setSelectedPlayer(player); setShowActions(true) }}>Actions</Button>
                           </div>
                         </td>
@@ -419,6 +421,9 @@ export default function PlayersTab() {
       )}
       {selectedPlayer && (
         <GiveItemModal player={selectedPlayer} open={showGiveItem} onClose={() => setShowGiveItem(false)} />
+      )}
+      {selectedPlayer && (
+        <GiveItemsModal player={selectedPlayer} open={showGiveItems} onClose={() => setShowGiveItems(false)} />
       )}
       {selectedPlayer && (
         <PlayerActionsModal player={selectedPlayer} open={showActions} onClose={() => setShowActions(false)} />
@@ -690,6 +695,146 @@ function GiveItemModal({ player, open, onClose }: { player: Player; open: boolea
                         </div>
                       ))
                     )}
+                  </div>
+                </div>
+              )}
+            </Modal.Body>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+    </Modal>
+  )
+}
+
+// ── Give Items Modal (bulk) ────────────────────────────────────────────────────
+
+function GiveItemsModal({ player, open, onClose }: { player: Player; open: boolean; onClose: () => void }) {
+  const [templates, setTemplates] = useState<{id: string; name: string}[]>([])
+  const [loading, setLoading] = useState(false)
+  const [query, setQuery] = useState('')
+  const [selected, setSelected] = useState('')
+  const [qty, setQty] = useState(1)
+  const [quality, setQuality] = useState(0)
+  const [staged, setStaged] = useState<{ template: string; qty: number; quality: number }[]>([])
+  const [submitting, setSubmitting] = useState(false)
+  const [result, setResult] = useState<{ given: string[]; skipped: { template: string; reason: string }[] } | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    setLoading(true)
+    api.players.templates().then(setTemplates).catch(() => {}).finally(() => setLoading(false))
+    setQuery(''); setSelected(''); setQty(1); setQuality(0); setStaged([]); setResult(null)
+  }, [open])
+
+  const filtered = useMemo(() => {
+    if (!query) return []
+    const q = query.toLowerCase()
+    return templates.filter(t => t.id.toLowerCase().includes(q) || t.name.toLowerCase().includes(q)).slice(0, 100)
+  }, [templates, query])
+
+  const pick = (t: {id: string; name: string}) => {
+    setSelected(t.id)
+    setQuery(t.name ? `${t.id}  —  ${t.name}` : t.id)
+  }
+
+  const addToStaged = () => {
+    if (!selected) { toast.warning('Select a template'); return }
+    setStaged(prev => [...prev, { template: selected, qty, quality }])
+    setQuery(''); setSelected(''); setQty(1); setQuality(0)
+  }
+
+  const removeFromStaged = (idx: number) => {
+    setStaged(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  const updateStaged = (idx: number, field: 'qty' | 'quality', value: number) => {
+    setStaged(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item))
+  }
+
+  const handleSubmit = async () => {
+    if (staged.length === 0) return
+    setSubmitting(true)
+    try {
+      const res = await api.players.giveItems(player.id, staged)
+      setResult(res)
+      setStaged([])
+      if (res.skipped.length === 0) onClose()
+    } catch (e: unknown) {
+      toast.danger(e instanceof Error ? e.message : String(e))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Modal>
+      <Modal.Backdrop isOpen={open} onOpenChange={v => !v && onClose()}>
+        <Modal.Container size="full">
+          <Modal.Dialog style={{ maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+            <Modal.CloseTrigger />
+            <Modal.Header><Modal.Heading>Give Items — {player.name}</Modal.Heading></Modal.Header>
+            <Modal.Body style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '12px 16px' }}>
+              {loading ? (
+                <div className="flex justify-center py-6"><Spinner size="lg" /></div>
+              ) : (
+                <div className="flex flex-col gap-3 h-full overflow-hidden">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="relative flex-1">
+                      <input
+                        className="w-full rounded px-3 py-1.5 text-sm border"
+                        style={{ background: 'var(--color-surface)', color: 'var(--color-text)', borderColor: '#2a2418', outline: 'none' }}
+                        placeholder="Search templates..."
+                        value={query}
+                        onChange={e => { setQuery(e.target.value); setSelected('') }}
+                      />
+                      {filtered.length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 rounded border overflow-y-auto" style={{ background: 'var(--color-surface)', borderColor: '#2a2418', maxHeight: '200px' }}>
+                          {filtered.map(t => (
+                            <div key={t.id} className="px-3 py-1.5 text-xs cursor-pointer hover:bg-[#2a2418]" onClick={() => pick(t)}>
+                              <span className="font-mono">{t.id}</span>{t.name ? <span style={{ color: 'var(--color-text-dim)' }}>  —  {t.name}</span> : null}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <input type="number" min={1} value={qty} onChange={e => setQty(Number(e.target.value))}
+                      className="rounded px-2 py-1.5 text-sm border w-16 text-center"
+                      style={{ background: 'var(--color-surface)', color: 'var(--color-text)', borderColor: '#2a2418', outline: 'none' }} />
+                    <input type="number" min={0} value={quality} onChange={e => setQuality(Number(e.target.value))}
+                      className="rounded px-2 py-1.5 text-sm border w-16 text-center"
+                      style={{ background: 'var(--color-surface)', color: 'var(--color-text)', borderColor: '#2a2418', outline: 'none' }} />
+                    <Button size="sm" onPress={addToStaged} isDisabled={!selected}>+ Add</Button>
+                  </div>
+                  {staged.length > 0 && (
+                    <div className="flex flex-col gap-1 overflow-y-auto flex-1">
+                      {staged.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2 px-3 py-1.5 rounded text-xs" style={{ background: 'var(--color-surface)', border: '1px solid #2a2418' }}>
+                          <span className="flex-1 font-mono">{item.template}</span>
+                          <input type="number" min={1} value={item.qty} onChange={e => updateStaged(idx, 'qty', Number(e.target.value))}
+                            className="rounded px-2 py-1 border w-14 text-center"
+                            style={{ background: 'var(--color-bg)', color: 'var(--color-text)', borderColor: '#2a2418', outline: 'none' }} />
+                          <input type="number" min={0} value={item.quality} onChange={e => updateStaged(idx, 'quality', Number(e.target.value))}
+                            className="rounded px-2 py-1 border w-14 text-center"
+                            style={{ background: 'var(--color-bg)', color: 'var(--color-text)', borderColor: '#2a2418', outline: 'none' }} />
+                          <button onClick={() => removeFromStaged(idx)} className="text-red-400 hover:text-red-300 px-1">✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {result && (
+                    <div className="text-xs shrink-0 rounded px-3 py-2" style={{ background: 'var(--color-surface)', border: '1px solid #2a2418' }}>
+                      {result.given.length > 0 && <div style={{ color: 'var(--color-success)' }}>✓ Gave: {result.given.join(', ')}</div>}
+                      {result.skipped.map((s, i) => (
+                        <div key={i} style={{ color: 'var(--color-danger)' }}>✕ Skipped {s.template}: {s.reason}</div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3 shrink-0">
+                    <Button variant="tertiary" size="sm" onPress={onClose}>Cancel</Button>
+                    <Button size="sm" onPress={handleSubmit} isDisabled={submitting || staged.length === 0}>
+                      {submitting ? <Spinner size="sm" color="current" /> : null}
+                      Give {staged.length} Item{staged.length !== 1 ? 's' : ''}
+                    </Button>
                   </div>
                 </div>
               )}
