@@ -75,6 +75,27 @@ type itemDataFile struct {
 	Items           map[string]itemRule `json:"items"`
 }
 
+// tagsDataFile is the output of dune-item-data/build-tags-data.sh — maps from
+// journey story node IDs / contract names to the gameplay tags those in-game
+// completions would emit. The admin tool uses these to apply tags when an
+// admin clicks Mark Complete (since the DB-only completion bypasses the
+// in-game effects).
+type tagsDataFile struct {
+	JourneyNodeTags map[string][]string `json:"journey_node_tags"`
+	ContractTags    map[string][]string `json:"contract_tags"`
+	ContractAliases map[string]string   `json:"contract_aliases"`
+	// ContractSkillGrants[contract_id] = skill-block tags this contract's
+	// SkillsKeyRewards would unlock in-game (e.g. "Skills.Key.Trooper3").
+	// Without applying these the trainer contract's tags land but the skill
+	// tree branch stays locked.
+	ContractSkillGrants map[string][]string `json:"contract_skill_grants"`
+	// JobSkillBlocks["Trooper"] = every bExternal Skills.Key.* module in the
+	// Trooper skill tree (tier 1/2/3 + capstones). Used by Unlock Trainer to
+	// grant the *entire* job's block set, since only ~10 of 30 are
+	// contract-granted (the rest are normally unlocked by dialogue or auto).
+	JobSkillBlocks map[string][]string `json:"job_skill_blocks"`
+}
+
 type blueprintRow struct {
 	ID         int64  `json:"id"`
 	OwnerName  string `json:"owner_name"`

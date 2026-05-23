@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -952,6 +953,28 @@ func resolveScripCurrencyID(ctx context.Context) (int16, error) {
 	return 0, fmt.Errorf("multiple non-solaris currency IDs found (%s); pass -scripcurrency", formatCurrencyIDs(ids))
 }
 
+// factionPlayerComponentRepSQL updates ReputationAmount inside
+// actors.properties.FactionPlayerComponent.m_FactionDataArray for the matching
+// faction name. set_player_faction_reputation only updates the table; the
+// in-game faction UI reads rank from this jsonb component, so any rep write
+// that needs to be reflected in-game must also run this update.
+// $1 = controller actor id, $2 = faction name ("Atreides"/"Harkonnen"),
+// $3 = new ReputationAmount.
+const factionPlayerComponentRepSQL = `
+	UPDATE dune.actors a
+	SET properties = jsonb_set(
+		a.properties,
+		ARRAY['FactionPlayerComponent','m_FactionDataArray', (sub.idx - 1)::text, 'ReputationAmount'],
+		to_jsonb($3::int))
+	FROM (
+		SELECT ord AS idx
+		FROM dune.actors aa,
+		     jsonb_array_elements(aa.properties->'FactionPlayerComponent'->'m_FactionDataArray')
+		         WITH ORDINALITY AS arr(elem, ord)
+		WHERE aa.id = $1 AND elem->'Faction'->>'Name' = $2
+	) sub
+	WHERE a.id = $1`
+
 func applyFactionRepDelta(ctx context.Context, actorID int64, factionID int16, delta int32) msgMutate {
 	// Route through set_player_faction_reputation which handles tier tags correctly.
 	// First get current rep to compute the new absolute value.
@@ -973,6 +996,10 @@ func applyFactionRepDelta(ctx context.Context, actorID int64, factionID int16, d
 		actorID, factionID, newRep)
 	if err != nil {
 		return msgMutate{err: fmt.Errorf("set_player_faction_reputation: %w", err)}
+	}
+	if _, err = globalDB.Exec(ctx, factionPlayerComponentRepSQL,
+		actorID, factionDisplayName(factionID), newRep); err != nil {
+		return msgMutate{err: fmt.Errorf("update FactionPlayerComponent rep: %w", err)}
 	}
 
 	tier := repToTier(newRep)
@@ -1045,12 +1072,22 @@ func cmdSetFactionTier(actorID int64, factionID int16, tier int) Cmd {
 		if tier < 0 || tier > 20 {
 			return msgMutate{err: fmt.Errorf("tier must be 0–20")}
 		}
+		// Nudge +1 over the threshold — the game UI floors at the threshold
+		// (rep == threshold shows the tier below), except at tier 0 where 0 is
+		// the legitimate minimum.
 		rep := factionTierThresholds[tier]
+		if tier > 0 {
+			rep++
+		}
 		ctx := context.Background()
 		_, err := globalDB.Exec(ctx, `SELECT dune.set_player_faction_reputation($1, $2, $3)`,
 			actorID, factionID, rep)
 		if err != nil {
 			return msgMutate{err: fmt.Errorf("set_player_faction_reputation: %w", err)}
+		}
+		if _, err = globalDB.Exec(ctx, factionPlayerComponentRepSQL,
+			actorID, factionDisplayName(factionID), rep); err != nil {
+			return msgMutate{err: fmt.Errorf("update FactionPlayerComponent rep: %w", err)}
 		}
 		fName := factionDisplayName(factionID)
 		return msgMutate{ok: fmt.Sprintf(
@@ -1275,6 +1312,86 @@ func cmdFetchJourneyNodes(accountID int64) Cmd {
 	}
 }
 
+// tagsForJourneyNodeSubtree returns the union of m_TagsToAdd for the named
+// node and every descendant (matching the SQL completion behavior in
+// cmdCompleteJourneyNode which flips children too). Order preserved, deduped.
+func tagsForJourneyNodeSubtree(nodeID string) []string {
+	if tagsData.JourneyNodeTags == nil {
+		return nil
+	}
+	prefix := nodeID + "."
+	seen := map[string]bool{}
+	var out []string
+	add := func(tags []string) {
+		for _, t := range tags {
+			if !seen[t] {
+				seen[t] = true
+				out = append(out, t)
+			}
+		}
+	}
+	add(tagsData.JourneyNodeTags[nodeID])
+	for id, tags := range tagsData.JourneyNodeTags {
+		if strings.HasPrefix(id, prefix) {
+			add(tags)
+		}
+	}
+	return out
+}
+
+// tierBumpFromTags scans applied tags for Faction.<X>.Tier<N> (N ∈ [0,5]) and
+// returns the highest implied reputation per faction. Used to fire the rep
+// promotion side effect when admin completion applies a tier tag.
+func tierBumpFromTags(tags []string) map[string]int32 {
+	out := map[string]int32{}
+	// e.g. "Faction.Atreides.Tier3"
+	for _, t := range tags {
+		const prefix = "Faction."
+		if !strings.HasPrefix(t, prefix) {
+			continue
+		}
+		rest := t[len(prefix):]
+		dot := strings.IndexByte(rest, '.')
+		if dot <= 0 {
+			continue
+		}
+		faction := rest[:dot]
+		tail := rest[dot+1:]
+		if !strings.HasPrefix(tail, "Tier") {
+			continue
+		}
+		n, err := strconv.Atoi(tail[len("Tier"):])
+		if err != nil || n < 0 || n > 5 {
+			continue
+		}
+		// +1 over the tier threshold so the in-game UI doesn't floor a tier low
+		// (rep == threshold displays the tier below). Tier 0 stays at 0 — it's
+		// the legitimate starting state.
+		rep := factionTierThresholds[n]
+		if n > 0 {
+			rep++
+		}
+		if rep > out[faction] {
+			out[faction] = rep
+		}
+	}
+	return out
+}
+
+func factionIDByName(name string) int16 {
+	switch name {
+	case "Atreides":
+		return 1
+	case "Harkonnen":
+		return 2
+	case "None":
+		return 3
+	case "Smuggler":
+		return 4
+	}
+	return 0
+}
+
 func cmdCompleteJourneyNode(accountID int64, nodeID string) Cmd {
 	return func() Msg {
 		if globalDB == nil {
@@ -1311,8 +1428,417 @@ func cmdCompleteJourneyNode(accountID int64, nodeID string) Cmd {
 			}
 			updated = 1
 		}
-		return msgMutate{ok: fmt.Sprintf("Completed %s + %d node(s) — takes effect on next login", nodeID, updated)}
+
+		// Apply tags that in-game completion of the node + its descendants
+		// would emit (via m_TagsToAdd). Without this the DB row is flipped
+		// but the player is missing the side effects the game would have
+		// written — which is why journey-only completion historically did not
+		// "stick" without login/logout cycles.
+		appliedTags := tagsForJourneyNodeSubtree(nodeID)
+		extra, err := applyTagsWithTierBump(ctx, accountID, appliedTags)
+		if err != nil {
+			return msgMutate{err: err}
+		}
+
+		return msgMutate{ok: fmt.Sprintf("Completed %s + %d node(s)%s — takes effect on next login", nodeID, updated, extra)}
 	}
+}
+
+// applyTagsWithTierBump writes `tags` via dune.update_player_tags and, for any
+// Faction.<X>.Tier<N> (N ∈ 0–5) it sees, also raises that faction's rep + the
+// FactionPlayerComponent ReputationAmount on the controller actor so the
+// in-game rank UI reflects the promotion. Never lowers existing rep.
+// Returns a short " , +K tag(s), bumped rep for N faction(s)" fragment for
+// inclusion in the caller's success message (empty when no tags applied).
+func applyTagsWithTierBump(ctx context.Context, accountID int64, tags []string) (string, error) {
+	if len(tags) == 0 {
+		return "", nil
+	}
+	if _, err := globalDB.Exec(ctx,
+		`SELECT dune.update_player_tags($1, $2::text[], '{}'::text[])`,
+		accountID, tags); err != nil {
+		return "", fmt.Errorf("apply tags: %w", err)
+	}
+
+	extra := fmt.Sprintf(", +%d tag(s)", len(tags))
+
+	bumps := tierBumpFromTags(tags)
+	if len(bumps) == 0 {
+		return extra, nil
+	}
+
+	var controllerID int64
+	_ = globalDB.QueryRow(ctx, `
+		SELECT player_controller_id FROM dune.player_state
+		WHERE account_id = $1 LIMIT 1`, accountID).Scan(&controllerID)
+	if controllerID == 0 {
+		// Fresh character without a player_state row — can't bump rep yet.
+		// Tags landed, the rep side effect will have to wait until the
+		// character first logs in. Surface in the message.
+		return extra + ", rep bump skipped (no controller yet)", nil
+	}
+
+	bumped := 0
+	for faction, rep := range bumps {
+		fid := factionIDByName(faction)
+		if fid == 0 {
+			continue
+		}
+		var current int32
+		_ = globalDB.QueryRow(ctx, `
+			SELECT COALESCE(reputation_amount, 0)
+			FROM dune.player_faction_reputation
+			WHERE actor_id = $1 AND faction_id = $2`,
+			controllerID, fid).Scan(&current)
+		if current >= rep {
+			continue
+		}
+		if _, err := globalDB.Exec(ctx,
+			`SELECT dune.set_player_faction_reputation($1::bigint, $2::smallint, $3::integer)`,
+			controllerID, fid, rep); err != nil {
+			return "", fmt.Errorf("bump %s rep: %w", faction, err)
+		}
+		if _, err := globalDB.Exec(ctx, factionPlayerComponentRepSQL,
+			controllerID, faction, rep); err != nil {
+			return "", fmt.Errorf("bump %s FactionPlayerComponent: %w", faction, err)
+		}
+		bumped++
+	}
+	if bumped > 0 {
+		extra += fmt.Sprintf(", bumped rep for %d faction(s)", bumped)
+	}
+	return extra, nil
+}
+
+// resolveContractTags resolves a contract id (full DA_CT_ name or short alias)
+// to its AddedFlagsOnCompletion list. Returns the resolved canonical name and
+// the tags, or ("", nil, err) if unknown.
+func resolveContractTags(contractID string) (string, []string, error) {
+	name := contractID
+	if full, ok := tagsData.ContractAliases[contractID]; ok {
+		name = full
+	}
+	tags, ok := tagsData.ContractTags[name]
+	if !ok || len(tags) == 0 {
+		return "", nil, fmt.Errorf("unknown contract %q (check tags-data.json)", contractID)
+	}
+	return name, tags, nil
+}
+
+// cmdCompleteContract applies the AddedFlagsOnCompletion tags for one contract.
+func cmdCompleteContract(accountID int64, contractID string) Cmd {
+	return cmdCompleteContracts(accountID, []string{contractID})
+}
+
+// cmdCompleteContracts applies the union of AddedFlagsOnCompletion across
+// multiple contracts in one go — one update_player_tags call, one tier-bump
+// pass, plus any SkillsKeyRewards skill-block unlocks. Unknown contracts
+// cause the whole batch to fail before any write so the operation is
+// all-or-nothing.
+func cmdCompleteContracts(accountID int64, contractIDs []string) Cmd {
+	return func() Msg {
+		if globalDB == nil {
+			return msgMutate{err: fmt.Errorf("not connected")}
+		}
+		if accountID == 0 {
+			return msgMutate{err: fmt.Errorf("account ID required")}
+		}
+		if len(contractIDs) == 0 {
+			return msgMutate{err: fmt.Errorf("at least one contract required")}
+		}
+
+		seenTag := map[string]bool{}
+		var allTags []string
+		seenSkill := map[string]bool{}
+		var allSkillGrants []string
+		var resolved []string
+		for _, id := range contractIDs {
+			name, tags, err := resolveContractTags(id)
+			if err != nil {
+				return msgMutate{err: err}
+			}
+			resolved = append(resolved, name)
+			for _, t := range tags {
+				if !seenTag[t] {
+					seenTag[t] = true
+					allTags = append(allTags, t)
+				}
+			}
+			for _, sk := range tagsData.ContractSkillGrants[name] {
+				if !seenSkill[sk] {
+					seenSkill[sk] = true
+					allSkillGrants = append(allSkillGrants, sk)
+				}
+			}
+		}
+
+		ctx := context.Background()
+		extra, err := applyTagsWithTierBump(ctx, accountID, allTags)
+		if err != nil {
+			return msgMutate{err: err}
+		}
+
+		if len(allSkillGrants) > 0 {
+			grantedExtra, err := grantSkillBlocks(ctx, accountID, allSkillGrants)
+			if err != nil {
+				return msgMutate{err: err}
+			}
+			extra += grantedExtra
+		}
+
+		// Strip any in-progress ContractItem rows so the in-game quest
+		// tracker doesn't keep showing the conditions for a contract we just
+		// force-completed. ContractName.Name uses the short alias form
+		// (no DA_CT_ prefix).
+		shortNames := make([]string, 0, len(resolved))
+		for _, full := range resolved {
+			shortNames = append(shortNames, strings.TrimPrefix(full, "DA_CT_"))
+		}
+		dismissedExtra, err := dismissActiveContracts(ctx, accountID, shortNames)
+		if err != nil {
+			return msgMutate{err: err}
+		}
+		extra += dismissedExtra
+
+		summary := resolved[0]
+		if len(resolved) > 1 {
+			summary = fmt.Sprintf("%d contracts", len(resolved))
+		}
+		return msgMutate{ok: fmt.Sprintf("Applied %s%s — takes effect on next login", summary, extra)}
+	}
+}
+
+// cmdResetJobSkills removes every Skills.Key.* ModuleData entry for the named
+// job's skill tree, undoing a prior Unlock Trainer that was applied by
+// mistake. Only the Key blocks for the job are touched — Attribute/Perk/
+// Ability child nodes are left alone (those usually have SpSpent: 0 unless
+// the player actually purchased them).
+func cmdResetJobSkills(accountID int64, job string) Cmd {
+	return func() Msg {
+		if globalDB == nil {
+			return msgMutate{err: fmt.Errorf("not connected")}
+		}
+		if accountID == 0 {
+			return msgMutate{err: fmt.Errorf("account ID required")}
+		}
+		blocks := tagsData.JobSkillBlocks[job]
+		if len(blocks) == 0 {
+			return msgMutate{err: fmt.Errorf("unknown job %q", job)}
+		}
+		ctx := context.Background()
+
+		var pawnID int64
+		_ = globalDB.QueryRow(ctx, `
+			SELECT player_pawn_id FROM dune.player_state
+			WHERE account_id = $1 LIMIT 1`, accountID).Scan(&pawnID)
+		if pawnID == 0 {
+			return msgMutate{err: fmt.Errorf("no pawn for account %d", accountID)}
+		}
+
+		removed := 0
+		for _, sk := range blocks {
+			key := fmt.Sprintf(`(TagName="%s")`, sk)
+			tag, err := globalDB.Exec(ctx, `
+				UPDATE dune.fgl_entities fe
+				SET components = jsonb_set(
+					fe.components,
+					ARRAY['FLevelComponent','1','ModuleData'],
+					(fe.components->'FLevelComponent'->1->'ModuleData') - $2)
+				WHERE fe.entity_id = (
+					SELECT entity_id FROM dune.actor_fgl_entities
+					WHERE actor_id = $1 AND slot_name = 'DuneCharacter'
+				)
+				AND (fe.components->'FLevelComponent'->1->'ModuleData') ? $2`,
+				pawnID, key)
+			if err != nil {
+				return msgMutate{err: fmt.Errorf("remove %s: %w", sk, err)}
+			}
+			if tag.RowsAffected() > 0 {
+				removed++
+			}
+		}
+		return msgMutate{ok: fmt.Sprintf("Reset %s skill tree — removed %d block(s)", job, removed)}
+	}
+}
+
+// cmdSetStarterClass writes FLevelComponent.StarterSkillTreeTag to
+// Skills.Key.<Job>1 so the game treats that as the character's base class.
+// Without this set (or with it = "None") characters that have multiple jobs
+// unlocked end up showing several "starter" abilities in the UI.
+func cmdSetStarterClass(accountID int64, job string) Cmd {
+	return func() Msg {
+		if globalDB == nil {
+			return msgMutate{err: fmt.Errorf("not connected")}
+		}
+		if accountID == 0 {
+			return msgMutate{err: fmt.Errorf("account ID required")}
+		}
+		if _, ok := tagsData.JobSkillBlocks[job]; !ok {
+			return msgMutate{err: fmt.Errorf("unknown job %q", job)}
+		}
+		ctx := context.Background()
+
+		var pawnID int64
+		_ = globalDB.QueryRow(ctx, `
+			SELECT player_pawn_id FROM dune.player_state
+			WHERE account_id = $1 LIMIT 1`, accountID).Scan(&pawnID)
+		if pawnID == 0 {
+			return msgMutate{err: fmt.Errorf("no pawn for account %d", accountID)}
+		}
+
+		starterTag := fmt.Sprintf("Skills.Key.%s1", job)
+		_, err := globalDB.Exec(ctx, `
+			UPDATE dune.fgl_entities fe
+			SET components = jsonb_set(
+				fe.components,
+				ARRAY['FLevelComponent','1','StarterSkillTreeTag','TagName'],
+				to_jsonb($2::text))
+			WHERE fe.entity_id = (
+				SELECT entity_id FROM dune.actor_fgl_entities
+				WHERE actor_id = $1 AND slot_name = 'DuneCharacter'
+			)`, pawnID, starterTag)
+		if err != nil {
+			return msgMutate{err: fmt.Errorf("set starter tag: %w", err)}
+		}
+		return msgMutate{ok: fmt.Sprintf("Starter class set to %s (%s)", job, starterTag)}
+	}
+}
+
+// cmdGrantJobSkills unlocks every bExternal Skills.Key.* module in the named
+// job's skill tree (e.g. "Trooper" → Trooper1/2/3 + CapstoneGadgets +
+// CapstoneWeaponry + CapstoneSuspensorTech). Only ~⅓ of these blocks are
+// contract-granted via SkillsKeyRewards; the rest are normally unlocked by
+// trainer dialogue or auto on level progression, so the admin Unlock Trainer
+// action calls this after the contract batch to bypass those gates.
+func cmdGrantJobSkills(accountID int64, job string) Cmd {
+	return func() Msg {
+		if globalDB == nil {
+			return msgMutate{err: fmt.Errorf("not connected")}
+		}
+		if accountID == 0 {
+			return msgMutate{err: fmt.Errorf("account ID required")}
+		}
+		blocks := tagsData.JobSkillBlocks[job]
+		if len(blocks) == 0 {
+			return msgMutate{err: fmt.Errorf("unknown job %q (check tags-data.json job_skill_blocks)", job)}
+		}
+		ctx := context.Background()
+		extra, err := grantSkillBlocks(ctx, accountID, blocks)
+		if err != nil {
+			return msgMutate{err: err}
+		}
+		return msgMutate{ok: fmt.Sprintf("Unlocked %s skill tree%s — takes effect on next login", job, extra)}
+	}
+}
+
+// dismissActiveContracts deletes any ContractItem inventory entries whose
+// stats.FContractItemStats.ContractName.Name matches one of shortNames.
+// Active contract items drive the in-game quest tracker, so after force-
+// completing a contract via tags we need to remove the live instance
+// otherwise the player keeps seeing "Deploy Assault Seekers" / etc as
+// outstanding. No-op if the player never had the contract active.
+func dismissActiveContracts(ctx context.Context, accountID int64, shortNames []string) (string, error) {
+	if len(shortNames) == 0 {
+		return "", nil
+	}
+	var pawnID int64
+	_ = globalDB.QueryRow(ctx, `
+		SELECT player_pawn_id FROM dune.player_state
+		WHERE account_id = $1 LIMIT 1`, accountID).Scan(&pawnID)
+	if pawnID == 0 {
+		return "", nil
+	}
+	tag, err := globalDB.Exec(ctx, `
+		DELETE FROM dune.items
+		WHERE template_id = 'ContractItem'
+		  AND inventory_id IN (
+		      SELECT id FROM dune.inventories
+		      WHERE actor_id = $1 AND inventory_type = 29
+		  )
+		  AND stats->'FContractItemStats'->1->'ContractName'->>'Name' = ANY($2::text[])`,
+		pawnID, shortNames)
+	if err != nil {
+		return "", fmt.Errorf("dismiss active contracts: %w", err)
+	}
+	n := tag.RowsAffected()
+	if n == 0 {
+		return "", nil
+	}
+	return fmt.Sprintf(", dismissed %d active contract(s)", n), nil
+}
+
+// grantSkillBlocks ensures each Skills.Key.<X> entry exists in the player's
+// FLevelComponent.ModuleData with SkillPointsSpent: 1 (the format the game
+// itself writes when a trainer's SkillsKeyRewards fires). If an entry already
+// exists it's left alone — preserves any further SP the player may have
+// already spent on that branch's child nodes. Returns a short fragment to
+// append to the caller's success message.
+func grantSkillBlocks(ctx context.Context, accountID int64, skillKeys []string) (string, error) {
+	var pawnID int64
+	_ = globalDB.QueryRow(ctx, `
+		SELECT player_pawn_id FROM dune.player_state
+		WHERE account_id = $1 LIMIT 1`, accountID).Scan(&pawnID)
+	if pawnID == 0 {
+		return ", skill grants skipped (no pawn yet)", nil
+	}
+
+	granted := 0
+	for _, sk := range skillKeys {
+		key := fmt.Sprintf(`(TagName="%s")`, sk)
+		// Set ModuleData[key] = {"SkillPointsSpent": 1} when:
+		//   - key doesn't exist yet (game never created a placeholder), OR
+		//   - key exists with SpSpent <= 0 (game-created placeholder that
+		//     means "available but not yet purchased").
+		// SpSpent >= 1 is left alone so any further SP the player has
+		// already spent on child nodes survives.
+		tag, err := globalDB.Exec(ctx, `
+			UPDATE dune.fgl_entities fe
+			SET components = jsonb_set(
+				fe.components,
+				ARRAY['FLevelComponent','1','ModuleData',$2],
+				'{"SkillPointsSpent": 1}'::jsonb,
+				true)
+			WHERE fe.entity_id = (
+				SELECT entity_id FROM dune.actor_fgl_entities
+				WHERE actor_id = $1 AND slot_name = 'DuneCharacter'
+			)
+			AND COALESCE(
+				(fe.components->'FLevelComponent'->1->'ModuleData'->$2->>'SkillPointsSpent')::int,
+				0
+			) < 1`,
+			pawnID, key)
+		if err != nil {
+			return "", fmt.Errorf("grant %s: %w", sk, err)
+		}
+		if tag.RowsAffected() > 0 {
+			granted++
+		}
+	}
+	if granted == 0 {
+		return ", no skill blocks needed (all already unlocked)", nil
+	}
+	return fmt.Sprintf(", unlocked %d skill block(s)", granted), nil
+}
+
+// allJourneyTags returns the union of every tag any journey node would emit
+// on completion. Used by Wipe All to also strip tags that prior completions
+// may have applied. Rep is intentionally not touched — natural progression
+// is monotonic and we don't try to roll it back.
+func allJourneyTags() []string {
+	if tagsData.JourneyNodeTags == nil {
+		return nil
+	}
+	seen := map[string]bool{}
+	var out []string
+	for _, tags := range tagsData.JourneyNodeTags {
+		for _, t := range tags {
+			if !seen[t] {
+				seen[t] = true
+				out = append(out, t)
+			}
+		}
+	}
+	return out
 }
 
 func cmdResetJourneyNode(accountID int64, nodeID string) Cmd {
@@ -1320,7 +1846,8 @@ func cmdResetJourneyNode(accountID int64, nodeID string) Cmd {
 		if globalDB == nil {
 			return msgMutate{err: fmt.Errorf("not connected")}
 		}
-		_, err := globalDB.Exec(context.Background(), `
+		ctx := context.Background()
+		_, err := globalDB.Exec(ctx, `
 			UPDATE dune.journey_story_node
 			SET complete_condition_state = 'false'::jsonb,
 			    has_pending_reward       = false
@@ -1330,7 +1857,20 @@ func cmdResetJourneyNode(accountID int64, nodeID string) Cmd {
 		if err != nil {
 			return msgMutate{err: fmt.Errorf("reset node: %w", err)}
 		}
-		return msgMutate{ok: fmt.Sprintf("Reset %s", nodeID)}
+
+		// Also strip any tags this node + its descendants would have emitted
+		// on completion. The proc accepts (add, remove) text[] pairs.
+		removeTags := tagsForJourneyNodeSubtree(nodeID)
+		extra := ""
+		if len(removeTags) > 0 {
+			if _, err = globalDB.Exec(ctx,
+				`SELECT dune.update_player_tags($1, '{}'::text[], $2::text[])`,
+				accountID, removeTags); err != nil {
+				return msgMutate{err: fmt.Errorf("remove node tags: %w", err)}
+			}
+			extra = fmt.Sprintf(", removed %d tag(s)", len(removeTags))
+		}
+		return msgMutate{ok: fmt.Sprintf("Reset %s%s", nodeID, extra)}
 	}
 }
 
@@ -1339,12 +1879,26 @@ func cmdWipeJourneyNodes(accountID int64) Cmd {
 		if globalDB == nil {
 			return msgMutate{err: fmt.Errorf("not connected")}
 		}
-		_, err := globalDB.Exec(context.Background(),
+		ctx := context.Background()
+		_, err := globalDB.Exec(ctx,
 			`SELECT dune.delete_all_journey_story_nodes($1)`, accountID)
 		if err != nil {
 			return msgMutate{err: fmt.Errorf("wipe journey: %w", err)}
 		}
-		return msgMutate{ok: fmt.Sprintf("Wiped all journey nodes for account %d", accountID)}
+
+		// Strip every tag any journey node could have emitted, so the
+		// player's tag state matches the post-wipe journey state.
+		removeTags := allJourneyTags()
+		extra := ""
+		if len(removeTags) > 0 {
+			if _, err = globalDB.Exec(ctx,
+				`SELECT dune.update_player_tags($1, '{}'::text[], $2::text[])`,
+				accountID, removeTags); err != nil {
+				return msgMutate{err: fmt.Errorf("remove journey tags: %w", err)}
+			}
+			extra = fmt.Sprintf(", removed %d journey tag(s)", len(removeTags))
+		}
+		return msgMutate{ok: fmt.Sprintf("Wiped all journey nodes for account %d%s", accountID, extra)}
 	}
 }
 
@@ -1363,11 +1917,142 @@ var climbTheRanksNodes = []string{
 	"DA_FQ_ClimbTheRanks.Rank5To20.CraftAugmentation.CompleteOnboardingJourney2",
 }
 
-// factionJourneyNodes returns the journey node IDs to complete for a preset.
-// Both presets complete the same Rank5To20 onboarding nodes (faction-independent).
-// The presets differ only in which tags and rep tier are written.
-func factionJourneyNodes(_ string) []string {
-	return climbTheRanksNodes
+// climbTheRanksStoryNodes are the faction-neutral storyline beats observed
+// completed on both rank-up reference characters (rank 19 Atreides and rank 8
+// Harkonnen). These cover the chapter-2 → rank-5-onboarding journey beats.
+var climbTheRanksStoryNodes = []string{
+	"DA_FQ_ClimbTheRanks.HuntingSkorda",
+	"DA_FQ_ClimbTheRanks.HuntingSkorda.FindSkorda",
+	"DA_FQ_ClimbTheRanks.HuntingSkorda.FindSkorda.SkordaInArrakeen",
+	"DA_FQ_ClimbTheRanks.HuntingSkorda.FindSkorda.SkordaInMysaTarrill",
+	"DA_FQ_ClimbTheRanks.HuntingSkorda.FindSkorda.SkordaInOodham",
+	"DA_FQ_ClimbTheRanks.GatheringIntelligence",
+	"DA_FQ_ClimbTheRanks.GatheringIntelligence.TrackDownContainer",
+	"DA_FQ_ClimbTheRanks.GatheringIntelligence.TrackDownContainer.FindCanister",
+	"DA_FQ_ClimbTheRanks.GatheringIntelligence.TrackDownContainer.InvestigateSandflies",
+	"DA_FQ_ClimbTheRanks.GatheringIntelligence.TrackDownContainer.TrackDownPilot",
+	"DA_FQ_ClimbTheRanks.GatheringIntelligence.TrackDownContainer.TrackDownRedScorpion",
+	"DA_FQ_ClimbTheRanks.JoinAHouse",
+	"DA_FQ_ClimbTheRanks.JoinAHouse.ProveYourself",
+	"DA_FQ_ClimbTheRanks.JoinAHouse.ProveYourself.ChooseASide",
+	"DA_FQ_ClimbTheRanks.JoinAHouse.ProveYourself.Rank1Contracts",
+	"DA_FQ_ClimbTheRanks.JoinAHouse.StrikeADeal",
+	"DA_FQ_ClimbTheRanks.JoinAHouse.StrikeADeal.FindTheSpy",
+	"DA_FQ_ClimbTheRanks.JoinAHouse.StrikeADeal.GetSpyMission",
+	"DA_FQ_ClimbTheRanks.JoinAHouse.StrikeADeal.TalkToARecruiter",
+	"DA_FQ_ClimbTheRanks.ClimbTheRanksR2",
+	"DA_FQ_ClimbTheRanks.ClimbTheRanksR2.ContributeToWarEffort_Atreides",
+	"DA_FQ_ClimbTheRanks.ClimbTheRanksR2.ContributeToWarEffort_Atreides.CompleteContractsR2",
+}
+
+// climbTheRanksStoryNodesAtreides are the Atreides-side storyline beats
+// (Ch2→Ch3 transition + Test of Loyalty + Atreides investigations).
+var climbTheRanksStoryNodesAtreides = []string{
+	"DA_FQ_ClimbTheRanks.TransitionToCh3_Atre",
+	"DA_FQ_ClimbTheRanks.TransitionToCh3_Atre.TheCall",
+	"DA_FQ_ClimbTheRanks.TransitionToCh3_Atre.TheCall.AnswerTheCall",
+	"DA_FQ_ClimbTheRanks.ATestOfLoyalty",
+	"DA_FQ_ClimbTheRanks.ATestOfLoyalty.GetMaximToBackOff",
+	"DA_FQ_ClimbTheRanks.ATestOfLoyalty.GetMaximToBackOff.FindSemuta",
+	"DA_FQ_ClimbTheRanks.InvestigateKytheria_Atreides",
+	"DA_FQ_ClimbTheRanks.InvestigateKytheria_Atreides.InvestigateWreck_Atreides",
+	`DA_FQ_ClimbTheRanks.InvestigateKytheria_Atreides.InvestigateWreck_Atreides.Complete "Track Down Skorda" Contract`,
+	"DA_FQ_ClimbTheRanks.InvestigateKytheria_Atreides.InvestigateWreck_Atreides.MeetAndreaGanan",
+	"DA_FQ_ClimbTheRanks.InvestigateDelphis_Atreides",
+	"DA_FQ_ClimbTheRanks.InvestigateDelphis_Atreides.DeviseAPlan_Atreides",
+	"DA_FQ_ClimbTheRanks.InvestigateDelphis_Atreides.DeviseAPlan_Atreides.TellThufirAboutDelphis",
+	"DA_FQ_ClimbTheRanks.InvestigateDelphis_Atreides.PledgeAllegiance_Atreides",
+	"DA_FQ_ClimbTheRanks.InvestigateDelphis_Atreides.PledgeAllegiance_Atreides.PledgeAllegiance_Atreides_Sub",
+	"DA_FQ_ClimbTheRanks.InvestigateDelphis_Atreides.SecureLastContainer_Atreides",
+	"DA_FQ_ClimbTheRanks.InvestigateDelphis_Atreides.SecureLastContainer_Atreides.RecoverSheolContainer_Atreides",
+	"DA_FQ_ClimbTheRanks.PoisonedSpice_Atreides",
+	"DA_FQ_ClimbTheRanks.PoisonedSpice_Atreides.PunishTraitor",
+	"DA_FQ_ClimbTheRanks.PoisonedSpice_Atreides.PunishTraitor.ChoosePoisonOrSpare",
+	"DA_FQ_ClimbTheRanks.PoisonedSpice_Atreides.PunishTraitor.CompleteWarProfiteerContract",
+	"DA_FQ_ClimbTheRanks.PoisonedSpice_Atreides.PunishTraitor.FindBusinessman",
+	"DA_FQ_ClimbTheRanks.PoisonedSpice_Atreides.PunishTraitor.TalkToThufirAgain",
+	"DA_FQ_ClimbTheRanks.PoisonedSpice_Atreides.PutFindingsToTest",
+	"DA_FQ_ClimbTheRanks.PoisonedSpice_Atreides.PutFindingsToTest.MeetThufir",
+	"DA_FQ_ClimbTheRanks.PoisonedSpice_Atreides.PutFindingsToTest.ReturnToGanan",
+	"DA_FQ_ClimbTheRanks.PoisonedSpice_Atreides.PutFindingsToTest.SpeakWithGanan",
+}
+
+// climbTheRanksStoryNodesHarkonnen are the Harkonnen-side storyline beats
+// (Ch2→Ch3 transition + Test of Treachery + Harkonnen investigations).
+var climbTheRanksStoryNodesHarkonnen = []string{
+	"DA_FQ_ClimbTheRanks.TransitionToCh3_Hark",
+	"DA_FQ_ClimbTheRanks.TransitionToCh3_Hark.TheCall",
+	"DA_FQ_ClimbTheRanks.TransitionToCh3_Hark.TheCall.AnswerTheCall",
+	"DA_FQ_ClimbTheRanks.ATestOfTreachery",
+	"DA_FQ_ClimbTheRanks.ATestOfTreachery.GetAntonToBackOff",
+	"DA_FQ_ClimbTheRanks.ATestOfTreachery.GetAntonToBackOff.FindCounterfeitEvidence",
+	"DA_FQ_ClimbTheRanks.InvestigateKytheria_Harkonnen",
+	"DA_FQ_ClimbTheRanks.InvestigateKytheria_Harkonnen.InvestigateWreck_Harkonnen",
+	`DA_FQ_ClimbTheRanks.InvestigateKytheria_Harkonnen.InvestigateWreck_Harkonnen.Complete "Track Down Skorda" Contract`,
+	"DA_FQ_ClimbTheRanks.InvestigateKytheria_Harkonnen.InvestigateWreck_Harkonnen.MeetSimoneVonKonig",
+	"DA_FQ_ClimbTheRanks.InvestigateDelphis_Harkonnen",
+	"DA_FQ_ClimbTheRanks.InvestigateDelphis_Harkonnen.DeviseAPlan_Harkonnen",
+	"DA_FQ_ClimbTheRanks.InvestigateDelphis_Harkonnen.DeviseAPlan_Harkonnen.TellPiterAboutEuporia",
+	"DA_FQ_ClimbTheRanks.InvestigateDelphis_Harkonnen.PledgeAllegiance_Harkonnen",
+	"DA_FQ_ClimbTheRanks.InvestigateDelphis_Harkonnen.PledgeAllegiance_Harkonnen.PledgeAllegiance_Harkonnen_Sub",
+	"DA_FQ_ClimbTheRanks.InvestigateDelphis_Harkonnen.SecureLastContainer_Harkonnen",
+	"DA_FQ_ClimbTheRanks.InvestigateDelphis_Harkonnen.SecureLastContainer_Harkonnen.RecoverSheolContainer_Harkonnen",
+	"DA_FQ_ClimbTheRanks.PoisonedSpice_Harkonnen",
+	"DA_FQ_ClimbTheRanks.PoisonedSpice_Harkonnen.LeverageYourFindings",
+	"DA_FQ_ClimbTheRanks.PoisonedSpice_Harkonnen.LeverageYourFindings.DeliverResults",
+	"DA_FQ_ClimbTheRanks.PoisonedSpice_Harkonnen.LeverageYourFindings.MeetPiter",
+	"DA_FQ_ClimbTheRanks.PoisonedSpice_Harkonnen.LeverageYourFindings.ReturnToVonKonig",
+	"DA_FQ_ClimbTheRanks.PoisonedSpice_Harkonnen.LeverageYourFindings.SpeakWithVonKonig",
+	"DA_FQ_ClimbTheRanks.PoisonedSpice_Harkonnen.TakeALeap",
+	"DA_FQ_ClimbTheRanks.PoisonedSpice_Harkonnen.TakeALeap.PoisonOrWarnPiter",
+	"DA_FQ_ClimbTheRanks.PoisonedSpice_Harkonnen.TakeALeap.TalkToPiterAgain",
+}
+
+// landsraadMissionNodes* are the weekly Landsraad mission journey nodes (DA_SQ =
+// Dune Awakening Side Quest). Completed naturally by doing one Landsraad mission
+// in-game; required alongside climbTheRanksNodes for rank 5→20 progression.
+var landsraadMissionNodesAtreides = []string{
+	"DA_SQ_OverlandMap.AtreLandsraadMission",
+	"DA_SQ_OverlandMap.AtreLandsraadMission.AtreMission",
+	"DA_SQ_OverlandMap.AtreLandsraadMission.AtreMission.AtreAccept",
+	"DA_SQ_OverlandMap.AtreLandsraadMission.AtreMission.AtreKeyStone",
+	"DA_SQ_OverlandMap.AtreLandsraadMission.AtreMission.AtreComplete",
+	"DA_SQ_OverlandMap.AtreLandsraadMission.AtreMission.AtreReturn",
+	"DA_SQ_OverlandMap.AtreLandsraadMission.AtreMission.AtreClaimReward",
+}
+
+var landsraadMissionNodesHarkonnen = []string{
+	"DA_SQ_OverlandMap.HarkLandsraadMission",
+	"DA_SQ_OverlandMap.HarkLandsraadMission.HarkMission",
+	"DA_SQ_OverlandMap.HarkLandsraadMission.HarkMission.HarkAccept",
+	"DA_SQ_OverlandMap.HarkLandsraadMission.HarkMission.HarkKeyStone",
+	"DA_SQ_OverlandMap.HarkLandsraadMission.HarkMission.HarkComplete",
+	"DA_SQ_OverlandMap.HarkLandsraadMission.HarkMission.HarkReturn",
+	"DA_SQ_OverlandMap.HarkLandsraadMission.HarkMission.HarkClaimReward",
+}
+
+// nodesForPreset returns the journey node IDs to complete for a faction+preset.
+// ch3_start: Rank5To20 onboarding only.
+// rank19_eligible: onboarding + faction-neutral chapter-2 storyline + chosen
+// faction's investigate/test/poisonedspice arc + weekly Landsraad mission tree.
+// The expanded set covers all storyline beats observed completed on the
+// rank-19 / rank-8 reference characters, so a fresh (rank 0) character can be
+// brought to rank 19 in one shot without per-rank login/logout cycles.
+func nodesForPreset(faction, preset string) []string {
+	nodes := append([]string{}, climbTheRanksNodes...)
+	if preset != "rank19_eligible" {
+		return nodes
+	}
+	nodes = append(nodes, climbTheRanksStoryNodes...)
+	switch faction {
+	case "atreides":
+		nodes = append(nodes, climbTheRanksStoryNodesAtreides...)
+		nodes = append(nodes, landsraadMissionNodesAtreides...)
+	case "harkonnen":
+		nodes = append(nodes, climbTheRanksStoryNodesHarkonnen...)
+		nodes = append(nodes, landsraadMissionNodesHarkonnen...)
+	}
+	return nodes
 }
 
 // cmdProgressionUnlock completes all prerequisite faction story journey nodes
@@ -1382,14 +2067,22 @@ func cmdProgressionUnlock(actorID int64, faction, preset string) Cmd {
 		}
 
 		var factionID int16
-		var dialogueFlag string
+		var dialogueFlag, alignedFlag, metRecruiterFlag, factionUnlocked, recruitmentDone string
 		switch faction {
 		case "atreides":
 			factionID = 1
 			dialogueFlag = "DialogueFlags.Factions.SentToMeetHawat"
+			alignedFlag = "DialogueFlags.Factions.AlignedAtreides"
+			metRecruiterFlag = "DialogueFlags.Factions.MetHawat"
+			factionUnlocked = "Contract.Tracking.AtreidesFactionUnlocked"
+			recruitmentDone = "Contract.Tracking.AtreidesRecruitmentCompleted"
 		case "harkonnen":
 			factionID = 2
 			dialogueFlag = "DialogueFlags.Factions.SentToPiterDeVries"
+			alignedFlag = "DialogueFlags.Factions.AlignedHarkonnen"
+			metRecruiterFlag = "DialogueFlags.Factions.MetPiterDeVries"
+			factionUnlocked = "Contract.Tracking.HarkonnenFactionUnlocked"
+			recruitmentDone = "Contract.Tracking.HarkonnenRecruitmentCompleted"
 		default:
 			return msgMutate{err: fmt.Errorf("faction must be atreides or harkonnen")}
 		}
@@ -1424,14 +2117,30 @@ func cmdProgressionUnlock(actorID int64, faction, preset string) Cmd {
 			return msgMutate{err: fmt.Errorf("player %d has no FLS ID", actorID)}
 		}
 
-		journeyNodes := factionJourneyNodes(faction)
+		journeyNodes := nodesForPreset(faction, preset)
 
 		factionName := factionDisplayName(factionID)
-		maxTier := 5
-		if setTier {
-			maxTier = 19
+		// Faction.<X>.TierN is only a real gameplay tag for N ∈ [0,5] — see
+		// DA_Atreides.json / DA_Harkonnen.json m_FactionTiers, where Tier 6+
+		// all have m_FactionTierTag.TagName == "None". Tier 5 flips
+		// m_bAllowPromotionThroughReputation to true, after which rep alone
+		// advances the displayed rank. So Tier0–5 + a rep >= threshold[19] is
+		// enough to display rank 19 — no need to write phantom Tier6..19 tags.
+		const maxTier = 5
+		// Baseline faction-progression tags observed on both rank-up reference
+		// characters (rank 19 Atreides + rank 8 Harkonnen). MetARecruiter,
+		// PlayedAllegianceCinematic, SeenAnvilCinematic, FactionRank1/3 are
+		// faction-neutral; the faction-specific flags are picked above.
+		allTags := []string{
+			dialogueFlag, alignedFlag, metRecruiterFlag,
+			factionUnlocked, recruitmentDone,
+			"DialogueFlags.Factions.FactionIntro",
+			"DialogueFlags.Factions.FactionRank1",
+			"DialogueFlags.Factions.FactionRank3",
+			"DialogueFlags.Factions.MetARecruiter",
+			"DialogueFlags.Factions.PlayedAllegianceCinematic",
+			"DialogueFlags.Factions.SeenAnvilCinematic",
 		}
-		allTags := []string{dialogueFlag}
 		if setTier {
 			allTags = append(allTags, "Journey.LandsraadContractsUnlocked")
 		}
@@ -1451,16 +2160,33 @@ func cmdProgressionUnlock(actorID int64, faction, preset string) Cmd {
 			return msgMutate{err: fmt.Errorf("complete journey nodes: %w", err)}
 		}
 
+		// Align the player with the chosen faction. Required for fresh / unaligned
+		// characters (no player_faction row) — without this the rank UI doesn't
+		// reflect tier changes because the game treats the player as unaligned.
+		// neutral_faction_id = 3 ("None") so this proc takes the upsert branch.
+		if _, err = tx.Exec(ctx,
+			`SELECT dune.change_player_faction($1::bigint, $2::smallint, 3::smallint, NOW()::timestamp)`,
+			controllerID, factionID); err != nil {
+			return msgMutate{err: fmt.Errorf("change_player_faction: %w", err)}
+		}
+
 		if _, err = tx.Exec(ctx,
 			`SELECT dune.update_player_tags($1, $2::text[], '{}'::text[])`, accountID, allTags); err != nil {
 			return msgMutate{err: fmt.Errorf("update player tags: %w", err)}
 		}
 
 		if setTier {
+			// +1 over the tier-19 threshold: the game UI floors at the threshold
+			// (rep == threshold shows the tier below), so we nudge just over.
+			rank19Rep := factionTierThresholds[19] + 1
 			if _, err = tx.Exec(ctx,
 				`SELECT dune.set_player_faction_reputation($1, $2, $3)`,
-				controllerID, factionID, factionTierThresholds[19]); err != nil {
+				controllerID, factionID, rank19Rep); err != nil {
 				return msgMutate{err: fmt.Errorf("set faction tier: %w", err)}
+			}
+			if _, err = tx.Exec(ctx, factionPlayerComponentRepSQL,
+				controllerID, factionName, rank19Rep); err != nil {
+				return msgMutate{err: fmt.Errorf("update FactionPlayerComponent rep: %w", err)}
 			}
 		}
 

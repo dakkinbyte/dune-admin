@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -652,6 +653,132 @@ func handleJourneyComplete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jsonOK(w, map[string]string{"ok": msg.ok})
+}
+
+func handleCompleteContract(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		AccountID  int64  `json:"account_id"`
+		ContractID string `json:"contract_id"`
+	}
+	if err := decode(r, &req); err != nil {
+		jsonErr(w, err, 400)
+		return
+	}
+	msg, ok := cmdCompleteContract(req.AccountID, req.ContractID)().(msgMutate)
+	if !ok {
+		jsonErr(w, fmt.Errorf("internal error"), 500)
+		return
+	}
+	if msg.err != nil {
+		jsonErr(w, msg.err, 500)
+		return
+	}
+	jsonOK(w, map[string]string{"ok": msg.ok})
+}
+
+func handleResetJobSkills(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		AccountID int64  `json:"account_id"`
+		Job       string `json:"job"`
+	}
+	if err := decode(r, &req); err != nil {
+		jsonErr(w, err, 400)
+		return
+	}
+	msg, ok := cmdResetJobSkills(req.AccountID, req.Job)().(msgMutate)
+	if !ok {
+		jsonErr(w, fmt.Errorf("internal error"), 500)
+		return
+	}
+	if msg.err != nil {
+		jsonErr(w, msg.err, 500)
+		return
+	}
+	jsonOK(w, map[string]string{"ok": msg.ok})
+}
+
+func handleSetStarterClass(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		AccountID int64  `json:"account_id"`
+		Job       string `json:"job"`
+	}
+	if err := decode(r, &req); err != nil {
+		jsonErr(w, err, 400)
+		return
+	}
+	msg, ok := cmdSetStarterClass(req.AccountID, req.Job)().(msgMutate)
+	if !ok {
+		jsonErr(w, fmt.Errorf("internal error"), 500)
+		return
+	}
+	if msg.err != nil {
+		jsonErr(w, msg.err, 500)
+		return
+	}
+	jsonOK(w, map[string]string{"ok": msg.ok})
+}
+
+func handleGrantJobSkills(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		AccountID int64  `json:"account_id"`
+		Job       string `json:"job"`
+	}
+	if err := decode(r, &req); err != nil {
+		jsonErr(w, err, 400)
+		return
+	}
+	msg, ok := cmdGrantJobSkills(req.AccountID, req.Job)().(msgMutate)
+	if !ok {
+		jsonErr(w, fmt.Errorf("internal error"), 500)
+		return
+	}
+	if msg.err != nil {
+		jsonErr(w, msg.err, 500)
+		return
+	}
+	jsonOK(w, map[string]string{"ok": msg.ok})
+}
+
+func handleCompleteContracts(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		AccountID   int64    `json:"account_id"`
+		ContractIDs []string `json:"contract_ids"`
+	}
+	if err := decode(r, &req); err != nil {
+		jsonErr(w, err, 400)
+		return
+	}
+	msg, ok := cmdCompleteContracts(req.AccountID, req.ContractIDs)().(msgMutate)
+	if !ok {
+		jsonErr(w, fmt.Errorf("internal error"), 500)
+		return
+	}
+	if msg.err != nil {
+		jsonErr(w, msg.err, 500)
+		return
+	}
+	jsonOK(w, map[string]string{"ok": msg.ok})
+}
+
+// handleListContracts returns the catalog of known contracts (id → tag count)
+// so the frontend can render a picker without shipping the full tag dump.
+func handleListContracts(w http.ResponseWriter, r *http.Request) {
+	type row struct {
+		ID       string `json:"id"`
+		Alias    string `json:"alias"`
+		TagCount int    `json:"tag_count"`
+	}
+	out := make([]row, 0, len(tagsData.ContractTags))
+	// Build reverse alias lookup: full name → short alias.
+	revAlias := make(map[string]string, len(tagsData.ContractAliases))
+	for short, full := range tagsData.ContractAliases {
+		revAlias[full] = short
+	}
+	for id, tags := range tagsData.ContractTags {
+		out = append(out, row{ID: id, Alias: revAlias[id], TagCount: len(tags)})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	jsonOK(w, out)
 }
 
 func handleJourneyReset(w http.ResponseWriter, r *http.Request) {

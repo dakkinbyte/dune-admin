@@ -137,6 +137,33 @@ func resolveItemDataPath() string {
 	return ""
 }
 
+func resolveTagsDataPath() string {
+	candidates := []string{"./tags-data.json", "../tags-data.json"}
+	for _, p := range candidates {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	return ""
+}
+
+var tagsData tagsDataFile
+
+func loadTagsData() error {
+	path := resolveTagsDataPath()
+	if path == "" {
+		return nil
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read tags data %s: %w", path, err)
+	}
+	if err := json.Unmarshal(data, &tagsData); err != nil {
+		return fmt.Errorf("parse tags data %s: %w", path, err)
+	}
+	return nil
+}
+
 var itemData itemDataFile
 
 func loadItemData() error {
@@ -213,6 +240,11 @@ func main() {
 	}
 
 	if err := loadItemData(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	if err := loadTagsData(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
