@@ -122,7 +122,6 @@ func localStream(cmdStr string) (<-chan string, func(), error) {
 	if err != nil {
 		return nil, func() {}, err
 	}
-	cmd.Stderr = cmd.Stdout
 	if err := cmd.Start(); err != nil {
 		return nil, func() {}, err
 	}
@@ -130,6 +129,7 @@ func localStream(cmdStr string) (<-chan string, func(), error) {
 	go func() {
 		defer close(ch)
 		sc := bufio.NewScanner(pipe)
+		sc.Buffer(make([]byte, 0, 256*1024), 1024*1024) // 1MB max line
 		for sc.Scan() {
 			ch <- sc.Text()
 		}
