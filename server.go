@@ -14,7 +14,7 @@ import (
 var allowedOrigins []string
 
 func init() {
-	raw := envOr("ALLOWED_ORIGINS", "https://dune-admin.layout.tools,http://localhost:5173")
+	raw := envOr("ALLOWED_ORIGINS", "https://dune-admin.layout.tools,http://localhost:5173,http://localhost:9090")
 	for _, o := range strings.Split(raw, ",") {
 		if o = strings.TrimSpace(o); o != "" {
 			allowedOrigins = append(allowedOrigins, o)
@@ -23,6 +23,11 @@ func init() {
 }
 
 func originAllowed(origin string) bool {
+	// Same-origin requests: if the frontend is served by this process,
+	// the origin will match our listen address.
+	if strings.HasSuffix(origin, listenAddr) {
+		return true
+	}
 	for _, o := range allowedOrigins {
 		if o == origin {
 			return true
