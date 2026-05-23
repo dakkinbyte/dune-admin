@@ -19,8 +19,11 @@ var (
 	captureMode     bool
 	setupMode       bool
 	sqlQuery        string
-	connectionMode  string
-	sshHost         string
+	connectionMode   string
+	containerName    string
+	containerUser    string
+	containerLogPath string
+	sshHost          string
 	sshUser         string
 	sshKeyPath      string
 	itemDataPath    string
@@ -80,6 +83,9 @@ func envIntOr(key string, def int) int {
 func init() {
 	loadDotEnv()
 	flag.StringVar(&connectionMode, "mode", envOr("CONNECTION_MODE", "direct"), "Connection mode: 'direct' or 'ssh'")
+	flag.StringVar(&containerName, "container", envOr("CONTAINER_NAME", "AMP_MehDune01"), "Podman container name (direct mode)")
+	flag.StringVar(&containerUser, "container-user", envOr("CONTAINER_USER", "amp"), "User that runs the container (direct mode)")
+	flag.StringVar(&containerLogPath, "logpath", envOr("CONTAINER_LOG_PATH", "/AMP/duneawakening/logs"), "Log path inside container (direct mode)")
 	flag.StringVar(&sshHost, "host", envOr("SSH_HOST", "192.168.0.72:22"), "SSH host:port")
 	flag.StringVar(&sshUser, "user", envOr("SSH_USER", "dune"), "SSH user")
 	flag.StringVar(&sshKeyPath, "key", envOr("SSH_KEY", ""), "SSH private key path (auto-detected if empty)")

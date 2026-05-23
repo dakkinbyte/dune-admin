@@ -26,6 +26,10 @@ var bgCmdAllowlist = map[string]bool{
 }
 
 func handleBGStatus(w http.ResponseWriter, r *http.Request) {
+	if connectionMode == "direct" {
+		handleBGStatusDirect(w, r)
+		return
+	}
 	if !requireSSH(w) {
 		return
 	}
@@ -338,4 +342,56 @@ func handleBGBackupUpload(w http.ResponseWriter, r *http.Request) {
 	} else {
 		jsonErr(w, fmt.Errorf("file must be .backup or .zip"), 400)
 	}
+}
+
+// ── direct mode ──────────────────────────────────────────────────────────────
+
+func handleBGStatusDirect(w http.ResponseWriter, _ *http.Request) {
+	procs, err := listGameProcesses()
+	if err != nil {
+		jsonErr(w, err, 500)
+		return
+	}
+
+	type serverRow struct {
+		Map       string  `json:"map"`
+		Sietch    string  `json:"sietch"`
+		Dimension int     `json:"dimension"`
+		Partition int     `json:"partition"`
+		Phase     string  `json:"phase"`
+		Ready     bool    `json:"ready"`
+		Players   int     `json:"players"`
+		PID       int     `json:"pid"`
+		CPU       float64 `json:"cpu"`
+		MemMB     float64 `json:"mem_mb"`
+		Port      int     `json:"port"`
+	}
+
+	servers := make([]serverRow, 0, len(procs))
+	for _, p := range procs {
+		servers = append(servers, serverRow{
+			Map:       p.Map,
+			Partition: p.Partition,
+			Phase:     "Running",
+			Ready:     true,
+			PID:       p.PID,
+			CPU:       p.CPU,
+			MemMB:     p.MemMB,
+			Port:      p.Port,
+		})
+	}
+
+	dbPhase := "Disconnected"
+	if globalDB != nil {
+		dbPhase = "Connected"
+	}
+
+	bg := map[string]string{
+		"name":     containerName,
+		"title":    "AMP Managed",
+		"phase":    "Running",
+		"database": dbPhase,
+	}
+
+	jsonOK(w, map[string]any{"battlegroup": bg, "servers": servers})
 }

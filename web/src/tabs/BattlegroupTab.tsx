@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Button, Modal, Spinner, toast } from '@heroui/react'
 import { api } from '../api/client'
 import type { BackupFile } from '../api/client'
+import { useStatus } from '../hooks/useStatus'
 
 type ServerRow = {
   map: string
@@ -11,6 +12,10 @@ type ServerRow = {
   phase: string
   ready: boolean
   players: number
+  pid?: number
+  cpu?: number
+  mem_mb?: number
+  port?: number
 }
 
 type BGInfo = {
@@ -53,6 +58,8 @@ const ACTIONS = [
 type ActionDef = typeof ACTIONS[0]
 
 export default function BattlegroupTab() {
+  const connStatus = useStatus()
+  const isDirect = connStatus?.connection_mode === 'direct'
   const [status, setStatus] = useState<DetailedStatus | null>(null)
   const [statusLoading, setStatusLoading] = useState(false)
   const [runningCmd, setRunningCmd] = useState<string | null>(null)
@@ -176,7 +183,10 @@ export default function BattlegroupTab() {
               <table className="w-full text-sm">
                 <thead>
                   <tr style={{ background: '#1a1610', borderBottom: '1px solid #2a2418' }}>
-                    {['Map', 'Phase', 'Players', 'Ready', 'Dim', 'Part'].map(h => (
+                    {(isDirect
+                      ? ['Map', 'Phase', 'Port', 'Part', 'PID', 'CPU %', 'Memory']
+                      : ['Map', 'Phase', 'Players', 'Ready', 'Dim', 'Part']
+                    ).map(h => (
                       <th key={h} className="text-left px-4 py-2 font-semibold text-xs uppercase tracking-wide"
                         style={{ color: 'var(--color-primary)' }}>{h}</th>
                     ))}
@@ -193,14 +203,30 @@ export default function BattlegroupTab() {
                           <span className="ml-1 font-normal" style={{ color: '#f0a830' }}>(initializing)</span>
                         )}
                       </td>
-                      <td className="px-4 py-2 text-xs font-semibold" style={{ color: s.players > 0 ? '#27ae60' : 'var(--color-text-dim)' }}>
-                        {s.players}
-                      </td>
-                      <td className="px-4 py-2 text-xs" style={{ color: s.ready ? '#27ae60' : '#e87040' }}>
-                        {s.ready ? '✓' : '✗'}
-                      </td>
-                      <td className="px-4 py-2 text-xs" style={{ color: 'var(--color-text-dim)' }}>{s.dimension}</td>
-                      <td className="px-4 py-2 text-xs" style={{ color: 'var(--color-text-dim)' }}>{s.partition}</td>
+                      {isDirect ? (
+                        <>
+                          <td className="px-4 py-2 text-xs font-mono" style={{ color: 'var(--color-text-dim)' }}>{s.port}</td>
+                          <td className="px-4 py-2 text-xs" style={{ color: 'var(--color-text-dim)' }}>{s.partition}</td>
+                          <td className="px-4 py-2 text-xs font-mono" style={{ color: 'var(--color-text-dim)' }}>{s.pid}</td>
+                          <td className="px-4 py-2 text-xs font-mono" style={{ color: (s.cpu ?? 0) > 50 ? '#e87040' : 'var(--color-text-dim)' }}>
+                            {(s.cpu ?? 0).toFixed(1)}
+                          </td>
+                          <td className="px-4 py-2 text-xs font-mono" style={{ color: 'var(--color-text-dim)' }}>
+                            {(s.mem_mb ?? 0) >= 1024 ? `${((s.mem_mb ?? 0) / 1024).toFixed(1)} GB` : `${(s.mem_mb ?? 0).toFixed(0)} MB`}
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-4 py-2 text-xs font-semibold" style={{ color: s.players > 0 ? '#27ae60' : 'var(--color-text-dim)' }}>
+                            {s.players}
+                          </td>
+                          <td className="px-4 py-2 text-xs" style={{ color: s.ready ? '#27ae60' : '#e87040' }}>
+                            {s.ready ? '✓' : '✗'}
+                          </td>
+                          <td className="px-4 py-2 text-xs" style={{ color: 'var(--color-text-dim)' }}>{s.dimension}</td>
+                          <td className="px-4 py-2 text-xs" style={{ color: 'var(--color-text-dim)' }}>{s.partition}</td>
+                        </>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -211,6 +237,7 @@ export default function BattlegroupTab() {
       </div>
 
       {/* Action buttons */}
+      {!isDirect && (
       <div className="shrink-0" style={{ borderTop: '1px solid #2a2418', paddingTop: '12px', marginTop: '12px' }}>
         <h2 className="text-base font-semibold mb-3" style={{ color: 'var(--color-primary)' }}>
           Server Control
@@ -240,6 +267,7 @@ export default function BattlegroupTab() {
           </Button>
         </div>
       </div>
+      )}
 
       {/* Confirm dialog */}
       <Modal>

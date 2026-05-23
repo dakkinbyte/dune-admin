@@ -2,10 +2,13 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button, Spinner, toast } from '@heroui/react'
 import { api, getWsBase } from '../api/client'
 import type { LogPod, CheatEntry } from '../api/client'
+import { useStatus } from '../hooks/useStatus'
 
 type ActiveView = 'pod' | 'cheats'
 
 export default function LogsTab() {
+  const connStatus = useStatus()
+  const isDirect = connStatus?.connection_mode === 'direct'
   const [pods, setPods] = useState<LogPod[]>([])
   const [podsLoading, setPodsLoading] = useState(false)
   const [selectedPod, setSelectedPod] = useState<LogPod | null>(null)
@@ -155,7 +158,7 @@ export default function LogsTab() {
         style={{ background: 'var(--color-surface)', borderRight: '1px solid #2a2418' }}
       >
         <div className="flex items-center justify-between px-2 py-1 mb-1">
-          <span className="text-xs font-semibold uppercase" style={{ color: 'var(--color-text-dim)' }}>Pods</span>
+          <span className="text-xs font-semibold uppercase" style={{ color: 'var(--color-text-dim)' }}>{isDirect ? 'Log Files' : 'Pods'}</span>
           <Button
             size="sm"
             variant="ghost"
@@ -189,7 +192,7 @@ export default function LogsTab() {
         <div style={{ borderBottom: '1px solid #2a2418', marginBottom: '4px' }} />
 
         {pods.length === 0 && !podsLoading && (
-          <p className="text-xs px-2" style={{ color: 'var(--color-text-dim)' }}>No pods found</p>
+          <p className="text-xs px-2" style={{ color: 'var(--color-text-dim)' }}>{isDirect ? 'No log files found' : 'No pods found'}</p>
         )}
         {pods.map(pod => (
           <button
@@ -341,7 +344,7 @@ export default function LogsTab() {
               {displayLines.length === 0
                 ? (selectedPod
                   ? (connected ? 'Waiting for log lines...' : 'Disconnected.')
-                  : 'Select a pod from the left panel to start streaming logs.')
+                  : isDirect ? 'Select a log file from the left panel to start streaming.' : 'Select a pod from the left panel to start streaming logs.')
                 : displayLines.join('\n')
               }
             </pre>

@@ -89,8 +89,15 @@ function AppCore({ isSignedIn }: { isSignedIn: boolean }) {
           )}
         </div>
         <div className="flex items-center gap-4 text-xs">
-          <ConnectionBadge label="SSH" connected={status?.ssh_connected ?? false} />
+          {status?.connection_mode !== 'direct' && (
+            <ConnectionBadge label="SSH" connected={status?.ssh_connected ?? false} />
+          )}
           <ConnectionBadge label="DB" connected={status?.db_connected ?? false} />
+          {status?.connection_mode === 'direct' && (
+            <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#1a2a1a', color: '#8d8', border: '1px solid #2a4a2a' }}>
+              direct
+            </span>
+          )}
           {status?.pod_ns && (
             <span style={{ color: 'var(--color-text-dim)' }}>ns: {status.pod_ns}</span>
           )}

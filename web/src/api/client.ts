@@ -42,7 +42,7 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
   return res.json()
 }
 
-export type Status = { ssh_connected: boolean; db_connected: boolean; pod_ns: string; pod_ip: string; ssh_host: string; version?: string }
+export type Status = { ssh_connected: boolean; db_connected: boolean; connection_mode: string; pod_ns: string; pod_ip: string; ssh_host: string; version?: string }
 export type Player = { id: number; account_id: number; controller_id: number; fls_id: string; name: string; class: string; map: string; faction_id: number; online_status: string }
 export type InventoryItem = { id: number; template_id: string; name: string; stack_size: number; quality: number; durability: string; max_durability: string }
 export type CurrencyRow = { player_id: number; currency_id: number; balance: number }

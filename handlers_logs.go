@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+
 var wsUpgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return originAllowed(r.Header.Get("Origin"))
@@ -29,6 +30,10 @@ func isValidK8sName(name string) bool {
 }
 
 func handleLogPods(w http.ResponseWriter, r *http.Request) {
+	if connectionMode == "direct" {
+		handleLogFilesDirect(w, r)
+		return
+	}
 	if !requireSSH(w) {
 		return
 	}
@@ -38,7 +43,6 @@ func handleLogPods(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, fmt.Errorf("kubectl: %w", err), 500)
 		return
 	}
-	// Also get funcom-operators namespace pods
 	out2, _ := sshExec(
 		"sudo kubectl get pods -n funcom-operators --no-headers -o custom-columns=NAME:.metadata.name 2>&1")
 
@@ -61,7 +65,24 @@ func handleLogPods(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, pods)
 }
 
+func handleLogFilesDirect(w http.ResponseWriter, _ *http.Request) {
+	files, err := listLogFiles()
+	if err != nil {
+		jsonErr(w, err, 500)
+		return
+	}
+	pods := make([]logPod, 0, len(files))
+	for _, f := range files {
+		pods = append(pods, logPod{Namespace: "logs", Name: f.Name})
+	}
+	jsonOK(w, pods)
+}
+
 func handleLogStream(w http.ResponseWriter, r *http.Request) {
+	if connectionMode == "direct" {
+		handleLogStreamDirect(w, r)
+		return
+	}
 	if !requireSSH(w) {
 		return
 	}
@@ -85,6 +106,42 @@ func handleLogStream(w http.ResponseWriter, r *http.Request) {
 
 	cmd := fmt.Sprintf("sudo kubectl logs -f -n %s %s 2>&1", ns, pod)
 	ch, cancel, err := sshStream(cmd)
+	if err != nil {
+		conn.WriteMessage(websocket.TextMessage, []byte("error: "+err.Error()))
+		return
+	}
+	defer cancel()
+
+	for line := range ch {
+		if err := conn.WriteMessage(websocket.TextMessage, []byte(line)); err != nil {
+			return
+		}
+	}
+}
+
+var logFileNameRe = regexp.MustCompile(`^[a-zA-Z0-9._-]+\.log$`)
+
+func handleLogStreamDirect(w http.ResponseWriter, r *http.Request) {
+	file := r.URL.Query().Get("pod") // frontend sends filename as "pod"
+	if file == "" {
+		http.Error(w, "file name required", 400)
+		return
+	}
+	if !logFileNameRe.MatchString(file) {
+		http.Error(w, "invalid log file name", 400)
+		return
+	}
+
+	conn, err := wsUpgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return
+	}
+	defer conn.Close()
+	conn.SetWriteDeadline(time.Time{})
+
+	cmd := fmt.Sprintf("sudo -i -u %s podman exec %s tail -n 200 -f %s/%s",
+		containerUser, containerName, containerLogPath, file)
+	ch, cancel, err := localStream(cmd)
 	if err != nil {
 		conn.WriteMessage(websocket.TextMessage, []byte("error: "+err.Error()))
 		return
