@@ -23,3 +23,5 @@ blueprint.json
 
 # Local Go build cache (used when system cache is unavailable)
 .go-cache/
+.superpowers/
+docs/

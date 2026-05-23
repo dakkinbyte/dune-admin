@@ -633,7 +633,6 @@ func handleProgressionUnlock(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
-
 func handleJourneyComplete(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		AccountID int64  `json:"account_id"`
@@ -884,7 +883,6 @@ func handleGetPlayerVehicles(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, rows)
 }
 
-
 func handleRepairItem(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ID int64 `json:"id"`
@@ -992,4 +990,3 @@ func handleGetPlayerDungeons(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonOK(w, rows)
 }
-

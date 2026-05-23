@@ -217,7 +217,6 @@ type msgTags struct {
 	err  error
 }
 
-
 // ── item template merge (called after connect) ────────────────────────────────
 
 func mergeItemTemplates(dbTemplates []string) {
