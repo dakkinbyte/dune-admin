@@ -1174,7 +1174,7 @@ api.players.partitions().then(setPartitions).catch(() => {})
                     {contractCatalogLoaded && !contractCatalogError && (
                       <div className="rounded-lg p-3 shrink-0 flex flex-col gap-2" style={{ background: '#0f0d09', border: '1px solid #2a2418' }}>
                         <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-primary)' }}>Unlock Trainer</div>
-                        <div className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Applies every Trainer_<i>X</i>_* contract&apos;s completion tags + grants the full job skill tree (Skills.Key.&lt;Job&gt;1/2/3 + all 3 capstones). Reset removes the job&apos;s Skills.Key.* blocks if applied by mistake.</div>
+                        <div className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Applies every Trainer_<i>X</i>_* contract&apos;s completion tags + grants the full job skill tree (Skills.Key.&lt;Job&gt;1/2/3 + all 3 capstones). <b>Reset</b> nukes the entire SkillArea — Key + Ability + Attribute + Perk — so the class is fully undone with no leftover refundable phantoms.</div>
                         <div className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
                           {(['BeneGesserit', 'Mentat', 'Planetologist', 'Swordmaster', 'Trooper'] as const).map(trainer => {
                             const re = new RegExp(`^Trainer_${trainer}\\d+(_|$)`)
@@ -1218,27 +1218,23 @@ api.players.partitions().then(setPartitions).catch(() => {})
                       </div>
                     )}
 
-                    {/* ── Starter Class ──────────────────────────────────────── */}
-                    <div className="rounded-lg p-3 shrink-0 flex flex-col gap-2" style={{ background: '#0f0d09', border: '1px solid #2a2418' }}>
-                      <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-primary)' }}>Starter Class</div>
-                      <div className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Sets FLevelComponent.StarterSkillTreeTag = <code>Skills.Key.&lt;Job&gt;1</code> so the game treats this job as the character&apos;s base. Fixes SP accounting and stops multi-class characters from showing several starter abilities.</div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {(['BeneGesserit', 'Mentat', 'Planetologist', 'Swordmaster', 'Trooper'] as const).map(trainer => (
-                          <Button
-                            key={trainer}
-                            size="sm"
-                            variant="ghost"
-                            isDisabled={busy}
-                            onPress={() => run(
-                              () => api.players.setStarterClass(player.account_id, trainer),
-                              `Set starter to ${trainer} for ${player.name}`
-                            )}
-                          >
-                            {trainer}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
+                    {/*
+                      ── Starter Class ─────────────────────────────────────────
+                      DISABLED — observed on actor 31: clicking Set Starter →
+                      Trooper appeared to wipe TotalXPEarned + TotalSkillPoints
+                      + UnspentSkillPoints + KeystoneBonusSkillPoints to 0 on
+                      the next in-game login. The cmd only touches
+                      StarterSkillTreeTag.TagName + two ModuleData entries, so
+                      the wipe came from the game's own integrity check
+                      reacting to a half-written class state on login. Until
+                      we understand which other character-creation fields
+                      (archetype, faction defaults, etc.) need to be written
+                      atomically, this button is too dangerous to expose —
+                      switching starter class isn't something the live game
+                      lets players do, so admin-side it's inherently fragile.
+                      Backend cmdSetStarterClass + route still exist for SQL-
+                      level recovery only.
+                    */}
 
                     {/* ── Unlock Main Quest ──────────────────────────────────── */}
                     <div className="rounded-lg p-3 shrink-0 flex flex-col gap-2" style={{ background: '#0f0d09', border: '1px solid #2a2418' }}>

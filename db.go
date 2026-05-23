@@ -1608,11 +1608,12 @@ func cmdCompleteContracts(accountID int64, contractIDs []string) Cmd {
 	}
 }
 
-// cmdResetJobSkills removes every Skills.Key.* ModuleData entry for the named
-// job's skill tree, undoing a prior Unlock Trainer that was applied by
-// mistake. Only the Key blocks for the job are touched — Attribute/Perk/
-// Ability child nodes are left alone (those usually have SpSpent: 0 unless
-// the player actually purchased them).
+// cmdResetJobSkills removes every ModuleData entry whose SkillArea matches
+// the named job — Key blocks, Abilities, Attributes, Perks — fully nuking
+// that class's skill tree. Key-block removal alone leaves orphaned ability
+// rows (e.g. SuspensorGrenade_Reduction lingers after Skills.Key.Trooper1
+// is gone) which the game still treats as refundable for 1 SP each (the
+// "phantom SP" bug). Removing every SkillArea-matching module avoids that.
 func cmdResetJobSkills(accountID int64, job string) Cmd {
 	return func() Msg {
 		if globalDB == nil {
@@ -1621,9 +1622,9 @@ func cmdResetJobSkills(accountID int64, job string) Cmd {
 		if accountID == 0 {
 			return msgMutate{err: fmt.Errorf("account ID required")}
 		}
-		blocks := tagsData.JobSkillBlocks[job]
-		if len(blocks) == 0 {
-			return msgMutate{err: fmt.Errorf("unknown job %q", job)}
+		modules := tagsData.JobAllModules[job]
+		if len(modules) == 0 {
+			return msgMutate{err: fmt.Errorf("unknown job %q (check tags-data.json job_all_modules)", job)}
 		}
 		ctx := context.Background()
 
@@ -1635,36 +1636,57 @@ func cmdResetJobSkills(accountID int64, job string) Cmd {
 			return msgMutate{err: fmt.Errorf("no pawn for account %d", accountID)}
 		}
 
-		removed := 0
-		for _, sk := range blocks {
-			key := fmt.Sprintf(`(TagName="%s")`, sk)
-			tag, err := globalDB.Exec(ctx, `
-				UPDATE dune.fgl_entities fe
-				SET components = jsonb_set(
-					fe.components,
-					ARRAY['FLevelComponent','1','ModuleData'],
-					(fe.components->'FLevelComponent'->1->'ModuleData') - $2)
-				WHERE fe.entity_id = (
-					SELECT entity_id FROM dune.actor_fgl_entities
-					WHERE actor_id = $1 AND slot_name = 'DuneCharacter'
-				)
-				AND (fe.components->'FLevelComponent'->1->'ModuleData') ? $2`,
-				pawnID, key)
-			if err != nil {
-				return msgMutate{err: fmt.Errorf("remove %s: %w", sk, err)}
-			}
-			if tag.RowsAffected() > 0 {
-				removed++
-			}
+		// Build the (TagName="...") keyed names in one pass and use the
+		// jsonb minus-text[] operator to drop them all in a single UPDATE.
+		keys := make([]string, len(modules))
+		for i, m := range modules {
+			keys[i] = fmt.Sprintf(`(TagName="%s")`, m)
 		}
-		return msgMutate{ok: fmt.Sprintf("Reset %s skill tree — removed %d block(s)", job, removed)}
+		tag, err := globalDB.Exec(ctx, `
+			UPDATE dune.fgl_entities fe
+			SET components = jsonb_set(
+				fe.components,
+				ARRAY['FLevelComponent','1','ModuleData'],
+				(fe.components->'FLevelComponent'->1->'ModuleData') - $2::text[])
+			WHERE fe.entity_id = (
+				SELECT entity_id FROM dune.actor_fgl_entities
+				WHERE actor_id = $1 AND slot_name = 'DuneCharacter'
+			)`,
+			pawnID, keys)
+		if err != nil {
+			return msgMutate{err: fmt.Errorf("reset %s tree: %w", job, err)}
+		}
+		if tag.RowsAffected() == 0 {
+			return msgMutate{ok: fmt.Sprintf("Reset %s skill tree — no ModuleData on pawn", job)}
+		}
+		return msgMutate{ok: fmt.Sprintf("Reset %s skill tree — scanned %d module slot(s)", job, len(modules))}
 	}
 }
 
-// cmdSetStarterClass writes FLevelComponent.StarterSkillTreeTag to
-// Skills.Key.<Job>1 so the game treats that as the character's base class.
-// Without this set (or with it = "None") characters that have multiple jobs
-// unlocked end up showing several "starter" abilities in the UI.
+// starterAbilityByJob is the canonical tier-1 starter ability the game
+// auto-grants on character creation for each class — empirically observed
+// for BG (VoiceCompel) and Trooper (SuspensorGrenade_Reduction); the others
+// derived from DT_TrainingModules.json by picking the unique
+// PrereqModuleTags_And = [Skills.Key.<Job>1] ability at GridPosition (3,0),
+// which is the slot the game uses for the "middle of the first row" starter.
+var starterAbilityByJob = map[string]string{
+	"BeneGesserit":  "Skills.Ability.VoiceCompel",
+	"Mentat":        "Skills.Ability.PoisonCapsuleLauncher",
+	"Planetologist": "Skills.Ability.SuspensorPad",
+	"Swordmaster":   "Skills.Ability.DeflectionSlow",
+	"Trooper":       "Skills.Ability.SuspensorGrenade_Reduction",
+}
+
+// cmdSetStarterClass swaps the player's starter class:
+//  1. removes the previous starter's Skills.Key.<Old>1 block + its starter
+//     ability from ModuleData (so you don't end up with two starters
+//     stacked after switching), then
+//  2. writes the new StarterSkillTreeTag pointer,
+//  3. activates the new Skills.Key.<Job>1 block at SpSpent: 1,
+//  4. grants the new tier-1 starter ability at SpSpent: 1.
+//
+// Result on next login: only one class is recognised as starter, with its
+// canonical first ability already learned.
 func cmdSetStarterClass(accountID int64, job string) Cmd {
 	return func() Msg {
 		if globalDB == nil {
@@ -1676,6 +1698,10 @@ func cmdSetStarterClass(accountID int64, job string) Cmd {
 		if _, ok := tagsData.JobSkillBlocks[job]; !ok {
 			return msgMutate{err: fmt.Errorf("unknown job %q", job)}
 		}
+		newAbility, ok := starterAbilityByJob[job]
+		if !ok {
+			return msgMutate{err: fmt.Errorf("no starter ability mapping for %q", job)}
+		}
 		ctx := context.Background()
 
 		var pawnID int64
@@ -1686,21 +1712,66 @@ func cmdSetStarterClass(accountID int64, job string) Cmd {
 			return msgMutate{err: fmt.Errorf("no pawn for account %d", accountID)}
 		}
 
-		starterTag := fmt.Sprintf("Skills.Key.%s1", job)
+		// Look up the current starter so we can deactivate it. Format is
+		// "Skills.Key.<Job>1"; we strip the prefix/suffix to recover the
+		// job name and look up its starter-ability for removal.
+		var oldStarterTag string
+		_ = globalDB.QueryRow(ctx, `
+			SELECT fe.components->'FLevelComponent'->1->'StarterSkillTreeTag'->>'TagName'
+			FROM dune.fgl_entities fe
+			JOIN dune.actor_fgl_entities afe ON afe.entity_id = fe.entity_id
+			WHERE afe.actor_id = $1 AND afe.slot_name = 'DuneCharacter'`,
+			pawnID).Scan(&oldStarterTag)
+
+		var keysToRemove []string
+		if strings.HasPrefix(oldStarterTag, "Skills.Key.") && strings.HasSuffix(oldStarterTag, "1") {
+			oldJob := strings.TrimSuffix(strings.TrimPrefix(oldStarterTag, "Skills.Key."), "1")
+			if oldJob != "" && oldJob != job {
+				keysToRemove = append(keysToRemove, fmt.Sprintf(`(TagName="%s")`, oldStarterTag))
+				if oldAb, ok := starterAbilityByJob[oldJob]; ok {
+					keysToRemove = append(keysToRemove, fmt.Sprintf(`(TagName="%s")`, oldAb))
+				}
+			}
+		}
+
+		newStarterTag := fmt.Sprintf("Skills.Key.%s1", job)
+		newStarterKey := fmt.Sprintf(`(TagName="%s")`, newStarterTag)
+		newAbilityKey := fmt.Sprintf(`(TagName="%s")`, newAbility)
+
+		// One chained jsonb update: strip old keys, write new tag, activate
+		// new starter block, grant new starter ability. - operator on an
+		// empty text[] is a no-op so it's safe when there's no old starter
+		// to clean up (e.g. fresh character with StarterSkillTreeTag=None).
 		_, err := globalDB.Exec(ctx, `
 			UPDATE dune.fgl_entities fe
 			SET components = jsonb_set(
-				fe.components,
-				ARRAY['FLevelComponent','1','StarterSkillTreeTag','TagName'],
-				to_jsonb($2::text))
+				jsonb_set(
+					jsonb_set(
+						jsonb_set(
+							fe.components,
+							ARRAY['FLevelComponent','1','ModuleData'],
+							(fe.components->'FLevelComponent'->1->'ModuleData') - $4::text[]),
+						ARRAY['FLevelComponent','1','StarterSkillTreeTag','TagName'],
+						to_jsonb($2::text)),
+					ARRAY['FLevelComponent','1','ModuleData',$3],
+					'{"SkillPointsSpent": 1}'::jsonb,
+					true),
+				ARRAY['FLevelComponent','1','ModuleData',$5],
+				'{"SkillPointsSpent": 1}'::jsonb,
+				true)
 			WHERE fe.entity_id = (
 				SELECT entity_id FROM dune.actor_fgl_entities
 				WHERE actor_id = $1 AND slot_name = 'DuneCharacter'
-			)`, pawnID, starterTag)
+			)`, pawnID, newStarterTag, newStarterKey, keysToRemove, newAbilityKey)
 		if err != nil {
 			return msgMutate{err: fmt.Errorf("set starter tag: %w", err)}
 		}
-		return msgMutate{ok: fmt.Sprintf("Starter class set to %s (%s)", job, starterTag)}
+
+		msg := fmt.Sprintf("Starter class set to %s (%s + %s active)", job, newStarterTag, newAbility)
+		if len(keysToRemove) > 0 {
+			msg += fmt.Sprintf(", cleared previous starter (%d module(s))", len(keysToRemove))
+		}
+		return msgMutate{ok: msg}
 	}
 }
 

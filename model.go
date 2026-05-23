@@ -94,6 +94,13 @@ type tagsDataFile struct {
 	// grant the *entire* job's block set, since only ~10 of 30 are
 	// contract-granted (the rest are normally unlocked by dialogue or auto).
 	JobSkillBlocks map[string][]string `json:"job_skill_blocks"`
+	// JobAllModules["Trooper"] = every module (Key, Ability, Attribute,
+	// Perk) whose SkillArea is ESkillTree::Trooper. Used by Reset Job Skills
+	// to fully nuke a class tree — the trainer Key blocks alone aren't
+	// enough because the game auto-grants the corresponding tier-1 ability
+	// (e.g. Skills.Ability.SuspensorGrenade_Reduction) which then sticks
+	// around as a refundable 1-SP phantom unless we remove it here.
+	JobAllModules map[string][]string `json:"job_all_modules"`
 }
 
 type blueprintRow struct {
