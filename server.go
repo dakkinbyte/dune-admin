@@ -170,13 +170,28 @@ func decode(r *http.Request, v any) error {
 // handleStatus returns SSH and DB connection state.
 func handleStatus(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]any{
-		"ssh_connected": globalSSH != nil,
-		"db_connected":  globalDB != nil,
-		"pod_ns":        globalPodNS,
-		"pod_ip":        globalPodIP,
-		"ssh_host":      sshHost,
-		"version":       version,
+		"ssh_connected":   globalSSH != nil,
+		"db_connected":    globalDB != nil,
+		"connection_mode": connectionMode,
+		"pod_ns":          globalPodNS,
+		"pod_ip":          globalPodIP,
+		"ssh_host":        sshHost,
+		"version":         version,
 	})
+}
+
+// requireSSH returns false and writes an error response if the current
+// connection mode does not support SSH-dependent operations.
+func requireSSH(w http.ResponseWriter) bool {
+	if connectionMode == "direct" {
+		jsonErr(w, fmt.Errorf("not available in direct connection mode"), http.StatusNotImplemented)
+		return false
+	}
+	if globalSSH == nil {
+		jsonErr(w, fmt.Errorf("SSH not connected"), http.StatusServiceUnavailable)
+		return false
+	}
+	return true
 }
 
 // handleReconnect attempts to re-establish SSH+DB connections.
@@ -185,7 +200,7 @@ func handleReconnect(w http.ResponseWriter, r *http.Request) {
 		globalDB.Close()
 		globalDB = nil
 	}
-	if globalSSH != nil {
+	if connectionMode != "direct" && globalSSH != nil {
 		globalSSH.Close()
 		globalSSH = nil
 	}

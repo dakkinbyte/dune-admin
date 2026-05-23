@@ -115,6 +115,9 @@ func publishNotification(routingKey string, keywords []string, content string) e
 //	  "content":     "Hello World!"
 //	}
 func handleNotify(w http.ResponseWriter, r *http.Request) {
+	if !requireSSH(w) {
+		return
+	}
 	var req struct {
 		RoutingKey string   `json:"routing_key"`
 		Keywords   []string `json:"keywords"`

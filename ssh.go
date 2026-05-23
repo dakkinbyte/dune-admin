@@ -64,8 +64,27 @@ func discoverDBPod(client *ssh.Client) (ns, pod, podIP string, err error) {
 	return parts[0], parts[1], parts[2], nil
 }
 
-// cmdConnect dials SSH, discovers the DB pod, then opens a pgx connection tunnelled through SSH.
+// cmdConnect connects to the database. In direct mode it opens a standard TCP
+// connection; in ssh mode it dials SSH, discovers the DB pod, then tunnels.
 func cmdConnect() Msg {
+	if connectionMode == "direct" {
+		return cmdConnectDirect()
+	}
+	return cmdConnectSSH()
+}
+
+// cmdConnectDirect opens a PostgreSQL connection directly (no SSH tunnel).
+func cmdConnectDirect() Msg {
+	pool, err := connectDBDirect(context.Background())
+	if err != nil {
+		return msgConnect{err: fmt.Errorf("DB connect: %w", err)}
+	}
+	globalDB = pool
+	return msgConnect{}
+}
+
+// cmdConnectSSH dials SSH, discovers the DB pod, then opens a pgx connection tunnelled through SSH.
+func cmdConnectSSH() Msg {
 	keyPath := resolveKeyPath()
 	client, err := dialSSH(keyPath)
 	if err != nil {
@@ -120,6 +139,30 @@ func connectDB(ctx context.Context, user, pass string) (*pgxpool.Pool, error) {
 	}
 	dbUser = user
 	dbPass = pass
+	return pool, nil
+}
+
+// connectDBDirect opens a standard PostgreSQL connection without SSH tunneling.
+func connectDBDirect(ctx context.Context) (*pgxpool.Pool, error) {
+	connStr := fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		dbHost, dbPort, dbUser, dbPass, dbName)
+	poolCfg, err := pgxpool.ParseConfig(connStr)
+	if err != nil {
+		return nil, err
+	}
+	poolCfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		_, err := conn.Exec(ctx, fmt.Sprintf(`SET search_path TO %s, public`, pgx.Identifier{dbSchema}.Sanitize()))
+		return err
+	}
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
+	if err != nil {
+		return nil, err
+	}
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
+		return nil, err
+	}
 	return pool, nil
 }
 

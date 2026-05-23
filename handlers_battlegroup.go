@@ -26,8 +26,7 @@ var bgCmdAllowlist = map[string]bool{
 }
 
 func handleBGStatus(w http.ResponseWriter, r *http.Request) {
-	if globalSSH == nil {
-		jsonErr(w, fmt.Errorf("SSH not connected"), 503)
+	if !requireSSH(w) {
 		return
 	}
 
@@ -98,6 +97,9 @@ func safeIdx(s []string, i int) string {
 }
 
 func handleBGExec(w http.ResponseWriter, r *http.Request) {
+	if !requireSSH(w) {
+		return
+	}
 	var req struct {
 		Cmd string `json:"cmd"`
 	}
@@ -142,6 +144,9 @@ func handleBGExec(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleBGPods(w http.ResponseWriter, r *http.Request) {
+	if !requireSSH(w) {
+		return
+	}
 	out, err := sshExec(fmt.Sprintf("sudo kubectl get pods -n %s --no-headers 2>&1", globalPodNS))
 	if err != nil {
 		jsonErr(w, fmt.Errorf("kubectl: %w", err), 500)
@@ -154,8 +159,7 @@ func handleBGPods(w http.ResponseWriter, r *http.Request) {
 func bgName() string { return strings.TrimPrefix(globalPodNS, "funcom-seabass-") }
 
 func handleBGBackupFiles(w http.ResponseWriter, r *http.Request) {
-	if globalSSH == nil {
-		jsonErr(w, fmt.Errorf("SSH not connected"), 503)
+	if !requireSSH(w) {
 		return
 	}
 	bgDir := fmt.Sprintf("/funcom/artifacts/database-dumps/%s", bgName())
@@ -192,8 +196,7 @@ func handleBGBackupFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleBGBackupDownload(w http.ResponseWriter, r *http.Request) {
-	if globalSSH == nil {
-		jsonErr(w, fmt.Errorf("SSH not connected"), 503)
+	if !requireSSH(w) {
 		return
 	}
 	filename := r.URL.Query().Get("file")
@@ -227,8 +230,7 @@ func handleBGBackupDownload(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleBGRestore(w http.ResponseWriter, r *http.Request) {
-	if globalSSH == nil {
-		jsonErr(w, fmt.Errorf("SSH not connected"), 503)
+	if !requireSSH(w) {
 		return
 	}
 	var req struct {
@@ -273,8 +275,7 @@ func sshWriteFile(remotePath string, data io.Reader) error {
 }
 
 func handleBGBackupUpload(w http.ResponseWriter, r *http.Request) {
-	if globalSSH == nil {
-		jsonErr(w, fmt.Errorf("SSH not connected"), 503)
+	if !requireSSH(w) {
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 4<<30)

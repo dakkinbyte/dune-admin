@@ -19,11 +19,13 @@ var (
 	captureMode     bool
 	setupMode       bool
 	sqlQuery        string
+	connectionMode  string
 	sshHost         string
 	sshUser         string
 	sshKeyPath      string
 	itemDataPath    string
 	scripCurrencyID int
+	dbHost          string
 	dbPort          int
 	dbUser          string
 	dbPass          string
@@ -77,17 +79,19 @@ func envIntOr(key string, def int) int {
 
 func init() {
 	loadDotEnv()
+	flag.StringVar(&connectionMode, "mode", envOr("CONNECTION_MODE", "direct"), "Connection mode: 'direct' or 'ssh'")
 	flag.StringVar(&sshHost, "host", envOr("SSH_HOST", "192.168.0.72:22"), "SSH host:port")
 	flag.StringVar(&sshUser, "user", envOr("SSH_USER", "dune"), "SSH user")
 	flag.StringVar(&sshKeyPath, "key", envOr("SSH_KEY", ""), "SSH private key path (auto-detected if empty)")
 	flag.StringVar(&itemDataPath, "itemdata", envOr("ITEM_DATA", ""), "Item data JSON path")
 	flag.IntVar(&scripCurrencyID, "scripcurrency", envIntOr("SCRIP_CURRENCY", 1), "Scrip currency id")
-	flag.IntVar(&dbPort, "dbport", envIntOr("DB_PORT", 15432), "PostgreSQL port inside the cluster")
+	flag.StringVar(&dbHost, "dbhost", envOr("DB_HOST", "127.0.0.1"), "PostgreSQL host")
+	flag.IntVar(&dbPort, "dbport", envIntOr("DB_PORT", 15432), "PostgreSQL port")
 	flag.StringVar(&dbUser, "dbuser", envOr("DB_USER", "dune"), "PostgreSQL user")
 	flag.StringVar(&dbPass, "dbpass", envOr("DB_PASS", ""), "PostgreSQL password")
 	flag.StringVar(&dbName, "dbname", envOr("DB_NAME", "dune"), "PostgreSQL database name")
 	flag.StringVar(&dbSchema, "schema", envOr("DB_SCHEMA", "dune"), "PostgreSQL schema")
-	flag.StringVar(&listenAddr, "addr", envOr("LISTEN_ADDR", ":8080"), "HTTP listen address")
+	flag.StringVar(&listenAddr, "addr", envOr("LISTEN_ADDR", ":9090"), "HTTP listen address")
 	flag.BoolVar(&captureMode, "capture", false, "Capture RabbitMQ messages (grant + notifications) and print to stdout")
 	flag.BoolVar(&setupMode, "setup", false, "Interactive setup wizard — writes .env from SSH autodiscovery")
 	flag.StringVar(&sqlQuery, "sql", "", "Run a SQL query and print results to stdout, then exit")
@@ -175,6 +179,10 @@ func main() {
 	}
 
 	if captureMode {
+		if connectionMode == "direct" {
+			fmt.Fprintln(os.Stderr, "capture mode requires SSH connection mode (-mode ssh)")
+			os.Exit(1)
+		}
 		if msg, ok := cmdConnect().(msgConnect); ok && msg.err != nil {
 			fmt.Fprintln(os.Stderr, "SSH connect:", msg.err)
 			os.Exit(1)
@@ -222,7 +230,6 @@ func main() {
 	}()
 
 	if !alreadyConnected {
-		// Connect synchronously (SSH + DB).
 		if msg, ok := cmdConnect().(msgConnect); ok && msg.err != nil {
 			fmt.Fprintln(os.Stderr, "connect:", msg.err)
 			fmt.Fprintln(os.Stderr, "Starting server anyway — use /api/v1/reconnect to retry")
@@ -232,11 +239,11 @@ func main() {
 			}
 		}
 	} else {
-		// Already connected by setup; just populate item templates.
 		if msg, ok := cmdFetchItemTemplates().(msgItemTemplates); ok {
 			mergeItemTemplates(msg.templates)
 		}
 	}
 
+	fmt.Printf("Connection mode: %s\n", connectionMode)
 	startServer(listenAddr)
 }

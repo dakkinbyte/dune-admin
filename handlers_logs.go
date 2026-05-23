@@ -29,6 +29,9 @@ func isValidK8sName(name string) bool {
 }
 
 func handleLogPods(w http.ResponseWriter, r *http.Request) {
+	if !requireSSH(w) {
+		return
+	}
 	out, err := sshExec(fmt.Sprintf(
 		"sudo kubectl get pods -n %s --no-headers -o custom-columns=NAME:.metadata.name 2>&1", globalPodNS))
 	if err != nil {
@@ -59,6 +62,9 @@ func handleLogPods(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleLogStream(w http.ResponseWriter, r *http.Request) {
+	if !requireSSH(w) {
+		return
+	}
 	ns := r.URL.Query().Get("ns")
 	pod := r.URL.Query().Get("pod")
 	if ns == "" || pod == "" {
