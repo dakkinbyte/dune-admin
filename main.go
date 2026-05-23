@@ -187,13 +187,11 @@ func main() {
 	}
 
 	if captureMode {
-		if connectionMode == "direct" {
-			fmt.Fprintln(os.Stderr, "capture mode requires SSH connection mode (-mode ssh)")
-			os.Exit(1)
-		}
-		if msg, ok := cmdConnect().(msgConnect); ok && msg.err != nil {
-			fmt.Fprintln(os.Stderr, "SSH connect:", msg.err)
-			os.Exit(1)
+		if connectionMode != "direct" {
+			if msg, ok := cmdConnect().(msgConnect); ok && msg.err != nil {
+				fmt.Fprintln(os.Stderr, "SSH connect:", msg.err)
+				os.Exit(1)
+			}
 		}
 		runCapture()
 		return
