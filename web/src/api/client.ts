@@ -7,7 +7,7 @@ declare global {
 function getApiBase(): string {
   const stored = localStorage.getItem('dune_admin_backend')
   if (stored) return stored.replace(/\/$/, '') + '/api/v1'
-  return 'http://localhost:8080/api/v1'
+  return window.location.origin + '/api/v1'
 }
 
 export function getWsBase(): string {

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -138,6 +140,15 @@ func startServer(addr string) {
 	mux.HandleFunc("GET /api/v1/bases", handleListBases)
 	mux.HandleFunc("GET /api/v1/bases/{id}/export", handleExportBase)
 
+	// ── frontend (SPA) ───────────────────────────────────────────────────────
+	for _, dir := range []string{"./dist", "./web/dist"} {
+		if info, err := os.Stat(dir); err == nil && info.IsDir() {
+			log.Printf("Serving frontend from %s", dir)
+			mux.Handle("/", spaHandler(dir))
+			break
+		}
+	}
+
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           corsMiddleware(mux),
@@ -148,6 +159,20 @@ func startServer(addr string) {
 	}
 	log.Printf("dune-admin listening on %s", addr)
 	log.Fatal(srv.ListenAndServe())
+}
+
+// spaHandler serves static files from distDir, falling back to index.html
+// for any path that doesn't match a real file (client-side routing).
+func spaHandler(distDir string) http.Handler {
+	fileServer := http.FileServer(http.Dir(distDir))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := filepath.Join(distDir, filepath.Clean(r.URL.Path))
+		if _, err := os.Stat(path); err == nil {
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+		http.ServeFile(w, r, filepath.Join(distDir, "index.html"))
+	})
 }
 
 // ── JSON helpers ──────────────────────────────────────────────────────────────
