@@ -650,8 +650,10 @@ function GiveItemsModal({ player, open, onClose }: { player: Player; open: boole
                 <div className="flex justify-center py-6"><Spinner size="lg" /></div>
               ) : (
                 <div className="flex flex-col gap-3 h-full overflow-hidden">
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="relative flex-1">
+                  <div className="flex items-end gap-2 shrink-0">
+                    <div className="flex flex-col gap-0.5 flex-1">
+                      <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Template</span>
+                      <div className="relative">
                       <input
                         className="w-full rounded px-3 py-1.5 text-sm border"
                         style={{ background: 'var(--color-surface)', color: 'var(--color-text)', borderColor: '#2a2418', outline: 'none' }}
@@ -668,6 +670,7 @@ function GiveItemsModal({ player, open, onClose }: { player: Player; open: boole
                           ))}
                         </div>
                       )}
+                      </div>
                     </div>
                     <div className="flex flex-col items-center gap-0.5">
                       <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Qty</span>
