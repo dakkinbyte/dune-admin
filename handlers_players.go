@@ -238,7 +238,7 @@ func handleGiveItems(w http.ResponseWriter, r *http.Request) {
 		}
 		given = append(given, item.Template)
 	}
-	jsonOK(w, map[string]interface{}{"given": given, "skipped": skipped})
+	jsonOK(w, map[string]any{"given": given, "skipped": skipped})
 }
 
 func handleGrantLive(w http.ResponseWriter, r *http.Request) {
