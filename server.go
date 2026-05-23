@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -144,6 +146,22 @@ func startServer(addr string) {
 	// ── bases ─────────────────────────────────────────────────────────────────
 	mux.HandleFunc("GET /api/v1/bases", handleListBases)
 	mux.HandleFunc("GET /api/v1/bases/{id}/export", handleExportBase)
+
+	// ── director proxy (direct mode) ─────────────────────────────────────────
+	if connectionMode == "direct" && directorURL != "" {
+		if target, err := url.Parse(directorURL); err == nil {
+			proxy := httputil.NewSingleHostReverseProxy(target)
+			mux.HandleFunc("/director/", func(w http.ResponseWriter, r *http.Request) {
+				r.URL.Path = strings.TrimPrefix(r.URL.Path, "/director")
+				if r.URL.Path == "" {
+					r.URL.Path = "/"
+				}
+				r.Host = target.Host
+				proxy.ServeHTTP(w, r)
+			})
+			log.Printf("Proxying /director/ → %s", directorURL)
+		}
+	}
 
 	// ── frontend (SPA) ───────────────────────────────────────────────────────
 	for _, dir := range []string{"./dist", "./web/dist"} {

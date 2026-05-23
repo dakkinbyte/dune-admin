@@ -23,6 +23,7 @@ var (
 	containerName    string
 	containerUser    string
 	containerLogPath string
+	directorURL      string
 	sshHost          string
 	sshUser         string
 	sshKeyPath      string
@@ -86,6 +87,7 @@ func init() {
 	flag.StringVar(&containerName, "container", envOr("CONTAINER_NAME", "AMP_MehDune01"), "Podman container name (direct mode)")
 	flag.StringVar(&containerUser, "container-user", envOr("CONTAINER_USER", "amp"), "User that runs the container (direct mode)")
 	flag.StringVar(&containerLogPath, "logpath", envOr("CONTAINER_LOG_PATH", "/AMP/duneawakening/logs"), "Log path inside container (direct mode)")
+	flag.StringVar(&directorURL, "director", envOr("DIRECTOR_URL", "http://127.0.0.1:11717"), "Battlegroup Director URL (direct mode)")
 	flag.StringVar(&sshHost, "host", envOr("SSH_HOST", "192.168.0.72:22"), "SSH host:port")
 	flag.StringVar(&sshUser, "user", envOr("SSH_USER", "dune"), "SSH user")
 	flag.StringVar(&sshKeyPath, "key", envOr("SSH_KEY", ""), "SSH private key path (auto-detected if empty)")
