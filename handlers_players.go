@@ -1077,6 +1077,27 @@ func handleRepairVehicle(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]any{"repaired": msg.repaired, "skipped": msg.skipped, "total": msg.total})
 }
 
+func handleRefuelVehicle(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		PlayerID  int64 `json:"player_id"`
+		VehicleID int64 `json:"vehicle_id"`
+	}
+	if err := decode(r, &req); err != nil {
+		jsonErr(w, err, 400)
+		return
+	}
+	msg, ok := cmdRefuelVehicle(req.PlayerID, req.VehicleID)().(msgMutate)
+	if !ok {
+		jsonErr(w, fmt.Errorf("internal error"), 500)
+		return
+	}
+	if msg.err != nil {
+		jsonErr(w, msg.err, 500)
+		return
+	}
+	jsonOK(w, map[string]string{"ok": msg.ok})
+}
+
 func handleGetPartitions(w http.ResponseWriter, r *http.Request) {
 	msg, ok := cmdListPartitions()().(msgPartitions)
 	if !ok {

@@ -77,6 +77,21 @@ export function InventoryModal({ player, open, onClose }: Props) {
     }
   }
 
+  const handleRepairAllGear = async () => {
+    try {
+      const res = await api.players.repairGear(player.id)
+      if (res.repaired === 0) {
+        toast.success(`No gear needed repair (${res.scanned} items scanned)`)
+      } else {
+        toast.success(`Repaired ${res.repaired} of ${res.scanned} gear pieces — relog to see in-game`)
+        // Refetch so the UI reflects the new durability values.
+        api.players.inventory(player.id).then(setItems).catch(() => {})
+      }
+    } catch (e: unknown) {
+      toast.danger(e instanceof Error ? e.message : String(e))
+    }
+  }
+
   const handleRepairVehicle = async (v: VehicleRow) => {
     try {
       const res = await api.players.repairVehicle(v.id, player.id)
@@ -95,16 +110,10 @@ export function InventoryModal({ player, open, onClose }: Props) {
     }
   }
 
-  const handleRepairAllGear = async () => {
+  const handleRefuelVehicle = async (v: VehicleRow) => {
     try {
-      const res = await api.players.repairGear(player.id)
-      if (res.repaired === 0) {
-        toast.success(`No gear needed repair (${res.scanned} items scanned)`)
-      } else {
-        toast.success(`Repaired ${res.repaired} of ${res.scanned} gear pieces — relog to see in-game`)
-        // Refetch so the UI reflects the new durability values.
-        api.players.inventory(player.id).then(setItems).catch(() => {})
-      }
+      await api.players.refuelVehicle(v.id, player.id)
+      toast.success(`Refueled ${v.vehicle_name || v.class} — relog to see in-game`)
     } catch (e: unknown) {
       toast.danger(e instanceof Error ? e.message : String(e))
     }
@@ -212,6 +221,7 @@ export function InventoryModal({ player, open, onClose }: Props) {
                             return !v.is_backup ? (
                               <div className="flex gap-1">
                                 <Button size="sm" variant="ghost" onPress={() => handleRepairVehicle(v)}>Repair</Button>
+                                <Button size="sm" variant="ghost" onPress={() => handleRefuelVehicle(v)}>Refuel</Button>
                               </div>
                             ) : null
                         }

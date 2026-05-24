@@ -161,6 +161,8 @@ export const api = {
       req<{repaired: number; scanned: number}>('POST', '/players/repair-gear', { player_id }),
     repairVehicle: (vehicle_id: number, player_id: number) =>
       req<{repaired: number; skipped: number; total: number}>('POST', '/players/repair-vehicle', { vehicle_id, player_id }),
+    refuelVehicle: (vehicle_id: number, player_id: number) =>
+      req<MutateResult>('POST', '/players/refuel-vehicle', { vehicle_id, player_id }),
     partitions: () => req<TeleportLocation[]>('GET', '/players/partitions'),
     teleport: (fls_id: string, partition_label: string) =>
       req<MutateResult>('POST', '/players/teleport', { fls_id, partition_label }),

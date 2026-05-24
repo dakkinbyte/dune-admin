@@ -111,6 +111,7 @@ func startServer(addr string) {
 	mux.HandleFunc("POST /api/v1/players/repair-item", handleRepairItem)
 	mux.HandleFunc("POST /api/v1/players/repair-gear", handleRepairPlayerGear)
 	mux.HandleFunc("POST /api/v1/players/repair-vehicle", handleRepairVehicle)
+	mux.HandleFunc("POST /api/v1/players/refuel-vehicle", handleRefuelVehicle)
 	mux.HandleFunc("GET /api/v1/players/partitions", handleGetPartitions)
 	mux.HandleFunc("POST /api/v1/players/teleport", handleTeleportPlayer)
 	mux.HandleFunc("GET /api/v1/players/{id}/events", handleGetPlayerEvents)
