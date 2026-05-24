@@ -5,8 +5,15 @@ import type { InventoryItem } from '../api/client'
 
 type Container = { id: number; name: string; class: string; map: string; item_count: number }
 
+const TYPE_LABELS: Record<string, string> = {
+  SpiceSilo_Placeable: 'Small Storage Container',
+  GenericContainer_Placeable: 'Chest',
+  StorageContainer_Placeable: 'Storage Container',
+  MediumStorageContainer_Placeable: 'Medium Storage Container',
+}
+
 function shortClass(cls: string): string {
-  return cls.replace(/_Placeable$/, '')
+  return TYPE_LABELS[cls] ?? cls.replace(/_Placeable$/, '')
 }
 
 export default function StorageTab() {

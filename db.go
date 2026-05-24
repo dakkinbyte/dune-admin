@@ -3372,16 +3372,23 @@ func cmdListStorageContainers() Msg {
 	// noting that "Small Storage Container" registers as SpiceSilo_Placeable
 	// despite sharing the type name with world POI silos — owner_entity_id
 	// distinguishes player-built from world-spawned.
+	// User-given container names live on dune.permission_actor.actor_name.
+	// Unnamed containers default to 'None' or '##<PlaceableType>_Placeable' —
+	// filter both out so only real custom names surface.
 	rows, err := globalDB.Query(context.Background(), `
 		SELECT p.id,
-		       ''::text AS name,
+		       COALESCE(MAX(CASE
+		           WHEN pa.actor_name NOT LIKE '##%' AND pa.actor_name <> 'None'
+		           THEN pa.actor_name
+		       END), '') AS name,
 		       p.building_type AS class,
 		       COALESCE(a.map, '') AS map,
 		       COUNT(i.id) AS item_count
 		FROM dune.placeables p
-		LEFT JOIN dune.actors a        ON a.id = p.id
-		LEFT JOIN dune.inventories inv ON inv.actor_id = p.id
-		LEFT JOIN dune.items i         ON i.inventory_id = inv.id
+		LEFT JOIN dune.actors a            ON a.id = p.id
+		LEFT JOIN dune.permission_actor pa ON pa.actor_id = p.id
+		LEFT JOIN dune.inventories inv     ON inv.actor_id = p.id
+		LEFT JOIN dune.items i             ON i.inventory_id = inv.id
 		WHERE p.building_type IN (
 		    'SpiceSilo_Placeable',
 		    'GenericContainer_Placeable',
