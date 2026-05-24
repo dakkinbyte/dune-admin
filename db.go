@@ -3365,19 +3365,34 @@ func cmdListStorageContainers() Msg {
 	if globalDB == nil {
 		return msgStorageContainers{err: fmt.Errorf("not connected")}
 	}
+	// Drive from dune.placeables so we catch player-built containers regardless
+	// of whether they've been promoted to an actor row yet (the game creates the
+	// actor lazily on first interaction). building_type is the in-data identity
+	// of the placeable kind; the four below cover the storage-container tiers,
+	// noting that "Small Storage Container" registers as SpiceSilo_Placeable
+	// despite sharing the type name with world POI silos — owner_entity_id
+	// distinguishes player-built from world-spawned.
 	rows, err := globalDB.Query(context.Background(), `
-		SELECT a.id,
-		       COALESCE(MAX(pa.actor_name), '') AS name,
-		       a.class,
-		       COALESCE(a.map, ''),
+		SELECT p.id,
+		       ''::text AS name,
+		       p.building_type AS class,
+		       COALESCE(a.map, '') AS map,
 		       COUNT(i.id) AS item_count
-		FROM dune.actors a
-		LEFT JOIN dune.permission_actor pa ON pa.actor_id = a.id
-		LEFT JOIN dune.inventories inv ON inv.actor_id = a.id
-		LEFT JOIN dune.items i ON i.inventory_id = inv.id
-		WHERE a.class ILIKE '%StorageContainer%'
-		GROUP BY a.id, a.class, a.map
-		ORDER BY a.id`)
+		FROM dune.placeables p
+		LEFT JOIN dune.actors a        ON a.id = p.id
+		LEFT JOIN dune.inventories inv ON inv.actor_id = p.id
+		LEFT JOIN dune.items i         ON i.inventory_id = inv.id
+		WHERE p.building_type IN (
+		    'SpiceSilo_Placeable',
+		    'GenericContainer_Placeable',
+		    'StorageContainer_Placeable',
+		    'MediumStorageContainer_Placeable'
+		  )
+		  AND p.is_hologram = false
+		  AND p.owner_entity_id IS NOT NULL
+		  AND p.owner_entity_id != 0
+		GROUP BY p.id, p.building_type, a.map
+		ORDER BY p.id`)
 	if err != nil {
 		return msgStorageContainers{err: err}
 	}

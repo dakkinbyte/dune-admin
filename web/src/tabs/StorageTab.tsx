@@ -6,8 +6,7 @@ import type { InventoryItem } from '../api/client'
 type Container = { id: number; name: string; class: string; map: string; item_count: number }
 
 function shortClass(cls: string): string {
-  const m = cls.match(/BP_(\w+StorageContainer)/)
-  return m ? m[1] : cls.split('/').pop()?.replace(/_C$/, '') ?? cls
+  return cls.replace(/_Placeable$/, '')
 }
 
 export default function StorageTab() {
