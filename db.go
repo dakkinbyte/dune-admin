@@ -3326,7 +3326,7 @@ func cmdRepairPlayerGear(playerID int64) Cmd {
 			var templateID string
 			var maxStr, curStr, decayedStr pgtype.Text
 			if err := rows.Scan(&id, &templateID, &maxStr, &curStr, &decayedStr); err != nil {
-				continue
+				return msgRepairGear{scanned: scanned, err: fmt.Errorf("scan item: %w", err)}
 			}
 
 			// Target priority: catalog (vehicle modules stored as items) → stats.MaxDurability → 100.
@@ -3360,9 +3360,15 @@ func cmdRepairPlayerGear(playerID int64) Cmd {
 			return msgRepairGear{err: fmt.Errorf("scan rows: %w", err)}
 		}
 
+		tx, err := globalDB.Begin(ctx)
+		if err != nil {
+			return msgRepairGear{scanned: scanned, err: fmt.Errorf("begin tx: %w", err)}
+		}
+		defer tx.Rollback(ctx)
+
 		repaired := 0
 		for _, rc := range toRepair {
-			_, err := globalDB.Exec(ctx, `
+			_, err := tx.Exec(ctx, `
 				UPDATE dune.items
 				SET stats = jsonb_set(
 					jsonb_set(stats,
@@ -3375,6 +3381,9 @@ func cmdRepairPlayerGear(playerID int64) Cmd {
 				return msgRepairGear{repaired: repaired, scanned: scanned, err: fmt.Errorf("repair item %d: %w", rc.id, err)}
 			}
 			repaired++
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return msgRepairGear{scanned: scanned, err: fmt.Errorf("commit: %w", err)}
 		}
 		return msgRepairGear{repaired: repaired, scanned: scanned}
 	}
@@ -3391,15 +3400,6 @@ func cmdRepairVehicle(playerID, vehicleID int64) Cmd {
 		ctx := context.Background()
 		if err := checkPlayerOffline(ctx, playerID); err != nil {
 			return msgRepairVehicle{err: err}
-		}
-
-		var exists bool
-		err := globalDB.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM dune.actors WHERE id = $1::bigint)`, vehicleID).Scan(&exists)
-		if err != nil {
-			return msgRepairVehicle{err: fmt.Errorf("look up vehicle: %w", err)}
-		}
-		if !exists {
-			return msgRepairVehicle{err: fmt.Errorf("vehicle %d not found", vehicleID)}
 		}
 
 		rows, err := globalDB.Query(ctx, `
@@ -3419,7 +3419,7 @@ func cmdRepairVehicle(playerID, vehicleID int64) Cmd {
 		for rows.Next() {
 			var m moduleRow
 			if err := rows.Scan(&m.id, &m.templateID); err != nil {
-				continue
+				return msgRepairVehicle{err: fmt.Errorf("scan module: %w", err)}
 			}
 			modules = append(modules, m)
 		}

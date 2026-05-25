@@ -220,7 +220,7 @@ export function PlayerActionsModal({ player, open, onClose }: Props) {
     <Modal>
       <Modal.Backdrop isOpen={open} onOpenChange={v => !v && onClose()}>
         <Modal.Container size="cover">
-          <Modal.Dialog className="h-[92vh] flex flex-col">
+          <Modal.Dialog className="h-[92vh] flex flex-col bg-surface-alt">
             <Modal.CloseTrigger />
             <Modal.Header>
               <Modal.Heading className="text-accent">
