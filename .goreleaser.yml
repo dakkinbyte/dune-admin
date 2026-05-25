@@ -143,6 +143,8 @@ brews:
       system "#{bin}/dune-admin version"
     install: |
       bin.install "dune-admin"
+      pkgshare.install "item-data.json"
+      pkgshare.install "tags-data.json"
 
 # Scoop bucket. Requires RELEASE_TOKEN secret (PAT with `repo` scope on
 # Icehunter/scoop-bucket). Windows-only; goreleaser uses the windows
