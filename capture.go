@@ -291,6 +291,18 @@ func runCaptureDirect() {
 	fmt.Println("Press Ctrl-C to stop.")
 	fmt.Println()
 
+	// Self-heal: apply dune_cap user + auth backends now and refresh every 15s.
+	// RabbitMQ's in-memory state is wiped on broker restart, so this keeps the
+	// capture tool working through Dune instance restarts without the manual
+	// post-restart playbook (see rabbitmq-research.md).
+	ensureCaptureUserDirect()
+	go func() {
+		for {
+			time.Sleep(15 * time.Second)
+			ensureCaptureUserDirect()
+		}
+	}()
+
 	// List actual exchanges from both brokers via rabbitmqctl
 	adminExchanges := listExchangesDirect_ctl("rabbit-admin@localhost", "DJUYYPFKOWCCNJIXEBAQ")
 	gameExchanges := listExchangesDirect_ctl("rabbit-game@localhost", "MDRQZKETDUYQCAQYSNNL")
@@ -318,6 +330,32 @@ func runCaptureDirect() {
 
 	<-done
 	<-done
+}
+
+// ensureBrokerDirect re-applies the dune_cap user + permissions + auth backend
+// chain on a local broker. Idempotent: works whether the user exists or not.
+// In-memory state in RabbitMQ resets on broker restart, so this must be called
+// at capture-tool startup AND on a refresh loop to survive Dune instance
+// restarts without manual intervention.
+func ensureBrokerDirect(node, cookie, label string) {
+	base := fmt.Sprintf("sudo RABBITMQ_ERLANG_COOKIE=%s rabbitmqctl -n %s", cookie, node)
+	// add_user fails harmlessly if it already exists; ignore error.
+	exec.Command("bash", "-c", fmt.Sprintf("%s add_user %s %s 2>&1", base, capUser, capPass)).Run() //nolint:errcheck
+	// change_password ensures the password matches what we use.
+	exec.Command("bash", "-c", fmt.Sprintf("%s change_password %s %s 2>&1", base, capUser, capPass)).Run() //nolint:errcheck
+	// Wide-open vhost permissions for dune_cap (admin-only capture user).
+	exec.Command("bash", "-c", fmt.Sprintf("%s set_permissions -p / %s '.*' '.*' '.*' 2>&1", base, capUser)).Run() //nolint:errcheck
+	// Auth backend chain: HTTP cache first (the game's auth path) + internal
+	// (so dune_cap from the user database resolves).
+	exec.Command("bash", "-c", fmt.Sprintf("%s eval 'application:set_env(rabbit, auth_backends, [{rabbit_auth_backend_cache, rabbit_auth_backend_http}, rabbit_auth_backend_internal]).' 2>&1", base)).Run() //nolint:errcheck
+	// Long TTL on the HTTP auth cache so capture doesn't hammer the auth API.
+	exec.Command("bash", "-c", fmt.Sprintf("%s eval 'application:set_env(rabbitmq_auth_backend_cache, cache_ttl, 86400000).' 2>&1", base)).Run() //nolint:errcheck
+	fmt.Printf("[capture] [%s] auth ensured\n", label)
+}
+
+func ensureCaptureUserDirect() {
+	ensureBrokerDirect("rabbit-admin@localhost", "DJUYYPFKOWCCNJIXEBAQ", "mq-admin")
+	ensureBrokerDirect("rabbit-game@localhost", "MDRQZKETDUYQCAQYSNNL", "mq-game")
 }
 
 // listExchangesDirect_ctl lists exchanges using rabbitmqctl on the host.
