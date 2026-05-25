@@ -8,7 +8,7 @@ import allGameplayTags from '../../../data/gameplayTags.json'
 import { api } from '../../../api/client'
 import type {
   Player, JourneyNode, SpecTrack, KeystoneRow,
-  TeleportLocation, GameEvent, DungeonRecord,
+  TeleportLocation, GameEvent, DungeonRecord, ProgressionPreset,
 } from '../../../api/client'
 import {
   ACTION_SECTIONS, XP_TRACKS, FACTIONS,
@@ -78,6 +78,10 @@ export function PlayerActionsModal({ player, open, onClose }: Props) {
   const [selectedTrainer, setSelectedTrainer] = useState<TrainerKey>('BeneGesserit')
   const [selectedMQ, setSelectedMQ] = useState<string>('DA_MQ_ANewBeginning')
 
+  // Quick Presets (curated journey bundles — backed by /api/v1/progression/presets)
+  const [presets, setPresets] = useState<ProgressionPreset[]>([])
+  const [presetsLoaded, setPresetsLoaded] = useState(false)
+
   // Contracts
   const [contractCatalog, setContractCatalog] = useState<{id: string; alias: string; tag_count: number}[]>([])
   const [contractCatalogLoaded, setContractCatalogLoaded] = useState(false)
@@ -129,7 +133,12 @@ export function PlayerActionsModal({ player, open, onClose }: Props) {
         .then(c => { setContractCatalog(c); setContractCatalogLoaded(true); setContractCatalogError('') })
         .catch((e: unknown) => { setContractCatalogError(e instanceof Error ? e.message : String(e)); setContractCatalogLoaded(true) })
     }
-  }, [section, nodesLoaded, contractCatalogLoaded, open, player.account_id])
+    if (section === 'progression' && !presetsLoaded && open) {
+      api.progression.presets()
+        .then(p => { setPresets(p); setPresetsLoaded(true) })
+        .catch(() => setPresetsLoaded(true))
+    }
+  }, [section, nodesLoaded, contractCatalogLoaded, presetsLoaded, open, player.account_id])
 
   useEffect(() => {
     if (section === 'specs' && !specsLoaded && open) {
@@ -416,6 +425,36 @@ export function PlayerActionsModal({ player, open, onClose }: Props) {
                   const selectedMQDef = MAIN_QUESTS.find(m => m.id === selectedMQ)
                   return (
                   <div className="flex flex-col gap-3 flex-1 min-h-0">
+                    {/* Quick Presets — curated journey-completion bundles */}
+                    <Panel>
+                      <SectionLabel>Quick Presets</SectionLabel>
+                      <div className="text-xs text-muted">Curated bundles that complete one or more root journey nodes and cascade to all children + tags.</div>
+                      {!presetsLoaded ? (
+                        <div className="text-xs text-muted py-2">Loading…</div>
+                      ) : presets.length === 0 ? (
+                        <div className="text-xs text-muted py-2">No presets available</div>
+                      ) : (
+                        <div className="flex flex-col">
+                          {presets.map(p => (
+                            <div key={p.id} className="flex items-center gap-3 py-2 border-b border-border/40 last:border-0">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-semibold">{p.name}</div>
+                                <div className="text-xs text-muted">{p.description}</div>
+                              </div>
+                              <Chip size="sm" variant="soft">{p.node_count} nodes</Chip>
+                              <Button size="sm" variant="secondary" isDisabled={busy}
+                                onPress={() => run(
+                                  () => api.progression.applyPreset(player.account_id, p.id),
+                                  `Applied preset '${p.name}' to ${player.name}`,
+                                ).then(() => setNodesLoaded(false))}>
+                                Apply
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </Panel>
+
                     {/* Progression Unlock */}
                     <Panel>
                       <SectionLabel>Progression Unlock</SectionLabel>
