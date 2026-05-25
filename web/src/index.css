@@ -1,6 +1,13 @@
 @import "tailwindcss";
 @import "@heroui/styles";
 
+@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-Medium.ttf') format('truetype'); font-weight: 400 500; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-ExtraLight.ttf') format('truetype'); font-weight: 200; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-Bold-Italic_MonoNumbers_Kommafix_Cyrfix.ttf') format('truetype'); font-weight: 700; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-Italic_MonoNumbers_Kommafix_Cyrfix.ttf') format('truetype'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'ImperialFont'; src: url('/fonts/ImperialFont.ttf') format('truetype'); font-weight: normal; font-style: normal; font-display: swap; }
+
 /* ── Dune desert dark theme ──────────────────────────────────────────────────
    Single source of truth for the dune palette. We override HeroUI v3 semantic
    tokens directly so utility classes (`bg-surface`, `text-foreground`,
@@ -9,6 +16,10 @@
 
    `.dark` is applied on <html> in index.html.
    ─────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --font-sans: 'Duneway', ui-sans-serif, system-ui, sans-serif;
+}
 
 .dark {
   color-scheme: dark;
@@ -107,7 +118,7 @@ html, body, #root {
   background-color: var(--background);
   color: var(--foreground);
   min-height: 100vh;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Duneway', system-ui, sans-serif;
   margin: 0;
   padding: 0;
 }
