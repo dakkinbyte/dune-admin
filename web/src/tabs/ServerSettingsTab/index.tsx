@@ -166,8 +166,22 @@ type RowProps = {
   onReset: () => void
 }
 
+// formatDefault renders the schema default in the same shape the UE INI uses,
+// so admins see e.g. "1.0" for a float (not "1") and "True"/"False" for bools.
+// JSON deserialization loses trailing zeros on floats, so we pad them back.
+function formatDefault(item: ServerSetting): string {
+  if (item.type === 'bool') {
+    return item.default === true ? 'True' : 'False'
+  }
+  if (item.type === 'float' && typeof item.default === 'number') {
+    return Number.isInteger(item.default) ? `${item.default}.0` : String(item.default)
+  }
+  return String(item.default)
+}
+
 function SettingRow({ item, value, isDirty, onChange, onReset }: RowProps) {
-  const placeholder = `default: ${String(item.default)}`
+  const formattedDefault = formatDefault(item)
+  const placeholder = `default: ${formattedDefault}`
 
   return (
     <div className="flex items-start gap-3 py-3 border-b border-border/40 last:border-0">
@@ -182,7 +196,10 @@ function SettingRow({ item, value, isDirty, onChange, onReset }: RowProps) {
             <Chip size="sm" color="default" variant="soft">AMP UI</Chip>
           )}
         </div>
-        <div className="text-xs text-muted mt-0.5">{item.description}</div>
+        <div className="text-xs text-muted mt-0.5">
+          {item.description}
+          <span className="ml-2 font-mono text-muted/60">default: {formattedDefault}</span>
+        </div>
         <div className="text-xs text-muted/60 font-mono mt-0.5">{item.section} · {item.key}</div>
       </div>
 
