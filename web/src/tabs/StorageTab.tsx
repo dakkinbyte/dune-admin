@@ -96,7 +96,7 @@ export default function StorageTab() {
   return (
     <div className="flex flex-col gap-3 h-full min-h-0">
       {/* Warning banner */}
-      <div className="shrink-0 rounded-md px-4 py-2 text-xs font-medium bg-danger/10 border border-danger/40 text-danger flex items-center gap-2">
+      <div className="shrink-0 rounded-[var(--radius)] px-4 py-2 text-xs font-medium bg-danger/10 border border-danger/40 text-danger flex items-center gap-2">
         <Icon name="triangle-alert" />
         <span>Items added to or removed from storage containers require a <strong>server zone restart</strong> to become visible to other players.</span>
       </div>
@@ -297,7 +297,7 @@ function AddItemsModal({ container, open, onClose, onSuccess, onRefresh }: {
                           />
                         </InputGroup>
                         {filtered.length > 0 && (
-                          <div className="absolute z-50 w-full mt-1 rounded-md border border-border bg-surface overflow-y-auto max-h-52">
+                          <div className="absolute z-50 w-full mt-1 rounded-[var(--radius)] border border-border bg-surface overflow-y-auto max-h-52">
                             {filtered.map(t => (
                               <div
                                 key={t.id}
@@ -347,7 +347,7 @@ function AddItemsModal({ container, open, onClose, onSuccess, onRefresh }: {
                         {staged.map((item, idx) => (
                           <div
                             key={idx}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs bg-surface border border-border"
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius)] text-xs bg-surface border border-border"
                           >
                             <span className="flex-1 font-mono">{item.template}</span>
                             <Input
@@ -374,7 +374,7 @@ function AddItemsModal({ container, open, onClose, onSuccess, onRefresh }: {
                   )}
 
                   {result && (
-                    <div className="text-xs shrink-0 rounded-md px-3 py-2 bg-surface border border-border">
+                    <div className="text-xs shrink-0 rounded-[var(--radius)] px-3 py-2 bg-surface border border-border">
                       {result.given.length > 0 && (
                         <div className="text-success">✓ Added: {result.given.join(', ')}</div>
                       )}

@@ -28,7 +28,7 @@ export function CommandOutputModal({
                   </p>
                 </div>
               ) : (
-                <div className="rounded-md p-3 font-mono text-xs overflow-auto max-h-60 bg-background border border-border text-success">
+                <div className="rounded-[var(--radius)] p-3 font-mono text-xs overflow-auto max-h-60 bg-background border border-border text-success">
                   <pre className="m-0 whitespace-pre-wrap">{cmdOutput}</pre>
                 </div>
               )}
@@ -39,7 +39,7 @@ export function CommandOutputModal({
                   <a
                     href={api.battlegroup.backupDownloadUrl(lastBackupFile)}
                     download={lastBackupFile.replace('.backup', '.zip')}
-                    className="text-sm px-3 py-1.5 rounded inline-flex items-center gap-1.5 bg-success/10 text-success border border-success/40 no-underline hover:bg-success/20"
+                    className="text-sm px-3 py-1.5 rounded-[var(--radius)] inline-flex items-center gap-1.5 bg-success/10 text-success border border-success/40 no-underline hover:bg-success/20"
                   >
                     <Icon name="download" /> Download
                   </a>

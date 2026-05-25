@@ -1,6 +1,13 @@
 @import "tailwindcss";
 @import "@heroui/styles";
 
+@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-Medium.ttf') format('truetype'); font-weight: 400 500; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-ExtraLight.ttf') format('truetype'); font-weight: 200; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-Bold-Italic_MonoNumbers_Kommafix_Cyrfix.ttf') format('truetype'); font-weight: 700; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-Italic_MonoNumbers_Kommafix_Cyrfix.ttf') format('truetype'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'ImperialFont'; src: url('/fonts/ImperialFont.ttf') format('truetype'); font-weight: normal; font-style: normal; font-display: swap; }
+
 /* ── Dune desert dark theme ──────────────────────────────────────────────────
    Single source of truth for the dune palette. We override HeroUI v3 semantic
    tokens directly so utility classes (`bg-surface`, `text-foreground`,
@@ -9,6 +16,10 @@
 
    `.dark` is applied on <html> in index.html.
    ─────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --font-sans: 'Duneway', ui-sans-serif, system-ui, sans-serif;
+}
 
 .dark {
   color-scheme: dark;
@@ -107,7 +118,7 @@ html, body, #root {
   background-color: var(--background);
   color: var(--foreground);
   min-height: 100vh;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Duneway', system-ui, sans-serif;
   margin: 0;
   padding: 0;
 }
@@ -131,12 +142,13 @@ html, body, #root {
 /* Column headers — sit on the body bg with a hairline divider below.
    Subtle elevation; the amber text + uppercase is what makes them read.   */
 [role="columnheader"] {
-  background: var(--surface);
+  background: linear-gradient(180deg, #1f1710 0%, var(--surface) 100%);
   color: var(--accent);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 1px solid var(--border);
+  border-top: 1px solid #4e3411;
   position: sticky;
   top: 0;
   z-index: 1;
@@ -150,6 +162,12 @@ html, body, #root {
 [role="row"]:nth-child(even) > [role="rowheader"],
 [role="row"]:nth-child(even) > [role="gridcell"] {
   background: var(--surface) !important;
+}
+
+/* Amber left accent on row hover — inset shadow avoids layout shift. */
+[role="row"]:hover > [role="rowheader"],
+[role="row"]:hover > [role="gridcell"]:first-of-type {
+  box-shadow: inset 2px 0 0 rgba(201, 130, 10, 0.45);
 }
 
 /* ── Tabs.Panel — HeroUI's default panel bg is too amber for our theme.
@@ -216,6 +234,31 @@ html, body, #root {
 [role="rowheader"],
 [role="gridcell"] {
   background: transparent;
+}
+
+/* ── HeroUI modal dialog — warm gradient body matches the panel language.  */
+[role="dialog"] {
+  background: linear-gradient(170deg, #2a1d0c 0%, #0d0b07 100%) !important;
+}
+.dialog-surface-alt[role="dialog"] {
+  background: var(--surface-alt) !important;
+}
+
+/* ── Pre / monospace output blocks ─────────────────────────────────────── */
+pre, .font-mono[class*="border"] {
+  border-radius: var(--radius) !important;
+}
+
+/* ── Surface lift — Option C: deep shadow stack ──────────────────────────
+   Adds perceived depth to card/panel surfaces: warm top-edge rim (#9e6711),
+   a gradient that darkens toward the bottom, and a stacked drop-shadow.
+   Use alongside existing bg-surface* + border-border classes.              */
+.dune-lift {
+  background: linear-gradient(170deg, #2a1d0c 0%, #0d0b07 100%) !important;
+  border-top-color: #9e6711 !important;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.35),
+    0 4px 10px rgba(0, 0, 0, 0.25);
 }
 
 /* Clerk modal backdrop — Clerk injects this via inline style so the

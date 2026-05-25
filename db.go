@@ -3219,23 +3219,282 @@ func cmdRepairItem(itemID int64) Cmd {
 		if globalDB == nil {
 			return msgMutate{err: fmt.Errorf("not connected")}
 		}
-		res, err := globalDB.Exec(context.Background(), `
-			UPDATE dune.items
+		ctx := context.Background()
+
+		// Derive owning player from item → inventory → actor (pawn) so we can gate Offline.
+		var pawnID int64
+		err := globalDB.QueryRow(ctx, `
+			SELECT inv.actor_id
+			FROM dune.items i
+			JOIN dune.inventories inv ON inv.id = i.inventory_id
+			WHERE i.id = $1::bigint`, itemID).Scan(&pawnID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return msgMutate{err: fmt.Errorf("item %d not found", itemID)}
+		}
+		if err != nil {
+			return msgMutate{err: fmt.Errorf("look up item owner: %w", err)}
+		}
+		if err := checkPlayerOffline(ctx, pawnID); err != nil {
+			return msgMutate{err: err}
+		}
+
+		// Write both fields: Current-only gets clamped to surviving Decayed on reload.
+		// Fallback target = 100.0 covers the 0-100 gear scale when MaxDurability is absent.
+		res, err := globalDB.Exec(ctx, `
+			UPDATE dune.items i
 			SET stats = jsonb_set(
-				stats,
-				'{FItemStackAndDurabilityStats,1,CurrentDurability}',
-				(stats->'FItemStackAndDurabilityStats'->1->'MaxDurability')
-			)
-			WHERE id = $1::bigint
-			  AND stats->'FItemStackAndDurabilityStats'->1->>'MaxDurability' IS NOT NULL
-			  AND (stats->'FItemStackAndDurabilityStats'->1->>'MaxDurability')::float > 0`, itemID)
+				jsonb_set(i.stats,
+					'{FItemStackAndDurabilityStats,1,CurrentDurability}',
+					to_jsonb(t.val), true),
+				'{FItemStackAndDurabilityStats,1,DecayedMaxDurability}',
+				to_jsonb(t.val), true)
+			FROM (
+				SELECT COALESCE(
+					(stats->'FItemStackAndDurabilityStats'->1->>'MaxDurability')::float8,
+					100.0
+				) AS val
+				FROM dune.items
+				WHERE id = $1::bigint
+				  AND stats ? 'FItemStackAndDurabilityStats'
+			) AS t
+			WHERE i.id = $1::bigint
+			  AND (
+				abs(COALESCE((i.stats->'FItemStackAndDurabilityStats'->1->>'CurrentDurability')::float8, 0) - t.val) > 0.01
+				OR abs(COALESCE((i.stats->'FItemStackAndDurabilityStats'->1->>'DecayedMaxDurability')::float8, 0) - t.val) > 0.01
+			  )`, itemID)
 		if err != nil {
 			return msgMutate{err: fmt.Errorf("repair item: %w", err)}
 		}
 		if res.RowsAffected() == 0 {
-			return msgMutate{err: fmt.Errorf("item %d not found or has no repairable durability", itemID)}
+			// Item exists (owner lookup succeeded). Either no durability field, or already at ceiling.
+			var hasDur bool
+			if err := globalDB.QueryRow(ctx, `
+				SELECT stats ? 'FItemStackAndDurabilityStats'
+				FROM dune.items WHERE id = $1::bigint`, itemID).Scan(&hasDur); err != nil {
+				return msgMutate{err: fmt.Errorf("check item: %w", err)}
+			}
+			if !hasDur {
+				return msgMutate{err: fmt.Errorf("item %d has no durability field", itemID)}
+			}
+			return msgMutate{ok: fmt.Sprintf("Item %d already at full durability", itemID)}
 		}
-		return msgMutate{ok: fmt.Sprintf("Repaired item %d", itemID)}
+		return msgMutate{ok: fmt.Sprintf("Repaired item %d — relog to see in-game", itemID)}
+	}
+}
+
+// Carried inventories: backpack, equipment, emote wheel, equipped weapons, action wheel, bank.
+var repairGearInventoryTypes = []int32{0, 1, 14, 15, 27, 30}
+
+func cmdRepairPlayerGear(playerID int64) Cmd {
+	return func() Msg {
+		if globalDB == nil {
+			return msgRepairGear{err: fmt.Errorf("not connected")}
+		}
+		if playerID == 0 {
+			return msgRepairGear{err: fmt.Errorf("player ID required")}
+		}
+		ctx := context.Background()
+		if err := checkPlayerOffline(ctx, playerID); err != nil {
+			return msgRepairGear{err: err}
+		}
+
+		rows, err := globalDB.Query(ctx, `
+			SELECT i.id, i.template_id,
+			       (i.stats->'FItemStackAndDurabilityStats'->1->>'MaxDurability'),
+			       (i.stats->'FItemStackAndDurabilityStats'->1->>'CurrentDurability'),
+			       (i.stats->'FItemStackAndDurabilityStats'->1->>'DecayedMaxDurability')
+			FROM dune.items i
+			JOIN dune.inventories inv ON inv.id = i.inventory_id
+			WHERE inv.actor_id = $1::bigint
+			  AND inv.inventory_type = ANY($2::int[])
+			  AND i.stats ? 'FItemStackAndDurabilityStats'`,
+			playerID, repairGearInventoryTypes)
+		if err != nil {
+			return msgRepairGear{err: fmt.Errorf("scan items: %w", err)}
+		}
+		defer rows.Close()
+
+		type repairCandidate struct {
+			id     int64
+			target float64
+		}
+		var toRepair []repairCandidate
+		scanned := 0
+		for rows.Next() {
+			scanned++
+			var id int64
+			var templateID string
+			var maxStr, curStr, decayedStr pgtype.Text
+			if err := rows.Scan(&id, &templateID, &maxStr, &curStr, &decayedStr); err != nil {
+				return msgRepairGear{scanned: scanned, err: fmt.Errorf("scan item: %w", err)}
+			}
+
+			// Target priority: catalog (vehicle modules stored as items) → stats.MaxDurability → 100.
+			var target float64
+			if v, ok := itemMaxDurability(templateID); ok && v > 0 {
+				target = v
+			} else if maxStr.Valid {
+				if v, perr := strconv.ParseFloat(maxStr.String, 64); perr == nil && v > 0 {
+					target = v
+				} else {
+					target = 100.0
+				}
+			} else {
+				target = 100.0
+			}
+
+			cur := 0.0
+			if curStr.Valid {
+				cur, _ = strconv.ParseFloat(curStr.String, 64)
+			}
+			decayed := 0.0
+			if decayedStr.Valid {
+				decayed, _ = strconv.ParseFloat(decayedStr.String, 64)
+			}
+			if math.Abs(cur-target) < 0.01 && math.Abs(decayed-target) < 0.01 {
+				continue
+			}
+			toRepair = append(toRepair, repairCandidate{id: id, target: target})
+		}
+		if err := rows.Err(); err != nil {
+			return msgRepairGear{err: fmt.Errorf("scan rows: %w", err)}
+		}
+
+		tx, err := globalDB.Begin(ctx)
+		if err != nil {
+			return msgRepairGear{scanned: scanned, err: fmt.Errorf("begin tx: %w", err)}
+		}
+		defer tx.Rollback(ctx)
+
+		repaired := 0
+		for _, rc := range toRepair {
+			_, err := tx.Exec(ctx, `
+				UPDATE dune.items
+				SET stats = jsonb_set(
+					jsonb_set(stats,
+						'{FItemStackAndDurabilityStats,1,CurrentDurability}',
+						to_jsonb($2::float8), true),
+					'{FItemStackAndDurabilityStats,1,DecayedMaxDurability}',
+					to_jsonb($2::float8), true)
+				WHERE id = $1::bigint`, rc.id, rc.target)
+			if err != nil {
+				return msgRepairGear{repaired: repaired, scanned: scanned, err: fmt.Errorf("repair item %d: %w", rc.id, err)}
+			}
+			repaired++
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return msgRepairGear{scanned: scanned, err: fmt.Errorf("commit: %w", err)}
+		}
+		return msgRepairGear{repaired: repaired, scanned: scanned}
+	}
+}
+
+func cmdRepairVehicle(playerID, vehicleID int64) Cmd {
+	return func() Msg {
+		if globalDB == nil {
+			return msgRepairVehicle{err: fmt.Errorf("not connected")}
+		}
+		if playerID == 0 {
+			return msgRepairVehicle{err: fmt.Errorf("player ID required")}
+		}
+		ctx := context.Background()
+		if err := checkPlayerOffline(ctx, playerID); err != nil {
+			return msgRepairVehicle{err: err}
+		}
+
+		rows, err := globalDB.Query(ctx, `
+			SELECT id, template_id
+			FROM dune.vehicle_modules
+			WHERE vehicle_id = $1::bigint`, vehicleID)
+		if err != nil {
+			return msgRepairVehicle{err: fmt.Errorf("scan modules: %w", err)}
+		}
+		defer rows.Close()
+
+		type moduleRow struct {
+			id         int64
+			templateID string
+		}
+		var modules []moduleRow
+		for rows.Next() {
+			var m moduleRow
+			if err := rows.Scan(&m.id, &m.templateID); err != nil {
+				return msgRepairVehicle{err: fmt.Errorf("scan module: %w", err)}
+			}
+			modules = append(modules, m)
+		}
+		if err := rows.Err(); err != nil {
+			return msgRepairVehicle{err: err}
+		}
+
+		total := len(modules)
+		repaired := 0
+		skipped := 0
+		for _, m := range modules {
+			target, ok := itemMaxDurability(m.templateID)
+			if !ok || target <= 0 {
+				skipped++
+				continue
+			}
+			// Both fields must be written — Current-only is clamped to surviving Decayed on reload.
+			_, err := globalDB.Exec(ctx, `
+				UPDATE dune.vehicle_modules
+				SET stats = jsonb_set(
+					jsonb_set(stats,
+						'{FVehicleModuleDurabilityStats,1,CurrentDurability}',
+						to_jsonb($2::float8), true),
+					'{FVehicleModuleDurabilityStats,1,DecayedMaxDurability}',
+					to_jsonb($2::float8), true)
+				WHERE id = $1::bigint`, m.id, target)
+			if err != nil {
+				return msgRepairVehicle{repaired: repaired, skipped: skipped, total: total, err: fmt.Errorf("repair module %d: %w", m.id, err)}
+			}
+			repaired++
+		}
+		return msgRepairVehicle{repaired: repaired, skipped: skipped, total: total}
+	}
+}
+
+func cmdRefuelVehicle(playerID, vehicleID int64) Cmd {
+	return func() Msg {
+		if globalDB == nil {
+			return msgMutate{err: fmt.Errorf("not connected")}
+		}
+		if playerID == 0 {
+			return msgMutate{err: fmt.Errorf("player ID required")}
+		}
+		ctx := context.Background()
+		if err := checkPlayerOffline(ctx, playerID); err != nil {
+			return msgMutate{err: err}
+		}
+
+		// Each vehicle BP has its own properties bag keyed by the class basename
+		// (e.g. "BP_Sandbike_CHOAM_C"), so we derive it before writing m_InitialFuel.
+		var class string
+		err := globalDB.QueryRow(ctx, `SELECT class FROM dune.actors WHERE id = $1::bigint`, vehicleID).Scan(&class)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return msgMutate{err: fmt.Errorf("vehicle %d not found", vehicleID)}
+		}
+		if err != nil {
+			return msgMutate{err: fmt.Errorf("look up vehicle class: %w", err)}
+		}
+		bpClass := class
+		if idx := strings.LastIndex(class, "."); idx >= 0 {
+			bpClass = class[idx+1:]
+		}
+
+		_, err = globalDB.Exec(ctx, `
+			UPDATE dune.actors
+			SET properties = jsonb_set(
+				COALESCE(properties, '{}'::jsonb),
+				ARRAY[$2::text, 'm_InitialFuel'],
+				to_jsonb(1.0::float8),
+				true)
+			WHERE id = $1::bigint`, vehicleID, bpClass)
+		if err != nil {
+			return msgMutate{err: fmt.Errorf("refuel vehicle: %w", err)}
+		}
+		return msgMutate{ok: fmt.Sprintf("Refueled vehicle %d — relog to see in-game", vehicleID)}
 	}
 }
 

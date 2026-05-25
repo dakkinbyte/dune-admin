@@ -7,11 +7,22 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
-var version = "dev" // set by goreleaser ldflags
+// AppVersion is the conduit release version shown to users.
+// Populated at build time via -ldflags "-X main.AppVersion=$(VERSION)".
+// Defaults to "dev" so unreleased builds don't masquerade as a real
+// release and don't trigger the update notifier.
+var AppVersion = "dev"
+
+// GitCommit and BuildTime are stamped at build time.
+var GitCommit = "unknown"
+var BuildTime = "unknown"
 
 // ── config ────────────────────────────────────────────────────────────────────
 
@@ -38,6 +49,66 @@ var (
 	listenAddr      string
 )
 
+// appConfig mirrors the fields written to ~/.dune-admin/config.yaml.
+type appConfig struct {
+	SSHHost       string `yaml:"ssh_host"`
+	SSHUser       string `yaml:"ssh_user"`
+	SSHKey        string `yaml:"ssh_key"`
+	DBPort        int    `yaml:"db_port"`
+	DBUser        string `yaml:"db_user"`
+	DBPass        string `yaml:"db_pass"`
+	DBName        string `yaml:"db_name"`
+	DBSchema      string `yaml:"db_schema"`
+	ScripCurrency int    `yaml:"scrip_currency"`
+	ListenAddr    string `yaml:"listen_addr"`
+}
+
+func configDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ".dune-admin"
+	}
+	return filepath.Join(home, ".dune-admin")
+}
+
+func configPath() string {
+	return filepath.Join(configDir(), "config.yaml")
+}
+
+func setEnvIfMissing(key, val string) {
+	if os.Getenv(key) == "" && val != "" {
+		os.Setenv(key, val)
+	}
+}
+
+// loadConfig reads ~/.dune-admin/config.yaml and falls back to .env in the
+// working directory for backward compatibility with existing unzipped-release
+// installs.
+func loadConfig() {
+	data, err := os.ReadFile(configPath())
+	if err == nil {
+		var cfg appConfig
+		if yaml.Unmarshal(data, &cfg) == nil {
+			setEnvIfMissing("SSH_HOST", cfg.SSHHost)
+			setEnvIfMissing("SSH_USER", cfg.SSHUser)
+			setEnvIfMissing("SSH_KEY", cfg.SSHKey)
+			if cfg.DBPort != 0 {
+				setEnvIfMissing("DB_PORT", strconv.Itoa(cfg.DBPort))
+			}
+			setEnvIfMissing("DB_USER", cfg.DBUser)
+			setEnvIfMissing("DB_PASS", cfg.DBPass)
+			setEnvIfMissing("DB_NAME", cfg.DBName)
+			setEnvIfMissing("DB_SCHEMA", cfg.DBSchema)
+			if cfg.ScripCurrency != 0 {
+				setEnvIfMissing("SCRIP_CURRENCY", strconv.Itoa(cfg.ScripCurrency))
+			}
+			setEnvIfMissing("LISTEN_ADDR", cfg.ListenAddr)
+			return
+		}
+	}
+	loadDotEnv()
+}
+
 func loadDotEnv() {
 	f, err := os.Open(".env")
 	if err != nil {
@@ -58,9 +129,7 @@ func loadDotEnv() {
 		if len(v) >= 2 && ((v[0] == '"' && v[len(v)-1] == '"') || (v[0] == '\'' && v[len(v)-1] == '\'')) {
 			v = v[1 : len(v)-1]
 		}
-		if os.Getenv(k) == "" {
-			os.Setenv(k, v)
-		}
+		setEnvIfMissing(k, v)
 	}
 }
 
@@ -82,7 +151,7 @@ func envIntOr(key string, def int) int {
 }
 
 func init() {
-	loadDotEnv()
+	loadConfig()
 	flag.StringVar(&connectionMode, "mode", envOr("CONNECTION_MODE", "direct"), "Connection mode: 'direct' or 'ssh'")
 	flag.StringVar(&containerName, "container", envOr("CONTAINER_NAME", "AMP_MehDune01"), "Podman container name (direct mode)")
 	flag.StringVar(&containerUser, "container-user", envOr("CONTAINER_USER", "amp"), "User that runs the container (direct mode)")
@@ -101,7 +170,7 @@ func init() {
 	flag.StringVar(&dbSchema, "schema", envOr("DB_SCHEMA", "dune"), "PostgreSQL schema")
 	flag.StringVar(&listenAddr, "addr", envOr("LISTEN_ADDR", ":9090"), "HTTP listen address")
 	flag.BoolVar(&captureMode, "capture", false, "Capture RabbitMQ messages (grant + notifications) and print to stdout")
-	flag.BoolVar(&setupMode, "setup", false, "Interactive setup wizard — writes .env from SSH autodiscovery")
+	flag.BoolVar(&setupMode, "setup", false, "Interactive setup wizard — writes ~/.dune-admin/config.yaml from SSH autodiscovery")
 	flag.StringVar(&sqlQuery, "sql", "", "Run a SQL query and print results to stdout, then exit")
 }
 
@@ -109,26 +178,40 @@ func resolveKeyPath() string {
 	if sshKeyPath != "" {
 		return sshKeyPath
 	}
+	home, _ := os.UserHomeDir()
+	exe, _ := os.Executable()
+	exeDir := filepath.Dir(exe)
 	candidates := []string{
-		filepath.Join(os.Getenv("HOME"), ".ssh", "id_ed25519"),
-		filepath.Join(os.Getenv("HOME"), ".ssh", "id_rsa"),
-		filepath.Join(os.Getenv("HOME"), ".ssh", "dune"),
-		"../sshKey",
-		"./sshKey",
+		filepath.Join(home, ".dune-admin", "sshKey"), // user config dir (package-manager installs)
+		filepath.Join(exeDir, "sshKey"),              // next to the binary (drag-and-drop / unzipped release)
+		"./sshKey",                                   // working directory fallback
 	}
-	for _, p := range candidates {
-		if _, err := os.Stat(p); err == nil { // #nosec G703 -- paths are hardcoded candidates, not user input
+	if runtime.GOOS == "windows" {
+		if localAppData := os.Getenv("LOCALAPPDATA"); localAppData != "" {
+			candidates = append([]string{filepath.Join(localAppData, "DuneSandboxServer", "sshKey")}, candidates...)
+		}
+	}
+	for _, p := range candidates { // #nosec G703 -- paths are hardcoded candidates, not user input
+		if _, err := os.Stat(p); err == nil {
 			return p
 		}
 	}
-	return candidates[0]
+	return filepath.Join(home, ".dune-admin", "sshKey")
 }
 
 func resolveItemDataPath() string {
 	if itemDataPath != "" {
 		return itemDataPath
 	}
-	candidates := []string{"./item-data.json", "../item-data.json"}
+	home, _ := os.UserHomeDir()
+	exe, _ := os.Executable()
+	exeDir := filepath.Dir(exe)
+	candidates := []string{
+		filepath.Join(home, ".dune-admin", "item-data.json"),
+		filepath.Join(exeDir, "item-data.json"),
+		filepath.Join(exeDir, "..", "share", "dune-admin", "item-data.json"), // Homebrew pkgshare
+		"./item-data.json",
+	}
 	for _, p := range candidates {
 		if _, err := os.Stat(p); err == nil {
 			return p
@@ -138,7 +221,15 @@ func resolveItemDataPath() string {
 }
 
 func resolveTagsDataPath() string {
-	candidates := []string{"./tags-data.json", "../tags-data.json"}
+	home, _ := os.UserHomeDir()
+	exe, _ := os.Executable()
+	exeDir := filepath.Dir(exe)
+	candidates := []string{
+		filepath.Join(home, ".dune-admin", "tags-data.json"),
+		filepath.Join(exeDir, "tags-data.json"),
+		filepath.Join(exeDir, "..", "share", "dune-admin", "tags-data.json"), // Homebrew pkgshare
+		"./tags-data.json",
+	}
 	for _, p := range candidates {
 		if _, err := os.Stat(p); err == nil {
 			return p
@@ -152,7 +243,7 @@ var tagsData tagsDataFile
 func loadTagsData() error {
 	path := resolveTagsDataPath()
 	if path == "" {
-		return fmt.Errorf("tags-data.json not found (looked in ./ and ../) — contract picker will be empty")
+		return fmt.Errorf("tags-data.json not found — contract picker will be empty")
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -169,7 +260,7 @@ var itemData itemDataFile
 func loadItemData() error {
 	path := resolveItemDataPath()
 	if path == "" {
-		return fmt.Errorf("item-data.json not found (looked in ./ and ../) — item grant features will be broken")
+		return fmt.Errorf("item-data.json not found — item grant features will be broken")
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -196,12 +287,14 @@ func loadItemData() error {
 // ── main ──────────────────────────────────────────────────────────────────────
 
 func needsSetup() bool {
-	_, err := os.Stat(".env")
-	if os.IsNotExist(err) {
-		return true
+	// config.yaml takes priority over legacy .env.
+	if _, err := os.Stat(configPath()); err == nil {
+		return dbPass == ""
 	}
-	// .env exists but is empty or missing the discovered DB password.
-	return dbPass == ""
+	if _, err := os.Stat(".env"); err == nil {
+		return dbPass == ""
+	}
+	return true
 }
 
 func main() {
@@ -249,7 +342,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Auto-run setup wizard when no .env exists — setup leaves us connected.
+	// Auto-run setup wizard when no config exists — setup leaves us connected.
 	alreadyConnected := false
 	if needsSetup() {
 		runSetup()

@@ -34,9 +34,9 @@ export function SideNav<K extends string>({
   items, active, onSelect, title, titleAction, width = 'w-56', children,
 }: Props<K>) {
   return (
-    <div className={`${width} shrink-0 flex flex-col rounded-md bg-surface border border-border/60 overflow-hidden`}>
+    <div className={`${width} shrink-0 flex flex-col rounded-[var(--radius)] bg-surface border border-border/60 dune-lift overflow-hidden`}>
       {(title || titleAction) && (
-        <div className="flex items-center justify-between px-3 py-2 border-b border-border/60 shrink-0">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-border/60 shrink-0 bg-gradient-to-b from-[#2a1d0c] to-transparent">
           {title && <span className="text-xs font-semibold uppercase tracking-widest text-accent">{title}</span>}
           {titleAction}
         </div>
@@ -50,7 +50,7 @@ export function SideNav<K extends string>({
               key={item.key}
               onClick={() => onSelect(item.key)}
               className={
-                'text-left px-3 py-2 rounded text-sm transition-colors flex items-start gap-2 ' +
+                'text-left px-3 py-2 rounded-[var(--radius)] text-sm transition-colors flex items-start gap-2 ' +
                 (isActive
                   ? 'bg-accent text-accent-foreground font-semibold'
                   : 'text-foreground hover:bg-surface-hover')

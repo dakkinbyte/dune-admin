@@ -14,7 +14,7 @@ type Props = {
  */
 export function PageHeader({ title, subtitle, children }: Props) {
   return (
-    <div className="flex items-start justify-between gap-3 shrink-0">
+    <div className="flex items-start justify-between gap-3 shrink-0 border-b border-[#4e3411]/60 pb-3 mb-1">
       <div className="flex-1 min-w-0">
         <h2 className="text-base font-semibold text-accent truncate">{title}</h2>
         {subtitle && <p className="text-sm text-muted mt-0.5">{subtitle}</p>}

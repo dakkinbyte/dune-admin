@@ -246,7 +246,7 @@ export default function LogsTab() {
 
             <pre
               ref={logContainerRef}
-              className="flex-1 overflow-auto p-4 text-xs font-mono m-0 whitespace-pre-wrap break-all rounded-md border border-border/60 bg-background text-success"
+              className="flex-1 overflow-auto p-4 text-xs font-mono m-0 whitespace-pre-wrap break-all rounded-[var(--radius)] border border-border/60 bg-background text-success"
             >
               {displayLines.length === 0
                 ? (selectedPod

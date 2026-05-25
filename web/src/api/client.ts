@@ -182,6 +182,12 @@ export const api = {
       req<MutateResult>('POST', '/players/grant-all-keystones', { player_id }),
     vehicles: (controller_id: number) => req<VehicleRow[]>('GET', `/players/${controller_id}/vehicles`),
     repairItem: (id: number) => req<MutateResult>('POST', '/players/repair-item', { id }),
+    repairGear: (player_id: number) =>
+      req<{repaired: number; scanned: number}>('POST', '/players/repair-gear', { player_id }),
+    repairVehicle: (vehicle_id: number, player_id: number) =>
+      req<{repaired: number; skipped: number; total: number}>('POST', '/players/repair-vehicle', { vehicle_id, player_id }),
+    refuelVehicle: (vehicle_id: number, player_id: number) =>
+      req<MutateResult>('POST', '/players/refuel-vehicle', { vehicle_id, player_id }),
     partitions: () => req<TeleportLocation[]>('GET', '/players/partitions'),
     teleport: (fls_id: string, partition_label: string) =>
       req<MutateResult>('POST', '/players/teleport', { fls_id, partition_label }),

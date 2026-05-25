@@ -17,10 +17,8 @@ function InfoCardRoot({ children, className = '' }: CardProps) {
   return (
     <div
       className={
-        'flex items-center gap-6 rounded-md px-4 py-3 text-sm shrink-0 ' +
-        // Recessed look — only slightly elevated from the page bg, with a
-        // hairline border. Matches the BattlegroupTab "Phase/Database" row.
-        'bg-surface border border-border/60 ' +
+        'flex items-center gap-6 rounded-[var(--radius)] px-4 py-3 text-sm shrink-0 ' +
+        'bg-surface border border-border/60 dune-lift ' +
         className
       }
     >

@@ -48,7 +48,7 @@ export default function BlueprintsTab({ isSignedIn = true }: { isSignedIn?: bool
   return (
     <div className="flex flex-col h-full gap-3 min-h-0">
       {!isSignedIn && (
-        <div className="shrink-0 rounded-md px-4 py-2 text-xs font-medium bg-danger/10 border border-danger/40 text-danger flex items-center gap-2">
+        <div className="shrink-0 rounded-[var(--radius)] px-4 py-2 text-xs font-medium bg-danger/10 border border-danger/40 text-danger flex items-center gap-2">
           <Icon name="triangle-alert" />
           <span>A <strong>Layout Tools</strong> account is required to export or import blueprints. Sign in using the button in the top right.</span>
         </div>

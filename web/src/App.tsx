@@ -81,7 +81,7 @@ function AppCore({ isSignedIn }: { isSignedIn: boolean }) {
       <Toast.Provider />
 
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-3 border-b border-border bg-surface shrink-0">
+      <header className="flex items-center justify-between px-6 py-3 border-b border-[#4e3411] bg-surface shrink-0" style={{background: 'linear-gradient(180deg, #241a0e 0%, #1a1610 100%)'}}>
         <div className="flex items-center gap-3">
           <span className="text-xl font-bold uppercase tracking-[0.2em] text-accent">
             DUNE ADMIN

@@ -3,7 +3,7 @@ import {
   Button, Chip, Input, ListBox, ListLayout, Modal, Select,
   Spinner, Virtualizer, toast,
 } from '@heroui/react'
-import { DataTable } from '../../../dune-ui'
+import { DataTable, Panel } from '../../../dune-ui'
 import allGameplayTags from '../../../data/gameplayTags.json'
 import { api } from '../../../api/client'
 import type {
@@ -229,7 +229,7 @@ export function PlayerActionsModal({ player, open, onClose }: Props) {
     <Modal>
       <Modal.Backdrop isOpen={open} onOpenChange={v => !v && onClose()}>
         <Modal.Container size="cover">
-          <Modal.Dialog className="h-[92vh] flex flex-col">
+          <Modal.Dialog className="h-[92vh] flex flex-col dialog-surface-alt">
             <Modal.CloseTrigger />
             <Modal.Header>
               <Modal.Heading className="text-accent">
@@ -242,7 +242,7 @@ export function PlayerActionsModal({ player, open, onClose }: Props) {
             <Modal.Body className="flex gap-0 overflow-hidden p-0 flex-1">
 
               {/* Section nav */}
-              <div className="shrink-0 flex flex-col gap-1 p-2 m-3 mr-0 border border-border/60 rounded-md bg-background min-w-[140px]">
+              <div className="shrink-0 flex flex-col gap-1 p-2 m-3 mr-0 border border-border/60 rounded-[var(--radius)] bg-background dune-lift min-w-[140px]">
                 {ACTION_SECTIONS.map(s => {
                   const isActive = section === s.key
                   return (
@@ -250,7 +250,7 @@ export function PlayerActionsModal({ player, open, onClose }: Props) {
                       key={s.key}
                       onClick={() => setSection(s.key)}
                       className={
-                        'text-left px-3 py-2 rounded text-sm transition-colors ' +
+                        'text-left px-3 py-2 rounded-[var(--radius)] text-sm transition-colors ' +
                         (isActive
                           ? 'bg-accent text-accent-foreground font-semibold'
                           : 'text-foreground hover:bg-surface-hover')
@@ -1024,10 +1024,3 @@ function SectionLabel({ children }: { children: ReactNode }) {
   return <h4 className="text-xs font-semibold uppercase tracking-widest text-accent">{children}</h4>
 }
 
-function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return (
-    <div className={'rounded-lg p-4 flex flex-col gap-2 bg-surface-secondary border border-border ' + className}>
-      {children}
-    </div>
-  )
-}

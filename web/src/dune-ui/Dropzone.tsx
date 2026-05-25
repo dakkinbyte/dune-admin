@@ -52,7 +52,7 @@ export function Dropzone({
   return (
     <div
       className={
-        'rounded-md flex flex-col items-center justify-center gap-2 text-sm cursor-pointer transition-all border-2 border-dashed ' +
+        'rounded-[var(--radius)] flex flex-col items-center justify-center gap-2 text-sm cursor-pointer transition-all border-2 border-dashed ' +
         (compact ? 'py-2 px-3' : 'py-6 px-4') + ' ' +
         (dragging
           ? 'border-warning bg-warning/10 text-warning'

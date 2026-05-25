@@ -61,11 +61,12 @@ type specTrack struct {
 }
 
 type itemRule struct {
-	Name     string  `json:"name"`
-	StackMax int64   `json:"stack_max"`
-	Volume   float64 `json:"volume"`
-	Tier     int     `json:"tier"`
-	Rarity   string  `json:"rarity"`
+	Name          string   `json:"name"`
+	StackMax      int64    `json:"stack_max"`
+	Volume        float64  `json:"volume"`
+	Tier          int      `json:"tier"`
+	Rarity        string   `json:"rarity"`
+	MaxDurability *float64 `json:"max_durability,omitempty"`
 }
 
 type itemDataFile struct {
@@ -150,6 +151,17 @@ type msgSQL struct {
 type msgMutate struct {
 	ok  string
 	err error
+}
+type msgRepairGear struct {
+	repaired int
+	scanned  int
+	err      error
+}
+type msgRepairVehicle struct {
+	repaired int
+	skipped  int
+	total    int
+	err      error
 }
 type msgJourney struct {
 	rows []journeyNode

@@ -186,7 +186,7 @@ export default function DatabaseTab() {
               onChange={e => setSqlInput(e.target.value)}
               placeholder="SELECT * FROM dune.actors LIMIT 10;"
               rows={5}
-              className="rounded-md px-3 py-2 text-sm font-mono w-full resize-y outline-none border"
+              className="rounded-[var(--radius)] px-3 py-2 text-sm font-mono w-full resize-y outline-none border"
               style={{
                 background: 'var(--field-background)',
                 color: 'var(--field-foreground)',
@@ -210,7 +210,7 @@ export default function DatabaseTab() {
         )}
 
         {error && !loading && (
-          <div className="rounded-md p-4 bg-danger/10 border border-danger/40 text-danger shrink-0">
+          <div className="rounded-[var(--radius)] p-4 bg-danger/10 border border-danger/40 text-danger shrink-0">
             <strong>Error:</strong> {error}
           </div>
         )}
@@ -222,7 +222,7 @@ export default function DatabaseTab() {
         )}
 
         {sqlResult !== null && !loading && !error && (
-          <pre className="rounded-md p-4 overflow-auto flex-1 min-h-0 text-sm font-mono whitespace-pre-wrap m-0 border border-border/60 bg-background text-foreground">
+          <pre className="rounded-[var(--radius)] p-4 overflow-auto flex-1 min-h-0 text-sm font-mono whitespace-pre-wrap m-0 border border-border/60 bg-background text-foreground">
             {sqlResult || '(empty result)'}
           </pre>
         )}

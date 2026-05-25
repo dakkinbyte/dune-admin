@@ -149,7 +149,7 @@ export function GiveItemsModal({ player, open, onClose }: Props) {
                           />
                         </InputGroup>
                         {filtered.length > 0 && (
-                          <div className="absolute z-50 w-full mt-1 rounded-md border border-border bg-surface overflow-y-auto max-h-52">
+                          <div className="absolute z-50 w-full mt-1 rounded-[var(--radius)] border border-border bg-surface overflow-y-auto max-h-52">
                             {filtered.map(t => (
                               <div
                                 key={t.id}
@@ -199,7 +199,7 @@ export function GiveItemsModal({ player, open, onClose }: Props) {
                         {staged.map((item, idx) => (
                           <div
                             key={idx}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs bg-surface border border-border"
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius)] text-xs bg-surface border border-border"
                           >
                             <span className="flex-1 font-mono">{item.template}</span>
                             <Input
@@ -226,7 +226,7 @@ export function GiveItemsModal({ player, open, onClose }: Props) {
                   )}
 
                   {result && (
-                    <div className="text-xs shrink-0 rounded-md px-3 py-2 bg-surface border border-border">
+                    <div className="text-xs shrink-0 rounded-[var(--radius)] px-3 py-2 bg-surface border border-border">
                       {result.given.length > 0 && (
                         <div className="text-success">✓ Gave: {result.given.join(', ')}</div>
                       )}

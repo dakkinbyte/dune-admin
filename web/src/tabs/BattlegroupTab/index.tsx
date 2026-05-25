@@ -111,7 +111,7 @@ export default function BattlegroupTab() {
       )}
 
       {isInitializing && (
-        <div className="rounded-md px-3 py-2 text-sm flex items-center gap-2 bg-warning/10 text-warning border border-warning/40 shrink-0">
+        <div className="rounded-[var(--radius)] px-3 py-2 text-sm flex items-center gap-2 bg-warning/10 text-warning border border-warning/40 shrink-0">
           <Icon name="triangle-alert" />
           <span>Server just started — game servers may still be initializing (~2 min).</span>
         </div>
