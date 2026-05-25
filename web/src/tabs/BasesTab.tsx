@@ -1,9 +1,20 @@
 import { useState, useEffect } from 'react'
-import { Button, Spinner, toast } from '@heroui/react'
+import { Button, Card, Spinner, toast } from '@heroui/react'
 import { api, ApiError } from '../api/client'
 import type { BaseRow } from '../api/client'
+import { DataTable, Icon, PageHeader, type Column } from '../dune-ui'
 
-export default function BasesTab() {
+type Key = 'id' | 'name' | 'pieces' | 'placeables' | 'actions'
+
+const COLUMNS: Column<Key>[] = [
+  { key: 'id',         label: 'ID',         width: 80 },
+  { key: 'name',       label: 'Name',       minWidth: 220 },
+  { key: 'pieces',     label: 'Pieces',     width: 100 },
+  { key: 'placeables', label: 'Placeables', width: 110 },
+  { key: 'actions',    label: '',           width: 120, sortable: false },
+]
+
+export default function BasesTab({ isSignedIn = true }: { isSignedIn?: boolean }) {
   const [bases, setBases] = useState<BaseRow[]>([])
   const [loading, setLoading] = useState(false)
   const [unsupported, setUnsupported] = useState(false)
@@ -12,14 +23,12 @@ export default function BasesTab() {
     setLoading(true)
     setUnsupported(false)
     try {
-      const data = await api.bases.list()
-      setBases(data)
+      setBases(await api.bases.list())
     } catch (e: unknown) {
       if (e instanceof ApiError && e.status === 404) {
         setUnsupported(true)
       } else {
-        const msg = e instanceof Error ? e.message : String(e)
-        toast.danger(`Failed to load bases: ${msg}`)
+        toast.danger(`Failed to load bases: ${e instanceof Error ? e.message : String(e)}`)
       }
     } finally {
       setLoading(false)
@@ -29,75 +38,65 @@ export default function BasesTab() {
   useEffect(() => { load() }, [])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '16px' }}>
-      <div className="flex items-center justify-between shrink-0">
-        <div>
-          <h2 className="text-lg font-semibold" style={{ color: 'var(--color-primary)' }}>
-            Bases
-          </h2>
-          <p className="text-sm" style={{ color: 'var(--color-text-dim)' }}>
-            Live in-world player bases. Export any base as a solido-compatible blueprint.
-          </p>
+    <div className="flex flex-col h-full gap-3 min-h-0">
+      {!isSignedIn && (
+        <div className="shrink-0 rounded-md px-4 py-2 text-xs font-medium bg-danger/10 border border-danger/40 text-danger flex items-center gap-2">
+          <Icon name="triangle-alert" />
+          <span>A <strong>Layout Tools</strong> account is required to export bases. Sign in using the button in the top right.</span>
         </div>
-        <Button variant="outline" size="sm" onPress={load} isDisabled={loading}>
-          {loading ? <Spinner size="sm" color="current" /> : null}
-          Refresh
+      )}
+
+      <PageHeader title={`Bases (${bases.length})`} subtitle="Live in-world player bases. Export any base as a solido-compatible blueprint.">
+        <Button size="sm" variant="ghost" onPress={load} isDisabled={loading}>
+          {loading ? <Spinner size="sm" color="current" /> : <><Icon name="refresh-cw" /> Refresh</>}
         </Button>
-      </div>
+      </PageHeader>
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <Spinner size="lg" />
-        </div>
+        <div className="flex justify-center py-12"><Spinner size="lg" /></div>
       ) : unsupported ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-3">
-          <p className="text-sm font-medium" style={{ color: 'var(--color-primary)' }}>
-            Feature not available
-          </p>
-          <p className="text-xs text-center" style={{ color: 'var(--color-text-dim)', maxWidth: 320 }}>
-            This version of the dune-admin binary does not support base listing.
-            Upgrade to the latest release to use this feature.
-          </p>
-        </div>
+        <Card className="self-center max-w-sm">
+          <Card.Header>
+            <Card.Title className="text-accent text-sm">Feature not available</Card.Title>
+          </Card.Header>
+          <Card.Content>
+            <p className="text-xs text-muted text-center">
+              This version of the dune-admin binary does not support base listing.
+              Upgrade to the latest release to use this feature.
+            </p>
+          </Card.Content>
+        </Card>
       ) : (
-        <div className="rounded-lg" style={{ flex: 1, minHeight: 0, overflowY: 'auto', border: '1px solid #2a2418' }}>
-          <table className="w-full text-sm">
-            <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: '#1a1610' }}>
-              <tr style={{ borderBottom: '1px solid #2a2418' }}>
-                {['ID', 'Name', 'Pieces', 'Placeables', 'Actions'].map(h => (
-                  <th key={h} className="text-left px-4 py-2 font-semibold text-xs uppercase tracking-wide" style={{ color: 'var(--color-primary)' }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {bases.map((base, i) => (
-                <tr key={base.id} style={{ borderBottom: '1px solid #1a1610', background: i % 2 === 0 ? '#0d0b07' : '#111009' }}>
-                  <td className="px-4 py-2 font-mono text-xs" style={{ color: 'var(--color-text)' }}>{base.id}</td>
-                  <td className="px-4 py-2 text-xs" style={{ color: 'var(--color-text)' }}>{base.name || '—'}</td>
-                  <td className="px-4 py-2 text-xs" style={{ color: 'var(--color-text-dim)' }}>{base.pieces}</td>
-                  <td className="px-4 py-2 text-xs" style={{ color: 'var(--color-text-dim)' }}>{base.placeables}</td>
-                  <td className="px-4 py-2">
-                    <a
-                      href={api.bases.exportUrl(base.id)}
-                      download={base.name ? `${base.name}.json` : `base-${base.id}.json`}
-                    >
-                      <Button size="sm" variant="outline">Export</Button>
-                    </a>
-                  </td>
-                </tr>
-              ))}
-              {bases.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--color-text-dim)' }}>
-                    No bases found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable<BaseRow, Key>
+          aria-label="Player bases"
+          className="min-h-0 max-h-full"
+          columns={COLUMNS}
+          rows={bases}
+          rowId={b => String(b.id)}
+          initialSort={{ column: 'id', direction: 'ascending' }}
+          sortValue={(b, k) => k === 'actions' ? '' : (b as unknown as Record<string, string | number>)[k]}
+          emptyState={<div className="py-8 text-center text-muted">No bases found.</div>}
+          renderCell={(b, key) => {
+            switch (key) {
+              case 'id':         return <span className="font-mono text-muted">{b.id}</span>
+              case 'name':       return b.name || <span className="text-muted">—</span>
+              case 'pieces':     return <span className="text-muted">{b.pieces}</span>
+              case 'placeables': return <span className="text-muted">{b.placeables}</span>
+              case 'actions':
+                return isSignedIn ? (
+                  <a href={api.bases.exportUrl(b.id)} download={b.name ? `${b.name}.json` : `base-${b.id}.json`}>
+                    <Button size="sm" variant="outline" className="w-full">
+                      <Icon name="download" /> Export
+                    </Button>
+                  </a>
+                ) : (
+                  <Button size="sm" variant="outline" className="w-full" isDisabled>
+                    <Icon name="download" /> Export
+                  </Button>
+                )
+            }
+          }}
+        />
       )}
     </div>
   )

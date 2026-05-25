@@ -1,34 +1,52 @@
 import { useState } from 'react'
-import { Button, Spinner, toast } from '@heroui/react'
+import { Button, InputGroup, Label, Spinner, TextField, toast } from '@heroui/react'
 import { api } from '../api/client'
+import { DataTable, Icon, PageHeader, SideNav, type Column } from '../dune-ui'
 
 type Section = 'tables' | 'describe' | 'sample' | 'search' | 'sql'
 
 type TableData = { headers: string[]; rows: string[][] }
 
+const SECTIONS: { key: Section; label: string }[] = [
+  { key: 'tables',   label: 'Tables' },
+  { key: 'describe', label: 'Describe' },
+  { key: 'sample',   label: 'Sample' },
+  { key: 'search',   label: 'Search Columns' },
+  { key: 'sql',      label: 'Run SQL' },
+]
+
 function ResultTable({ headers, rows }: TableData) {
-  if (rows.length === 0) return <p className="text-sm" style={{ color: 'var(--color-text-dim)' }}>No results.</p>
+  // Backend may return null for empty headers/rows — guard against it.
+  const safeHeaders = headers ?? []
+  const safeRows = rows ?? []
+  if (safeRows.length === 0 || safeHeaders.length === 0) {
+    return <p className="text-sm text-muted">No results.</p>
+  }
+  const columns: Column<string>[] = safeHeaders.map((h, i) => ({
+    key: `c${i}`,
+    label: h,
+  }))
+  type Row = { _id: string; values: string[] }
+  const items: Row[] = safeRows.map((r, i) => ({ _id: String(i), values: r ?? [] }))
   return (
-    <div className="overflow-auto rounded-lg flex-1 min-h-0" style={{ border: '1px solid #2a2418' }}>
-      <table className="w-full text-xs">
-        <thead>
-          <tr style={{ background: '#1a1610', borderBottom: '1px solid #2a2418' }}>
-            {headers.map(h => (
-              <th key={h} className="text-left px-3 py-2 font-semibold uppercase tracking-wide whitespace-nowrap" style={{ color: 'var(--color-primary)' }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr key={i} style={{ borderBottom: '1px solid #1a1610', background: i % 2 === 0 ? '#0d0b07' : '#0f0d09' }}>
-              {row.map((cell, j) => (
-                <td key={j} className="px-3 py-1.5 font-mono whitespace-nowrap" style={{ color: 'var(--color-text)' }}>{cell}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable<Row, string>
+      aria-label="Result"
+      className="min-h-0 max-h-full"
+      columns={columns}
+      rows={items}
+      rowId={r => r._id}
+      initialSort={{ column: columns[0].key, direction: 'ascending' }}
+      sortValue={(r, k) => {
+        const idx = Number(k.slice(1))
+        const v = r.values[idx] ?? ''
+        const n = Number(v)
+        return !isNaN(n) && v !== '' ? n : v
+      }}
+      renderCell={(r, k) => {
+        const idx = Number(k.slice(1))
+        return <span className="font-mono whitespace-nowrap">{r.values[idx] ?? ''}</span>
+      }}
+    />
   )
 }
 
@@ -84,87 +102,70 @@ export default function DatabaseTab() {
     }
   }
 
-  const sections: { key: Section; label: string }[] = [
-    { key: 'tables', label: 'Tables' },
-    { key: 'describe', label: 'Describe' },
-    { key: 'sample', label: 'Sample' },
-    { key: 'search', label: 'Search Columns' },
-    { key: 'sql', label: 'Run SQL' },
-  ]
+  const activeLabel = SECTIONS.find(s => s.key === active)?.label ?? ''
 
   return (
     <div className="flex gap-4 h-full min-h-0">
-      <div
-        className="w-40 shrink-0 flex flex-col gap-1 rounded-lg p-2"
-        style={{ background: 'var(--color-surface)', border: '1px solid #2a2418' }}
-      >
-        {sections.map(s => (
-          <button
-            key={s.key}
-            onClick={() => { setActive(s.key); setResult(null); setSqlResult(null); setError(null) }}
-            className="text-left px-3 py-2 rounded text-sm transition-colors"
-            style={{
-              background: active === s.key ? 'var(--color-primary)' : 'transparent',
-              color: active === s.key ? '#fff' : 'var(--color-text)',
-            }}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
+      <SideNav<Section>
+        items={SECTIONS}
+        active={active}
+        onSelect={k => { setActive(k); setResult(null); setSqlResult(null); setError(null) }}
+        title="Database"
+        width="w-44"
+      />
 
-      <div className="flex-1 overflow-auto flex flex-col gap-4 min-h-0">
-        <h2 className="text-base font-semibold shrink-0" style={{ color: 'var(--color-primary)' }}>
-          {sections.find(s => s.key === active)?.label}
-        </h2>
+      <div className="flex-1 flex flex-col gap-3 min-h-0 overflow-hidden">
+        <PageHeader title={activeLabel} />
 
-        {/* Inputs */}
+        {/* Inputs per section */}
         {(active === 'describe' || active === 'sample') && (
-          <div className="flex gap-3 items-end shrink-0">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Table Name</label>
-              <input
-                className="rounded px-3 py-1.5 text-sm font-mono border"
-                style={{ background: 'var(--color-surface)', color: 'var(--color-text)', borderColor: '#2a2418', outline: 'none' }}
-                value={tableInput}
-                onChange={e => setTableInput(e.target.value)}
-                placeholder="dune.actors"
-                onKeyDown={e => e.key === 'Enter' && run()}
-              />
-            </div>
-            {active === 'sample' && (
-              <div className="flex flex-col gap-1">
-                <label className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Limit</label>
-                <input
-                  className="rounded px-3 py-1.5 text-sm w-20 border"
-                  style={{ background: 'var(--color-surface)', color: 'var(--color-text)', borderColor: '#2a2418', outline: 'none' }}
-                  value={limitInput}
-                  onChange={e => setLimitInput(e.target.value)}
-                  type="number" min={1} max={1000}
+          <div className="flex items-center gap-3 shrink-0">
+            <TextField className="flex-1 max-w-md" aria-label="Table name">
+              <InputGroup className="w-full">
+                <InputGroup.Prefix>Table dune.</InputGroup.Prefix>
+                <InputGroup.Input
+                  className="flex-1 w-full"
+                  value={tableInput}
+                  onChange={e => setTableInput(e.target.value)}
+                  placeholder="actors"
+                  onKeyDown={e => e.key === 'Enter' && run()}
                 />
-              </div>
+              </InputGroup>
+            </TextField>
+            {active === 'sample' && (
+              <TextField className="w-28" aria-label="Limit">
+                <InputGroup>
+                  <InputGroup.Prefix>Limit</InputGroup.Prefix>
+                  <InputGroup.Input
+                    type="number" min={1} max={1000}
+                    value={limitInput}
+                    onChange={e => setLimitInput(e.target.value)}
+                  />
+                </InputGroup>
+              </TextField>
             )}
             <Button onPress={run} isDisabled={loading} size="sm">
-              {loading ? <Spinner size="sm" color="current" /> : null} Run
+              {loading ? <Spinner size="sm" color="current" /> : <Icon name="play" />} Run
             </Button>
           </div>
         )}
 
         {active === 'search' && (
-          <div className="flex gap-3 items-end shrink-0">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Column or Table Name</label>
-              <input
-                className="rounded px-3 py-1.5 text-sm border w-72"
-                style={{ background: 'var(--color-surface)', color: 'var(--color-text)', borderColor: '#2a2418', outline: 'none' }}
-                value={searchInput}
-                onChange={e => setSearchInput(e.target.value)}
-                placeholder="player_id, faction..."
-                onKeyDown={e => e.key === 'Enter' && run()}
-              />
-            </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <TextField className="flex-1 max-w-md" aria-label="Column or table name">
+              <InputGroup className="w-full">
+                <InputGroup.Prefix>Search</InputGroup.Prefix>
+                <InputGroup.Input
+                  className="flex-1 w-full"
+                  value={searchInput}
+                  onChange={e => setSearchInput(e.target.value)}
+                  placeholder="player_id, faction..."
+                  onKeyDown={e => e.key === 'Enter' && run()}
+                />
+              </InputGroup>
+            </TextField>
             <Button onPress={run} isDisabled={loading} size="sm">
-              {loading ? <Spinner size="sm" color="current" /> : null} Search
+              {loading ? <Spinner size="sm" color="current" /> : <Icon name="search" />} Search
             </Button>
           </div>
         )}
@@ -172,28 +173,32 @@ export default function DatabaseTab() {
         {active === 'tables' && (
           <div className="shrink-0">
             <Button onPress={run} isDisabled={loading} size="sm" variant="outline">
-              {loading ? <Spinner size="sm" color="current" /> : null} List Tables
+              {loading ? <Spinner size="sm" color="current" /> : <Icon name="list" />} List Tables
             </Button>
           </div>
         )}
 
         {active === 'sql' && (
           <div className="flex flex-col gap-2 shrink-0">
-            <label className="text-xs" style={{ color: 'var(--color-text-dim)' }}>SQL Query</label>
+            <Label>SQL Query</Label>
             <textarea
               value={sqlInput}
               onChange={e => setSqlInput(e.target.value)}
               placeholder="SELECT * FROM dune.actors LIMIT 10;"
               rows={5}
-              className="rounded px-3 py-2 text-sm font-mono border w-full resize-y"
-              style={{ background: 'var(--color-surface)', color: 'var(--color-text)', borderColor: '#2a2418', outline: 'none' }}
+              className="rounded-md px-3 py-2 text-sm font-mono w-full resize-y outline-none border"
+              style={{
+                background: 'var(--field-background)',
+                color: 'var(--field-foreground)',
+                borderColor: 'var(--field-border)',
+              }}
               onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) run() }}
             />
-            <p className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Cmd/Ctrl+Enter to run</p>
-            <div>
+            <div className="flex items-center gap-3">
               <Button onPress={run} isDisabled={loading} size="sm">
-                {loading ? <Spinner size="sm" color="current" /> : null} Run Query
+                {loading ? <Spinner size="sm" color="current" /> : <Icon name="play" />} Run Query
               </Button>
+              <span className="text-xs text-muted">Cmd/Ctrl+Enter to run</span>
             </div>
           </div>
         )}
@@ -205,7 +210,7 @@ export default function DatabaseTab() {
         )}
 
         {error && !loading && (
-          <div className="rounded-lg p-4" style={{ background: '#1a0808', border: '1px solid #5a1010', color: '#e88' }}>
+          <div className="rounded-md p-4 bg-danger/10 border border-danger/40 text-danger shrink-0">
             <strong>Error:</strong> {error}
           </div>
         )}
@@ -217,14 +222,9 @@ export default function DatabaseTab() {
         )}
 
         {sqlResult !== null && !loading && !error && (
-          <div
-            className="rounded-lg p-4 overflow-auto flex-1 min-h-0"
-            style={{ background: '#0a0806', border: '1px solid #2a2418' }}
-          >
-            <pre className="text-sm font-mono whitespace-pre-wrap" style={{ color: '#e8dcc8', margin: 0 }}>
-              {sqlResult || '(empty result)'}
-            </pre>
-          </div>
+          <pre className="rounded-md p-4 overflow-auto flex-1 min-h-0 text-sm font-mono whitespace-pre-wrap m-0 border border-border/60 bg-background text-foreground">
+            {sqlResult || '(empty result)'}
+          </pre>
         )}
       </div>
     </div>

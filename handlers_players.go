@@ -631,6 +631,7 @@ func handleProgressionUnlock(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, msg.err, 500)
 		return
 	}
+	invalidateAllJourneyCache()
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
@@ -652,6 +653,7 @@ func handleJourneyComplete(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, msg.err, 500)
 		return
 	}
+	invalidateJourneyCache(req.AccountID)
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
@@ -673,6 +675,7 @@ func handleCompleteContract(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, msg.err, 500)
 		return
 	}
+	invalidateJourneyCache(req.AccountID)
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
@@ -757,6 +760,7 @@ func handleCompleteContracts(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, msg.err, 500)
 		return
 	}
+	invalidateJourneyCache(req.AccountID)
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
@@ -799,6 +803,7 @@ func handleJourneyReset(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, msg.err, 500)
 		return
 	}
+	invalidateJourneyCache(req.AccountID)
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
@@ -819,6 +824,7 @@ func handleJourneyWipe(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, msg.err, 500)
 		return
 	}
+	invalidateJourneyCache(req.AccountID)
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 

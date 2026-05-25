@@ -1,0 +1,524 @@
+oid	kind	category	name	args	return	comment	file
+58085	f	player_persistence	_add_item_delete_log	in_item_id bigint, in_inventory_id bigint, in_template_id text	void		functions/player_persistence/_add_item_delete_log__3args.sql
+58086	f	player_persistence	_add_item_trace_log	in_function_name dune.itemtrackingfunctiontype, in_item_locations dune.inventoryitemlocation[]	void		functions/player_persistence/_add_item_trace_log__2args.sql
+58087	f	player_persistence	_add_item_trace_log	in_function_name dune.itemtrackingfunctiontype, in_item_id bigint, in_inventory_id bigint, in_template_id text, in_position_index bigint	void		functions/player_persistence/_add_item_trace_log__5args.sql
+58094	f	building_blueprint	_building_validate_totem_owner_id	in_totem_owner_id bigint	bigint		functions/building_blueprint/_building_validate_totem_owner_id__1args.sql
+58095	f	transfer	_character_transfer_allocate_id	kind dune._charactertransferentrykind, data jsonb	bigint		functions/transfer/_character_transfer_allocate_id__2args.sql
+58096	f	transfer	_character_transfer_create_data_table		void		functions/transfer/_character_transfer_create_data_table__0args.sql
+58097	f	transfer	_character_transfer_data_filter	id text, removed text[], VARIADIC refs dune._charactertransferdatafilterref[]	dune._charactertransferdatafilter		functions/transfer/_character_transfer_data_filter__3args.sql
+58098	f	transfer	_character_transfer_data_table_load	entries jsonb	void		functions/transfer/_character_transfer_data_table_load__1args.sql
+58099	f	transfer	_character_transfer_data_table_save		jsonb		functions/transfer/_character_transfer_data_table_save__0args.sql
+58100	f	vehicle	_character_transfer_ensure_player_is_owner_of_vbt_vehicle	in_vehicle_id bigint[]	void		functions/vehicle/_character_transfer_ensure_player_is_owner_of_vbt_vehicle__1args.sql
+58101	f	transfer	_character_transfer_get_filter	kind dune._charactertransferentrykind	dune._charactertransferdatafilter		functions/transfer/_character_transfer_get_filter__1args.sql
+58102	f	transfer	_character_transfer_get_patches_checksum		text		functions/transfer/_character_transfer_get_patches_checksum__0args.sql
+58103	f	transfer	_character_transfer_pre_export_validation	in_fls_id text	TABLE(out_acc_id bigint, out_funcom_id text, out_player_controller_id bigint, out_player_pawn_id bigint)		functions/transfer/_character_transfer_pre_export_validation__1args.sql
+58104	f	transfer	_character_transfer_property_not_exported_is_expected	path text	boolean		functions/transfer/_character_transfer_property_not_exported_is_expected__1args.sql
+58105	f	transfer	_character_transfer_replace_local_id_with_transfer_id	data text, path text	text		functions/transfer/_character_transfer_replace_local_id_with_transfer_id__2args.sql
+58106	f	transfer	_character_transfer_replace_local_id_with_transfer_id_in_json	data jsonb, path text	jsonb		functions/transfer/_character_transfer_replace_local_id_with_transfer_id_in_json__2args.sql
+58107	f	transfer	_character_transfer_replace_transfer_id_with_local_id	data text, path text	text		functions/transfer/_character_transfer_replace_transfer_id_with_local_id__2args.sql
+58108	f	transfer	_character_transfer_replace_transfer_id_with_local_id_in_json	data jsonb, path text	jsonb		functions/transfer/_character_transfer_replace_transfer_id_with_local_id_in_json__2args.sql
+58109	f	vehicle	_character_transfer_store_in_world_owned_vehicles_into_recovery	in_player_id bigint	void		functions/vehicle/_character_transfer_store_in_world_owned_vehicles_into_recovery__1args.sql
+58110	f	transfer	_character_transfer_top_level_export	in_kind dune._charactertransferentrykind, data jsonb	jsonb		functions/transfer/_character_transfer_top_level_export__2args.sql
+58111	f	transfer	_character_transfer_top_level_import	in_kind dune._charactertransferentrykind, data jsonb, in_id bigint	jsonb		functions/transfer/_character_transfer_top_level_import__3args.sql
+58112	f	building_blueprint	_placeable_validate_totem_owner_id	in_totem_owner_id bigint	bigint		functions/building_blueprint/_placeable_validate_totem_owner_id__1args.sql
+58113	f	encryption	_user_data_encryption_initially_encrypt_existing_data		void		functions/encryption/_user_data_encryption_initially_encrypt_existing_data__0args.sql
+58114	f	encryption	_user_data_encryption_setup_enabled	key_hash bytea	void		functions/encryption/_user_data_encryption_setup_enabled__1args.sql
+58115	f	encryption	_user_data_encryption_setup_tainted		void		functions/encryption/_user_data_encryption_setup_tainted__0args.sql
+58116	f	guild	accept_guild_invite	in_invite_id bigint, in_role_id smallint, in_max_guild_count_per_player integer, in_max_members_per_guild integer, in_neutral_faction_id smallint	void		functions/guild/accept_guild_invite__5args.sql
+58117	f	party	accept_party_invite	in_invite_id bigint, in_platform_session_id text, in_max_party_member_count integer	dune.partyacceptinviteresult		functions/party/accept_party_invite__3args.sql
+58118	f	anticheat	add_actor_audit	in_id bigint, in_class text	void		functions/anticheat/add_actor_audit__2args.sql
+58119	f	event_log	add_event_log_data	in_game_event_owner bigint, in_universe_time bigint, in_map_name text, in_partition_id bigint, in_event_type integer, in_x_location double precision, in_y_location double precision, in_z_location double precision, in_is_player_facing boolean, in_custom_data text	void		functions/event_log/add_event_log_data__10args.sql
+58120	f	event_log	add_event_log_data_batched	in_data dune.eventlogbulkentrydata[]	void		functions/event_log/add_event_log_data_batched__1args.sql
+58121	f	guild	add_guild_invite	in_player_id bigint, in_guild_id bigint, in_sender_player_id bigint, in_invite_sent_timespan bigint, in_max_guild_invites_per_guild integer	void		functions/guild/add_guild_invite__5args.sql
+58122	f	guild	add_guild_member	in_player_id bigint, in_guild_id bigint, in_role_id smallint, in_max_guild_count_per_player integer, in_max_members_per_guild integer, in_neutral_faction_id smallint	void		functions/guild/add_guild_member__6args.sql
+58123	f	landclaim	add_landclaim_segment	in_totem_id bigint, in_grid_location_x bigint, in_grid_location_y bigint	void		functions/landclaim/add_landclaim_segment__3args.sql
+58124	f	map_areas	add_map_areas_surveyed_items	in_account_id bigint, in_area_id smallint, in_survey_point_marker_id bigint, in_surveyed_items_target jsonb, in_surveyed_items_progress jsonb, in_map_name text	void		functions/map_areas/add_map_areas_surveyed_items__6args.sql
+58125	f	map_areas	add_map_areas_time_discovered	in_account_id bigint, in_area_id smallint, in_time_discovered timestamp without time zone, in_map_name text	void		functions/map_areas/add_map_areas_time_discovered__4args.sql
+58126	f	map_areas	add_map_areas_time_first_entered	in_account_id bigint, in_area_id smallint, in_time_first_entered timestamp without time zone, in_map_name text	void		functions/map_areas/add_map_areas_time_first_entered__4args.sql
+58127	f	partition	add_partition_unique	in_map text, in_definition jsonb, in_dimension bigint, in_label text	bigint		functions/partition/add_partition_unique__4args.sql
+58128	f	party	add_party_invite	in_sender_player_id bigint, in_sender_platform_name text, in_sender_platform_session_id text, in_player_id bigint, in_max_party_member_count integer, in_invite_sent_timespan bigint	void		functions/party/add_party_invite__6args.sql
+58129	f	currency	adjust_player_virtual_currency_balance	in_controller_id bigint, in_currency_id smallint, in_delta bigint	bigint		functions/currency/adjust_player_virtual_currency_balance__3args.sql
+58130	f	lookup	admin_get_character_details	in_account_id bigint	TABLE(account_id bigint, player_id text, character_name text, online_status text, last_avatar_activity timestamp with time zone, class text, map text, transform dune.transform, server_id text, partition_id bigint, partition_label text, dimension_index integer, gas_attributes jsonb, properties jsonb, slot_name text, fgl_data text)		functions/lookup/admin_get_character_details__1args.sql
+58131	f	lookup	admin_get_character_ids	in_search_term text	TABLE(id bigint, "user" text, character_name text)		functions/lookup/admin_get_character_ids__1args.sql
+58132	f	lookup	admin_get_inventory_details	in_account_id bigint	TABLE(inventory_id bigint, item_id bigint, stack_size integer, template_id text, acquisition_time bigint)		functions/lookup/admin_get_inventory_details__1args.sql
+58133	f	lookup	admin_get_journey_details	in_player_id text, in_story_node_id text	TABLE(out_story_node_id text, out_override_reward_block boolean, out_has_pending_reward boolean, out_complete_condition_state jsonb, out_reveal_condition_state jsonb, out_fail_condition_state jsonb, out_metadata_state jsonb, out_reset_group dune.journeystoryresetgroup)		functions/lookup/admin_get_journey_details__2args.sql
+58134	f	journey_progression	admin_get_mnemonic_recall_details	in_account_id bigint	TABLE(mnemonic_recall_id bigint, lesson_id text, lesson_state bigint, lesson_progress integer)		functions/journey_progression/admin_get_mnemonic_recall_details__1args.sql
+58135	f	lookup	admin_get_partitions		TABLE(out_partition_id bigint, out_server_id text, out_partition_definition jsonb, out_dimension_index integer, out_blocked boolean, out_label text, out_map text)		functions/lookup/admin_get_partitions__0args.sql
+58136	f	lookup	admin_move_offline_player	in_fls_id text, in_target_partition_name text, in_target_location dune.vector	void		functions/lookup/admin_move_offline_player__3args.sql
+58137	f	lookup	admin_move_offline_player_to_partition	in_fls_id text, in_target_partition_id bigint, in_target_location dune.vector	void		functions/lookup/admin_move_offline_player_to_partition__3args.sql
+58138	f	lookup	admin_read_player_tags	in_account_id bigint	TABLE(tags text)		functions/lookup/admin_read_player_tags__1args.sql
+58139	f	inventory	advance_items_id_sequencer	count bigint	bigint		functions/inventory/advance_items_id_sequencer__1args.sql
+58140	f	actors	assign_actor_id	in_class text	bigint		functions/actors/assign_actor_id__1args.sql
+58141	f	base_backup	base_backup_delete	in_base_backup_id bigint	void		functions/base_backup/base_backup_delete__1args.sql
+58142	f	base_backup	base_backup_find_totems_from_player_owner	in_player_id bigint	TABLE(totem_id bigint)		functions/base_backup/base_backup_find_totems_from_player_owner__1args.sql
+58143	f	base_backup	base_backup_finish_placing	in_base_backup_id bigint	void		functions/base_backup/base_backup_finish_placing__1args.sql
+58144	f	base_backup	base_backup_get_actors_to_spawn	in_base_backup_id bigint	SETOF dune.actorspawninfo		functions/base_backup/base_backup_get_actors_to_spawn__1args.sql
+58145	f	base_backup	base_backup_get_available_backups	in_player_id bigint	TABLE(id bigint, base_backup_name text, totem_id bigint, totem_buildable_type text, landclaim_original_global_location real[], base_backup_map text)		functions/base_backup/base_backup_get_available_backups__1args.sql
+58146	f	base_backup	base_backup_get_buildable_data	in_base_backup_id bigint	TABLE(buildable_type text, total_count integer)		functions/base_backup/base_backup_get_buildable_data__1args.sql
+58147	f	base_backup	base_backup_get_data	in_base_backup_id bigint	dune.getbasebackupdata		functions/base_backup/base_backup_get_data__1args.sql
+58148	f	base_backup	base_backup_get_totem_data	in_base_backup_id bigint	dune.basebackuptotemdata		functions/base_backup/base_backup_get_totem_data__1args.sql
+58149	f	base_backup	base_backup_get_totem_data_from_totem_id	in_totem_id bigint	dune.basebackuptotemdata		functions/base_backup/base_backup_get_totem_data_from_totem_id__1args.sql
+58150	f	base_backup	base_backup_get_totem_id	backup_id bigint	bigint		functions/base_backup/base_backup_get_totem_id__1args.sql
+58151	f	base_backup	base_backup_recycle	in_base_backup_id bigint, in_target_inventory_id bigint	integer		functions/base_backup/base_backup_recycle__2args.sql
+58152	f	base_backup	base_backup_save	in_player_actor_id bigint, in_base_backup_name text, in_building_pieces_to_link dune.basebackupbuildingitem[], in_placeables_to_link bigint[], in_placeables_to_remove_totem_owner bigint[]	bigint		functions/base_backup/base_backup_save__5args.sql
+58153	f	base_backup	base_backup_save_all_totems_from_player_owner	in_player_id bigint	TABLE(base_backup_id bigint)		functions/base_backup/base_backup_save_all_totems_from_player_owner__1args.sql
+58154	f	base_backup	base_backup_save_from_totem	in_player_id bigint, totem_id bigint	bigint		functions/base_backup/base_backup_save_from_totem__2args.sql
+58155	f	guild	break_guild_allegiance	in_guild_id bigint, in_neutral_faction_id smallint	void		functions/guild/break_guild_allegiance__2args.sql
+58156	f	transfer	can_takeover_account	in_user_id text	boolean		functions/transfer/can_takeover_account__1args.sql
+58157	f	faction	change_player_faction	in_player_id bigint, in_faction_id smallint, neutral_faction_id smallint, in_utc_time_faction_change timestamp without time zone	void		functions/faction/change_player_faction__4args.sql
+58158	f	transfer	character_migration_export	in_fls_id text	jsonb		functions/transfer/character_migration_export__1args.sql
+58159	f	transfer	character_migration_import	in_data jsonb, in_fls_id text, in_character_name text	bigint		functions/transfer/character_migration_import__3args.sql
+58160	f	transfer	character_transfer_export	in_fls_id text	jsonb		functions/transfer/character_transfer_export__1args.sql
+58162	f	transfer	character_transfer_get_unsaved_counts	in_fls_id text	TABLE(unsaved_bases_count bigint, unsaved_vehicles_count bigint)		functions/transfer/character_transfer_get_unsaved_counts__1args.sql
+58163	f	transfer	character_transfer_import	in_data jsonb, in_fls_id text, in_character_name text	bigint		functions/transfer/character_transfer_import__3args.sql
+58165	f	party	clean_expired_party_invites	in_invite_expire_seconds integer	void		functions/party/clean_expired_party_invites__1args.sql
+58166	f	faction	clean_guild_invites_with_incompatible_faction	in_player_id bigint, in_faction_id smallint, neutral_faction_id smallint	void		functions/faction/clean_guild_invites_with_incompatible_faction__3args.sql
+58167	f	guild	clean_old_guild_invites	in_cutoff_timespan bigint	void		functions/guild/clean_old_guild_invites__1args.sql
+58168	f	stock_vendor	clean_stock_for_player	in_player_id bigint	void		functions/stock_vendor/clean_stock_for_player__1args.sql
+58169	f	stock_vendor	clean_stock_for_vendors	in_vendor_ids text[]	void		functions/stock_vendor/clean_stock_for_vendors__1args.sql
+58170	f	stock_vendor	clean_vendors_older_than_timestamp	in_reference_timestamp bigint	void		functions/stock_vendor/clean_vendors_older_than_timestamp__1args.sql
+58171	f	transfer	cleanup_account_log_and_orphaned_actors		void		functions/transfer/cleanup_account_log_and_orphaned_actors__0args.sql
+58172	f	transfer	cleanup_accounts_marked_for_deletion_in_fls	in_account_ids text[]	void		functions/transfer/cleanup_accounts_marked_for_deletion_in_fls__1args.sql
+58173	f	cleanup	cleanup_orphaned_entities		trigger		functions/cleanup/cleanup_orphaned_entities__0args.sql
+58174	f	map_areas	clear_map_areas_data_for_player	in_id bigint	void		functions/map_areas/clear_map_areas_data_for_player__1args.sql
+58175	f	journey_progression	complete_journey_nodes_where_prerequisite_nodes_are_complete	story_ids_to_complete text[], prerequisite_completed_story_ids text[]	void		functions/journey_progression/complete_journey_nodes_where_prerequisite_nodes_are_complete__2args.sql
+58176	f	journey_progression	complete_journey_story_nodes_for_player	in_player_id text, in_story_node_ids text[]	void		functions/journey_progression/complete_journey_story_nodes_for_player__2args.sql
+58177	f	misc	corilis_cleanup_map	in_server_info dune.serverinfo, in_map_info dune.coriolismapinfo	void		functions/misc/corilis_cleanup_map__2args.sql
+58178	f	journey_progression	coriolis_cleanup_farm	in_server_info dune.serverinfo, in_map_info dune.coriolismapinfo	void		functions/journey_progression/coriolis_cleanup_farm__2args.sql
+58179	f	journey_progression	coriolis_cleanup_partition	in_server_info dune.serverinfo, in_map_info dune.coriolismapinfo	void		functions/journey_progression/coriolis_cleanup_partition__2args.sql
+58180	f	journey_progression	coriolis_update_seed	in_server_info dune.serverinfo, in_new_coriolis_seed integer, in_map_info dune.coriolismapinfo	void		functions/journey_progression/coriolis_update_seed__3args.sql
+58181	f	event_log	create_event_log_partition		trigger		functions/event_log/create_event_log_partition__0args.sql
+58182	p	event_log	create_event_log_partition_table	IN table_name text, IN partition_id bigint			procedures/create_event_log_partition_table__2args.sql
+58183	f	guild	create_guild	in_player_id bigint, in_neutral_faction smallint, in_guild_name text, in_guild_desc text, in_max_guild_count_per_player integer, OUT out_guild_id bigint, OUT out_success boolean, OUT out_fail_reason dune.guildcreatefailreason	record		functions/guild/create_guild__8args.sql
+58184	f	journey_progression	create_or_update_tutorial_entry	in_player_id bigint, in_tutorial_id smallint, in_tutorial_state smallint	void		functions/journey_progression/create_or_update_tutorial_entry__3args.sql
+58185	f	server	create_server_player_access_codes	in_account_id bigint, in_access_code integer, in_access_code_type integer, in_is_resettable boolean	void		functions/server/create_server_player_access_codes__4args.sql
+58186	f	map_areas	create_sinkchart_for_map_area_id	in_item_id bigint, in_creator_id bigint, in_map_name text, in_area_id smallint	integer		functions/map_areas/create_sinkchart_for_map_area_id__4args.sql
+58187	f	debug	debug_add_test_table_data	in_entry text	void		functions/debug/debug_add_test_table_data__1args.sql
+58188	f	debug	debug_collect_test_table_data		SETOF text		functions/debug/debug_collect_test_table_data__0args.sql
+58189	f	debug	debug_echo	in_text text, in_notices text[]	text		functions/debug/debug_echo__2args.sql
+58190	f	debug	debug_get_coriolis_seeds		TABLE(farm_seed integer, map_names text[], map_seeds integer[], partitions_ids bigint[], partitions_map text[], partitions_seeds integer[])		functions/debug/debug_get_coriolis_seeds__0args.sql
+58191	f	debug	debug_raise_exception	in_exception text, in_notices text[]	void		functions/debug/debug_raise_exception__2args.sql
+58192	f	debug	debug_raise_notices	in_notices text[]	void		functions/debug/debug_raise_notices__1args.sql
+58193	f	debug	debug_reset_test_table		void		functions/debug/debug_reset_test_table__0args.sql
+58194	f	debug	debug_set_farm_seed	in_new_coriolis_seed integer	void		functions/debug/debug_set_farm_seed__1args.sql
+58195	f	debug	debug_set_map_seed	in_map text, in_new_coriolis_seed integer	void		functions/debug/debug_set_map_seed__2args.sql
+58196	f	debug	debug_set_partition_seed	in_partition_id bigint, in_new_coriolis_seed integer	void		functions/debug/debug_set_partition_seed__2args.sql
+58197	f	encryption	decrypt_user_data	in_encrypted_data bytea	text		functions/encryption/decrypt_user_data__1args.sql
+58198	f	transfer	delete_account	in_user_id text, in_reason text	boolean		functions/transfer/delete_account__2args.sql
+58199	f	actors	delete_actor_states_travel	in_actor_id bigint	void		functions/actors/delete_actor_states_travel__1args.sql
+58200	f	actors	delete_actors	in_ids bigint[]	void		functions/actors/delete_actors__1args.sql
+58201	f	actors	delete_actors_and_respawns_on_server	in_server_info dune.serverinfo, in_vehicle_classes_spawned_on_map text[], in_allow_vehicle_recovery boolean	void		functions/actors/delete_actors_and_respawns_on_server__3args.sql
+58202	f	dungeon	delete_all_dungeon_completions	in_dungeon_id text	void		functions/dungeon/delete_all_dungeon_completions__1args.sql
+58203	f	dungeon	delete_all_dungeon_completions_by_player	in_dungeon_id text, in_player_id bigint, in_keep_completion_for_other_players boolean	void		functions/dungeon/delete_all_dungeon_completions_by_player__3args.sql
+58204	f	dungeon	delete_all_dungeon_completions_for_all_dungeons_by_player	in_player_id bigint, in_keep_completion_for_other_players boolean	void		functions/dungeon/delete_all_dungeon_completions_for_all_dungeons_by_player__2args.sql
+58205	f	farm	delete_all_inactive_farms		void		functions/farm/delete_all_inactive_farms__0args.sql
+58206	f	journey_progression	delete_all_journey_story_nodes	in_account_id bigint	void		functions/journey_progression/delete_all_journey_story_nodes__1args.sql
+58207	f	shifting_sand	delete_all_static_shifting_sand		void		functions/shifting_sand/delete_all_static_shifting_sand__0args.sql
+58208	f	journey_progression	delete_all_tutorial_entries	in_player_id bigint	void		functions/journey_progression/delete_all_tutorial_entries__1args.sql
+58209	f	building_blueprint	delete_building_blueprint	in_building_item_id bigint	void		functions/building_blueprint/delete_building_blueprint__1args.sql
+58210	f	character_mod	delete_character	in_actor_id bigint	void		functions/character_mod/delete_character__1args.sql
+58211	f	map_areas	delete_crafted_map	in_item_id bigint	void		functions/map_areas/delete_crafted_map__1args.sql
+58212	f	dialogue	delete_dialogue_data	in_player_controller_id bigint	void		functions/dialogue/delete_dialogue_data__1args.sql
+58213	f	inventory	delete_inventory_item	in_item_id bigint, in_count bigint	bigint		functions/inventory/delete_inventory_item__2args.sql
+58214	f	inventory	delete_item	in_id bigint	void		functions/inventory/delete_item__1args.sql
+58215	f	inventory	delete_items	in_ids bigint[]	void		functions/inventory/delete_items__1args.sql
+58216	f	inventory	delete_items_from_actor	in_actor_id bigint	void		functions/inventory/delete_items_from_actor__1args.sql
+58217	f	journey_progression	delete_journey_story_ids	story_ids text[]	void		functions/journey_progression/delete_journey_story_ids__1args.sql
+58218	f	journey_progression	delete_journey_story_node	in_account_id bigint, in_story_node_id text	void		functions/journey_progression/delete_journey_story_node__2args.sql
+58219	f	journey_progression	delete_journey_story_nodes_for_group_for_player	in_account_id bigint, in_reset_group dune.journeystoryresetgroup	void		functions/journey_progression/delete_journey_story_nodes_for_group_for_player__2args.sql
+58220	f	journey_progression	delete_journey_story_nodes_for_player	in_player_id text, in_story_node_ids text[]	void		functions/journey_progression/delete_journey_story_nodes_for_player__2args.sql
+58221	f	journey_progression	delete_journey_story_nodes_for_player_account	in_account_id bigint, in_story_node_ids text[]	void		functions/journey_progression/delete_journey_story_nodes_for_player_account__2args.sql
+58222	f	markers	delete_map_markers	in_dimension_index integer, in_map_name text, in_player_marker_data dune.deleteplayermarkerdata[]	void		functions/markers/delete_map_markers__3args.sql
+58223	f	markers	delete_markers_by_id	in_marker_ids integer[]	void		functions/markers/delete_markers_by_id__1args.sql
+58224	f	markers	delete_markers_by_static_location_key	p_location_key text	void		functions/markers/delete_markers_by_static_location_key__1args.sql
+58225	f	markers	delete_markers_for_all_players	in_marker_types_to_keep text[], in_map text	void		functions/markers/delete_markers_for_all_players__2args.sql
+58226	f	actors	delete_markers_return_actor_ids	in_dimension_index integer, in_map_name text, in_marker_ids integer[]	TABLE(actor_id bigint, marker_id integer)		functions/actors/delete_markers_return_actor_ids__3args.sql
+58227	f	journey_progression	delete_mnemonic_recall_lesson	in_account_id bigint, in_lesson_id text	void		functions/journey_progression/delete_mnemonic_recall_lesson__2args.sql
+58228	f	journey_progression	delete_mnemonic_recall_lesson_all	in_account_id bigint	void		functions/journey_progression/delete_mnemonic_recall_lesson_all__1args.sql
+58229	f	server	delete_server_player_access_codes	in_account_id bigint, in_access_code integer, in_access_code_type integer	void		functions/server/delete_server_player_access_codes__3args.sql
+58230	f	spawner	delete_spawner	in_map text, in_name text, in_dimension_index integer	void		functions/spawner/delete_spawner__3args.sql
+58231	f	markers	delete_static_location_markers	p_location_keys text[]	void		functions/markers/delete_static_location_markers__1args.sql
+58232	f	map_areas	delete_world_partition_by_map_id	in_map_id text	void		functions/map_areas/delete_world_partition_by_map_id__1args.sql
+58233	f	guild	demote_guild_member	in_guild_id bigint, in_player_id bigint, in_new_role smallint	void		functions/guild/demote_guild_member__3args.sql
+58234	f	partition	determine_partition_label	in_map text, in_dimension_index integer, in_label text, in_allow_overwrite boolean, in_partition_id bigint	text		functions/partition/determine_partition_label__5args.sql
+58236	f	partition	determine_partition_label_trigger		trigger		functions/partition/determine_partition_label_trigger__0args.sql
+58237	f	guild	disband_guild	in_guild_id bigint	void		functions/guild/disband_guild__1args.sql
+58238	f	party	disband_party	in_party_id bigint	void		functions/party/disband_party__1args.sql
+58239	f	misc	downgrade_map_name	in_map_name text	text		functions/misc/downgrade_map_name__1args.sql
+58240	f	inventory	drain_item_tracking_data		TABLE(function_name dune.itemtrackingfunctiontype, item_id bigint, account_id bigint, inventory_id bigint, template_id text, event_time timestamp without time zone, position_index bigint)		functions/inventory/drain_item_tracking_data__0args.sql
+58241	f	exchange	dune_exchange_add_sell_order	in_exchange_id bigint, in_access_point_id bigint, in_owner_id bigint, in_max_orders_per_player integer, in_expiration_time bigint, in_item_id bigint, in_count bigint, in_category_mask integer, in_category_depth smallint, in_durability_cur real, in_durability_max real, in_item_price bigint, in_wear_normalized_item_price bigint, in_quality_level bigint, in_solari_cost bigint	dune.duneexchangeaddsellorderresult		functions/exchange/dune_exchange_add_sell_order__15args.sql
+58242	f	exchange	dune_exchange_cancel_order	in_order_id bigint, in_purge_time bigint, in_completion_type integer	void		functions/exchange/dune_exchange_cancel_order__3args.sql
+58243	f	exchange	dune_exchange_expire_orders	in_exchange_id bigint, in_current_time bigint, in_purge_time bigint, in_expired_completion_type integer	SETOF dune.exchangeexpiredorder		functions/exchange/dune_exchange_expire_orders__4args.sql
+58244	f	exchange	dune_exchange_fulfill_sell_order	in_exchange_id bigint, in_max_orders_per_player integer, in_purchased_completion_type integer, in_sold_completion_type integer, in_instigator_id bigint, in_order_id bigint, in_order_revision bigint, in_dst_inventory_id bigint, in_dst_index bigint, in_count bigint, in_solaris_fee bigint, in_purge_time bigint	dune.duneexchangefulfillsellorderresult		functions/exchange/dune_exchange_fulfill_sell_order__12args.sql
+58246	f	inventory	dune_exchange_get_item_price_stats	in_template_ids text[]	TABLE(template_id text, minimum bigint, average bigint)		functions/inventory/dune_exchange_get_item_price_stats__1args.sql
+58247	f	exchange	dune_exchange_get_user_id	in_owner_id bigint	bigint		functions/exchange/dune_exchange_get_user_id__1args.sql
+58248	f	currency	dune_exchange_modify_user_solari_balance	in_controller_id bigint, in_solari_delta bigint	void		functions/currency/dune_exchange_modify_user_solari_balance__2args.sql
+58249	f	exchange	dune_exchange_purge_completed_orders	in_exchange_id bigint, in_current_time bigint	SETOF dune.exchangeexpiredorder		functions/exchange/dune_exchange_purge_completed_orders__2args.sql
+58250	f	exchange	dune_exchange_query_storage_item	in_order_id bigint	TABLE(completion_type integer, id bigint, revision bigint, expiration_time bigint, access_point_id bigint, ap_name text, owner_id bigint, item_id bigint, template_id text, stack_size bigint, item_price bigint, quality_level bigint, durability_cur real, durability_max real, dynamic_stats jsonb)		functions/exchange/dune_exchange_query_storage_item__1args.sql
+58251	f	exchange	dune_exchange_query_storage_items	in_exchange_id bigint, in_owner_id bigint	TABLE(completion_type integer, id bigint, revision bigint, expiration_time bigint, access_point_id bigint, ap_name text, owner_id bigint, item_id bigint, template_id text, stack_size bigint, item_price bigint, quality_level bigint, durability_cur real, durability_max real, dynamic_stats jsonb)		functions/exchange/dune_exchange_query_storage_items__2args.sql
+58252	f	exchange	dune_exchange_relist_order	in_order_id bigint, in_expiration_time bigint, in_item_price bigint, in_wear_normalized_item_price bigint, in_solari_cost bigint	bigint		functions/exchange/dune_exchange_relist_order__5args.sql
+58253	f	currency	dune_exchange_retrieve_solari_balance	in_owner_id bigint	bigint		functions/currency/dune_exchange_retrieve_solari_balance__1args.sql
+58254	f	currency	dune_exchange_retrieve_solaris_from_item	in_controller_id bigint, in_order_id bigint	dune.duneexchangeretrievesolarisfromitemresult		functions/currency/dune_exchange_retrieve_solaris_from_item__2args.sql
+58255	f	exchange	dune_exchange_retrieve_storage_item	in_exchange_id bigint, in_order_id bigint, in_dst_inventory_id bigint, in_dst_index bigint, in_count bigint	dune.duneexchangeretrievestorageorderresult		functions/exchange/dune_exchange_retrieve_storage_item__5args.sql
+58256	f	exchange	dune_exchange_update_recurring_sell_order	in_exchange_id bigint, in_expiration_time bigint, in_access_point_id bigint, in_owner_id bigint, in_item_id bigint, in_increment bigint, in_max_count bigint, in_category_mask integer, in_category_depth smallint, in_durability_cur real, in_durability_max real, in_item_price bigint, in_wear_normalized_item_price bigint, in_quality_level bigint	bigint		functions/exchange/dune_exchange_update_recurring_sell_order__14args.sql
+58257	f	lookup	dune_get_account_id_by_user	in_user text	bigint		functions/lookup/dune_get_account_id_by_user__1args.sql
+58258	f	currency	edit_guild_description	in_guild_id bigint, in_guild_desc text	void		functions/currency/edit_guild_description__2args.sql
+58259	f	encryption	encrypt_user_data	in_data text	bytea		functions/encryption/encrypt_user_data__1args.sql
+58260	f	lookup	fetch_resourcefield_state	in_map text, in_dimension_index integer, in_field_kind_id smallint	TABLE(field_id bigint, spawn_time double precision, value_remaining bigint)		functions/lookup/fetch_resourcefield_state__3args.sql
+58261	f	lookup	fetch_server_spice_field_manifest	in_server_id text	TABLE(spicefield_type_id integer, inactive_fields_of_type integer, requested_spawned_of_type integer)		functions/lookup/fetch_server_spice_field_manifest__1args.sql
+58262	f	lookup	fetch_spicefie_id_types_with_global_info	in_map_name text, in_dimension_index integer	TABLE(spicefield_type_id integer, max_globally_active integer, max_globally_primed integer, current_globally_active integer, current_globally_primed integer, is_spawning_active boolean, field_type text)		functions/lookup/fetch_spicefie_id_types_with_global_info__2args.sql
+58263	f	actors	find_actor_by_id	in_id bigint	dune.actorspawninfo		functions/actors/find_actor_by_id__1args.sql
+58264	f	misc	fix_broken_harkonnen_players_due_to_fooled_thufir		void		functions/misc/fix_broken_harkonnen_players_due_to_fooled_thufir__0args.sql
+58265	f	anticheat	flag_player_as_cheater	in_account_id bigint, in_cheat_type dune.cheat_type_enum	void		functions/anticheat/flag_player_as_cheater__2args.sql
+58266	f	actors	gather_ownerless_actors_on_server	in_server_info dune.serverinfo	SETOF dune.actorspawninfo		functions/actors/gather_ownerless_actors_on_server__1args.sql
+58267	f	actors	gather_player_linked_actors	in_player_pawn_id bigint	SETOF dune.actorspawninfo		functions/actors/gather_player_linked_actors__1args.sql
+58268	f	actors	gather_removed_accounts_that_left_orphaned_actors_on_server	in_server_info dune.serverinfo	TABLE(account_id bigint, removal_reason text, actors_left dune.orphanedplayeractorinfo[])		functions/actors/gather_removed_accounts_that_left_orphaned_actors_on_server__1args.sql
+58269	f	actors	get_account_actor_ids	in_account_id bigint	dune.playeractorids		functions/actors/get_account_actor_ids__1args.sql
+58270	f	server	get_active_servers_for_gateway		TABLE(server_id text, map text, partition_id bigint, dimension_index integer, game_addr inet, game_port integer, revision integer)	Used by the gateway service to monitor for active servers.	functions/server/get_active_servers_for_gateway__0args.sql
+58271	f	actors	get_actor_server_info	in_id bigint	dune.serverinfo		functions/actors/get_actor_server_info__1args.sql
+58272	f	permission	get_actors_location_data_with_permission	in_actor_ids bigint[]	SETOF dune.actorpermissionlocationdata		functions/permission/get_actors_location_data_with_permission__1args.sql
+58273	f	lookup	get_all_demo_players		TABLE(fls_ids text)		functions/lookup/get_all_demo_players__0args.sql
+58274	f	faction	get_all_faction_members		TABLE(player_id bigint, fls_id text, faction_id smallint)		functions/faction/get_all_faction_members__0args.sql
+58275	f	lookup	get_all_guild_members		TABLE(player_id bigint, fls_id text, guild_id bigint)		functions/lookup/get_all_guild_members__0args.sql
+58276	f	lookup	get_all_online_or_recently_disconnected_player_online_state		SETOF dune.playeronlinestateentry		functions/lookup/get_all_online_or_recently_disconnected_player_online_state__0args.sql
+58277	f	lookup	get_all_parties		TABLE(party_id bigint, player_id bigint, player_name text, party_leader_id bigint, platform_session_id text, platform_name text, platform_players_count integer)		functions/lookup/get_all_parties__0args.sql
+58278	f	lookup	get_all_party_invites		TABLE(invite_id bigint, party_id bigint, sender_player_id bigint, sender_name text, player_id bigint, player_name text, invite_sent_timespan bigint)		functions/lookup/get_all_party_invites__0args.sql
+58279	f	lookup	get_all_party_members		TABLE(player_id bigint, fls_id text, party_id bigint)		functions/lookup/get_all_party_members__0args.sql
+58280	f	lookup	get_all_player_character_home_dimensions		TABLE(fls_id text, home_dimension integer)		functions/lookup/get_all_player_character_home_dimensions__0args.sql
+58281	f	lookup	get_all_player_in_guild_online_state	in_guild_id bigint	SETOF dune.playeronlinestateentry		functions/lookup/get_all_player_in_guild_online_state__1args.sql
+58282	f	lookup	get_all_player_travel_states		TABLE(fls_id text, login_target_dimension_index integer)		functions/lookup/get_all_player_travel_states__0args.sql
+58283	f	journey_progression	get_all_tutorial_entries	in_player_id bigint	TABLE(tutorial_id smallint, tutorial_state smallint)		functions/journey_progression/get_all_tutorial_entries__1args.sql
+58284	f	lookup	get_all_unresolved_character_imports		TABLE(flsid text, importstate dune.transferimportstate, lastupdatetime timestamp with time zone)		functions/lookup/get_all_unresolved_character_imports__0args.sql
+58285	f	schema_meta	get_applied_patches		SETOF text		functions/schema_meta/get_applied_patches__0args.sql
+58286	f	battlegroup	get_battlegroup_close_date		timestamp without time zone		functions/battlegroup/get_battlegroup_close_date__0args.sql
+58287	f	lookup	get_best_dungeon_completion	in_dungeon_id text	TABLE(out_difficulty integer, out_duration_ms integer, out_players_names text[])		functions/lookup/get_best_dungeon_completion__1args.sql
+58288	f	lookup	get_best_dungeons_completions_for_player	in_player_id bigint	TABLE(out_dungeon_id text, out_difficulty integer, out_duration_ms integer, out_players_num smallint)		functions/lookup/get_best_dungeons_completions_for_player__1args.sql
+58289	f	building_blueprint	get_building_blueprint_copy_data	in_building_blueprint_id bigint	dune.buildingblueprintgetcopydata		functions/building_blueprint/get_building_blueprint_copy_data__1args.sql
+58290	f	building_blueprint	get_building_favorites	in_account_id bigint	TABLE(building_types text[])		functions/building_blueprint/get_building_favorites__1args.sql
+58291	f	building_blueprint	get_building_id	in_actor_id bigint, in_class text	dune.buildinggetidcomposite		functions/building_blueprint/get_building_id__2args.sql
+58292	f	lookup	get_character_import_state	in_fls_id text	dune.transferimportstate		functions/lookup/get_character_import_state__1args.sql
+58293	f	transfer	get_character_transfer_related_items	in_fls_id text	jsonb		functions/transfer/get_character_transfer_related_items__1args.sql
+58294	f	misc	get_consumed_lore_pickups	in_actor_id bigint, in_use_temporary boolean	SETOF bit		functions/misc/get_consumed_lore_pickups__2args.sql
+58295	f	misc	get_controller_id_from_platform_id	in_platform_id text	bigint		functions/misc/get_controller_id_from_platform_id__1args.sql
+58296	f	exchange	get_dune_exchange_accesspoint_id	in_exchange_id bigint, in_name text	bigint		functions/exchange/get_dune_exchange_accesspoint_id__2args.sql
+58297	f	exchange	get_dune_exchange_data	in_exchange_id bigint, in_controller_id bigint	dune.loadexchangedataresult		functions/exchange/get_dune_exchange_data__2args.sql
+58298	f	exchange	get_dune_exchange_id	in_name text	bigint		functions/exchange/get_dune_exchange_id__1args.sql
+58299	f	exchange	get_dune_exchange_used_order_slots	in_controller_id bigint	integer		functions/exchange/get_dune_exchange_used_order_slots__1args.sql
+58300	f	exchange	get_exchange_inventory_id	in_exchange_id bigint	bigint		functions/exchange/get_exchange_inventory_id__1args.sql
+58301	f	exchange	get_exchange_orders_by_mask	in_mask integer, in_depth smallint	SETOF bigint		functions/exchange/get_exchange_orders_by_mask__2args.sql
+58302	f	exchange	get_exchange_sell_orders	in_id bigint, in_exchange_id bigint, in_min_item_price bigint, in_max_item_price bigint, in_template_id text, in_mask integer, in_depth smallint	TABLE(id bigint, revision bigint, expiration_time bigint, access_point_id bigint, ap_name text, owner_id bigint, template_id text, stack_size bigint, initial_stack_size bigint, item_price bigint, quality_level bigint, durability_cur real, durability_max real, dynamic_stats jsonb)		functions/exchange/get_exchange_sell_orders__7args.sql
+58303	f	inventory	get_exchange_sell_orders_by_item_type	in_exchange_id bigint, in_template_ids text[]	TABLE(id bigint, revision bigint, expiration_time bigint, access_point_id bigint, ap_name text, owner_id bigint, template_id text, stack_size bigint, initial_stack_size bigint, item_price bigint, quality_level bigint, durability_cur real, durability_max real, dynamic_stats jsonb)		functions/inventory/get_exchange_sell_orders_by_item_type__2args.sql
+58304	f	exchange	get_exchange_sell_orders_by_owner	in_exchange_id bigint, in_owner_id bigint	TABLE(id bigint, revision bigint, expiration_time bigint, access_point_id bigint, ap_name text, owner_id bigint, template_id text, stack_size bigint, initial_stack_size bigint, item_price bigint, quality_level bigint, durability_cur real, durability_max real, dynamic_stats jsonb)		functions/exchange/get_exchange_sell_orders_by_owner__2args.sql
+58305	f	farm	get_farm_state		TABLE(server_id text, farm_id text, outgoing_s2s_connections integer, incoming_s2s_connections integer, connected_players integer, igw_addr inet, igw_port integer, game_addr inet, game_port integer, ready boolean, alive boolean, map text, revision integer)		functions/farm/get_farm_state__0args.sql
+58306	f	misc	get_friends_search	in_player_name text, in_max_players_count integer	TABLE(player_id bigint, character_name text, funcom_id text, platform_id text, platform_name text)		functions/misc/get_friends_search__2args.sql
+58307	f	guild	get_guild_data	in_guild_id bigint	TABLE(guild_name text, guild_faction_id smallint, guild_description text)		functions/guild/get_guild_data__1args.sql
+58308	f	guild	get_guild_data_for_player	in_player_id bigint	TABLE(guild_id bigint, guild_factions_id smallint, guild_name text, guild_description text, player_id bigint, role_id smallint, player_faction_id smallint)		functions/guild/get_guild_data_for_player__1args.sql
+58309	f	guild	get_guild_for_player	in_player_id bigint	bigint		functions/guild/get_guild_for_player__1args.sql
+58310	f	guild	get_guild_invites	in_guild_id bigint	TABLE(invite_id bigint, player_id bigint, sender_player_id bigint, invite_sent_timespan bigint, character_name text, sender_character_name text)		functions/guild/get_guild_invites__1args.sql
+58311	f	guild	get_guild_members	in_guild_id bigint	TABLE(player_id bigint, role_id smallint, player_faction_id smallint)		functions/guild/get_guild_members__1args.sql
+58312	f	inventory	get_inventory_data	in_inventory_id bigint	dune.inventorydata		functions/inventory/get_inventory_data__1args.sql
+58313	f	inventory	get_inventory_id	in_actor_id bigint, in_component_name_hash integer	bigint		functions/inventory/get_inventory_id__2args.sql
+58314	f	items_purge	get_items_to_remove	items_to_remove text[]	text[]		functions/items_purge/get_items_to_remove__1args.sql
+58315	f	landclaim	get_landclaim_segments	in_totem_id bigint	TABLE(grid_location_x bigint, grid_location_y bigint)		functions/landclaim/get_landclaim_segments__1args.sql
+58316	f	lookup	get_learned_building_sets	in_account_id bigint	SETOF text		functions/lookup/get_learned_building_sets__1args.sql
+58317	f	lookup	get_learned_new_buildable_pieces	in_account_id bigint	SETOF text		functions/lookup/get_learned_new_buildable_pieces__1args.sql
+58318	f	lookup	get_login_journey_nodes	in_account_id bigint	dune.journeynodeinfo[]		functions/lookup/get_login_journey_nodes__1args.sql
+58319	f	lookup	get_login_journey_nodes_cooldown	in_account_id bigint	dune.journeynodecooldowninfo[]		functions/lookup/get_login_journey_nodes_cooldown__1args.sql
+58320	f	journey_progression	get_mnemonic_recall_lessons	in_account_id bigint	TABLE(id bigint, lesson_id text, lession_state bigint, lesson_progress integer, is_new boolean)		functions/journey_progression/get_mnemonic_recall_lessons__1args.sql
+58321	f	lookup	get_online_player_controller_ids	in_map text	SETOF bigint		functions/lookup/get_online_player_controller_ids__1args.sql
+58322	f	lookup	get_online_player_controller_ids_on_farm		SETOF bigint		functions/lookup/get_online_player_controller_ids_on_farm__0args.sql
+58323	f	partition	get_partition_presets		SETOF text	Adds a partition only if its unique. Not using constraints, as this is only a helper function.	functions/partition/get_partition_presets__0args.sql
+58324	f	partition	get_partitions	in_map text	SETOF bigint		functions/partition/get_partitions__1args.sql
+58325	f	party	get_party_members	in_party_id bigint	TABLE(player_id bigint, fls_id text, party_id bigint)		functions/party/get_party_members__1args.sql
+58326	f	permission	get_permission_actors_for_server	in_server_info dune.serverinfo	SETOF dune.actorpermissioncombineddata		functions/permission/get_permission_actors_for_server__1args.sql
+58327	f	permission	get_permission_for_actor	in_actor_id bigint	dune.actorpermissioncombineddata		functions/permission/get_permission_for_actor__1args.sql
+58328	f	permission	get_permission_for_actors	in_actor_id bigint[]	SETOF dune.actorpermissioncombineddata		functions/permission/get_permission_for_actors__1args.sql
+58329	f	permission	get_permission_for_player_actors	in_player_id bigint, in_min_rank smallint	SETOF dune.actorpermissioncombineddata		functions/permission/get_permission_for_player_actors__2args.sql
+58330	f	building_blueprint	get_placeable_id	in_actor_id bigint, in_class text, in_building_type text	dune.placeablegetidcomposite		functions/building_blueprint/get_placeable_id__3args.sql
+58331	f	lookup	get_player_access_codes	in_account_id bigint	TABLE(access_code integer, access_code_type integer)		functions/lookup/get_player_access_codes__1args.sql
+58332	f	faction	get_player_current_faction_reputation	in_actor_id bigint, OUT out_faction_id smallint, OUT out_reputation_amount integer	record		functions/faction/get_player_current_faction_reputation__3args.sql
+58333	f	faction	get_player_faction	in_player_id bigint, in_neutral_faction_id smallint	smallint		functions/faction/get_player_faction__2args.sql
+58334	f	faction	get_player_faction_name	in_actor_id bigint, OUT player_faction_name text, OUT utc_time_faction_change timestamp without time zone	record		functions/faction/get_player_faction_name__3args.sql
+58335	f	lookup	get_player_guild_invites	in_player_id bigint	TABLE(invite_id bigint, guild_id bigint, guild_name text, guild_description text, sender_player_id bigint, invite_sent_timespan bigint, character_name text, sender_character_name text)		functions/lookup/get_player_guild_invites__1args.sql
+58336	f	lookup	get_player_ids_online_state	in_player_ids bigint[]	SETOF dune.playeronlinestateentry		functions/lookup/get_player_ids_online_state__1args.sql
+58337	f	lookup	get_player_infos_for_actor_ids	in_actor_ids bigint[]	TABLE(player_id bigint, character_name text, fls_id text, funcom_id text, platform_id text, platform_name text)		functions/lookup/get_player_infos_for_actor_ids__1args.sql
+58338	f	lookup	get_player_infos_for_character_names	in_character_names text[]	TABLE(player_id bigint, character_name text, fls_id text, funcom_id text, platform_id text, platform_name text)		functions/lookup/get_player_infos_for_character_names__1args.sql
+58339	f	lookup	get_player_infos_for_fls_ids	in_fls_ids text[]	TABLE(player_id bigint, character_name text, fls_id text, funcom_id text, platform_id text, platform_name text)		functions/lookup/get_player_infos_for_fls_ids__1args.sql
+58340	f	lookup	get_player_infos_for_funcom_ids	in_funcom_ids text[]	TABLE(player_id bigint, character_name text, fls_id text, funcom_id text, platform_id text, platform_name text)		functions/lookup/get_player_infos_for_funcom_ids__1args.sql
+58341	f	lookup	get_player_online_state_within_grace_period_for_each_server		TABLE(fls_id text, previous_partition_id bigint, current_server_id text, online_status dune.playerconnectionstatus, within_grace_period boolean, last_disconnect timestamp without time zone, demo_playtime_seconds integer, logoff_persistence_end_time timestamp without time zone, party_id bigint)		functions/lookup/get_player_online_state_within_grace_period_for_each_server__0args.sql
+58342	f	vehicle	get_player_owned_vehicles_data	in_player_id bigint, in_account_id bigint	TABLE(out_actor_id bigint, out_name text, out_class text, out_map text, out_partition_id bigint, out_dimension integer, out_transform dune.transform, out_actor_state text)		functions/vehicle/get_player_owned_vehicles_data__2args.sql
+58343	f	lookup	get_player_partition_id	in_fls_id text	bigint		functions/lookup/get_player_partition_id__1args.sql
+58344	f	lookup	get_player_pawn	in_account_id bigint	TABLE(description dune.actordescription, server_info dune.serverinfo, player_tags text[])		functions/lookup/get_player_pawn__1args.sql
+58345	f	currency	get_player_virtual_currency_balances	in_controller_id bigint	TABLE(out_currency_id smallint, out_currency_balance bigint)		functions/currency/get_player_virtual_currency_balances__1args.sql
+58346	f	lookup	get_players_demo_data	in_controller_ids bigint[]	SETOF dune.playerdemostatedescription		functions/lookup/get_players_demo_data__1args.sql
+58347	f	items_purge	get_recipes_to_remove	recipes_to_remove text[]	text[]		functions/items_purge/get_recipes_to_remove__1args.sql
+58348	f	actors	get_registered_spawned_actor	in_spawner_id bigint	SETOF bigint		functions/actors/get_registered_spawned_actor__1args.sql
+58349	f	spawner	get_respawn_locations	in_account_id bigint	dune.respawnlocation[]		functions/spawner/get_respawn_locations__1args.sql
+58350	f	schema_meta	get_schema_version		integer		functions/schema_meta/get_schema_version__0args.sql
+58351	f	currency	get_solaris_id		smallint		functions/currency/get_solaris_id__0args.sql
+58352	f	spawner	get_spawner_id	in_map text, in_name text, in_dimension_index integer	bigint		functions/spawner/get_spawner_id__3args.sql
+58353	f	encryption	get_stored_user_data_encryption_key_hash		bytea		functions/encryption/get_stored_user_data_encryption_key_hash__0args.sql
+58354	f	encryption	get_stored_user_data_encryption_status		dune.userdataencryptionstatus		functions/encryption/get_stored_user_data_encryption_status__0args.sql
+58355	f	encryption	get_stored_user_data_encryption_taint_xmax		bigint		functions/encryption/get_stored_user_data_encryption_taint_xmax__0args.sql
+58356	f	misc	get_sub_inventory_id	in_owner_item_id bigint	bigint		functions/misc/get_sub_inventory_id__1args.sql
+58357	f	lookup	get_traveling_actor_id_and_types	in_actor_id bigint	TABLE(id bigint, is_instigator boolean, is_player boolean, level integer)		functions/lookup/get_traveling_actor_id_and_types__1args.sql
+58358	f	lookup	get_traveling_actor_ids	in_actor_id bigint, in_max_recursion_level integer	TABLE(id bigint, is_instigator boolean, level integer)		functions/lookup/get_traveling_actor_ids__2args.sql
+58359	f	lookup	get_traveling_actors_fls_ids	in_actor_id bigint	TABLE(out_id text)		functions/lookup/get_traveling_actors_fls_ids__1args.sql
+58360	f	lookup	get_traveling_non_player_actor_ids	in_actor_id bigint	TABLE(id bigint)		functions/lookup/get_traveling_non_player_actor_ids__1args.sql
+58361	f	vehicle	get_unbacked_up_vehicle_ids_for_account	in_account_id bigint	TABLE(vehicle_id bigint)		functions/vehicle/get_unbacked_up_vehicle_ids_for_account__1args.sql
+58362	f	schema_meta	get_universe_time		TABLE(universe_time_timestamp timestamp without time zone, down_time_accumulation bigint)		functions/schema_meta/get_universe_time__0args.sql
+58363	f	transfer	get_unsaved_base_totem_ids_for_account	in_account_id bigint	TABLE(totem_id bigint)		functions/transfer/get_unsaved_base_totem_ids_for_account__1args.sql
+58364	f	vehicle	get_vehicle_id	in_actor_id bigint, in_class text	bigint		functions/vehicle/get_vehicle_id__2args.sql
+58365	f	vehicle	get_vehicle_module_inventory_id	in_vehicle_module_id bigint, in_vehicle_module_inventory_type integer	bigint		functions/vehicle/get_vehicle_module_inventory_id__2args.sql
+58366	f	guild	guild_handle_actor_delete	in_player_id bigint	void		functions/guild/guild_handle_actor_delete__1args.sql
+58367	f	guild	guilds_get_exclusive_operation_lock		void		functions/guild/guilds_get_exclusive_operation_lock__0args.sql
+58368	f	faction	handle_player_faction_guild_effects	in_player_id bigint, in_faction_id smallint, neutral_faction_id smallint	void		functions/faction/handle_player_faction_guild_effects__3args.sql
+58369	f	partition	igwo_delete_world_partitions	in_partition_ids bigint[]	void		functions/partition/igwo_delete_world_partitions__1args.sql
+58370	f	partition	igwo_get_partition_id_seq_last_value		bigint		functions/partition/igwo_get_partition_id_seq_last_value__0args.sql
+58371	f	partition	igwo_get_partition_ids		SETOF bigint		functions/partition/igwo_get_partition_ids__0args.sql
+58372	f	partition	igwo_get_partitions		TABLE(partition_id bigint, map text, dimension_index integer, label text, min_x double precision, min_y double precision, max_x double precision, max_y double precision)		functions/partition/igwo_get_partitions__0args.sql
+58373	f	igwo	igwo_get_server_details		TABLE(address text, server_id text, ready boolean, partition_id bigint, map text, dimension_index integer, label text)		functions/igwo/igwo_get_server_details__0args.sql
+58374	f	partition	igwo_insert_world_partition	in_partition_id bigint, in_map text, in_partition_definition jsonb, in_dimension_index integer, in_partition_label text	bigint		functions/partition/igwo_insert_world_partition__5args.sql
+58375	f	partition	igwo_next_partition_id_seq		bigint		functions/partition/igwo_next_partition_id_seq__0args.sql
+58376	f	partition	igwo_notify_world_partition_update		void		functions/partition/igwo_notify_world_partition_update__0args.sql
+58377	f	partition	igwo_restart_partition_id_seq	in_restart_with bigint	void		functions/partition/igwo_restart_partition_id_seq__1args.sql
+58378	f	partition	igwo_update_world_partition	in_map text, in_partition_definition jsonb, in_partition_id bigint, in_dimension_index integer, in_label text	void		functions/partition/igwo_update_world_partition__5args.sql
+58379	f	event_log	init_event_log	in_partition_id bigint	void		functions/event_log/init_event_log__1args.sql
+58380	f	partition	initialize_partitions_basic_battlegroup		void		functions/partition/initialize_partitions_basic_battlegroup__0args.sql
+58381	f	partition	initialize_partitions_basic_survival_1		void		functions/partition/initialize_partitions_basic_survival_1__0args.sql
+58382	f	partition	initialize_partitions_development_battlegroup		void		functions/partition/initialize_partitions_development_battlegroup__0args.sql
+58383	f	partition	initialize_partitions_editor_default_1x1		void		functions/partition/initialize_partitions_editor_default_1x1__0args.sql
+58384	f	partition	initialize_partitions_full_battlegroup		void		functions/partition/initialize_partitions_full_battlegroup__0args.sql
+58385	f	partition	initialize_partitions_igw_test_small_2x1		void		functions/partition/initialize_partitions_igw_test_small_2x1__0args.sql
+58386	f	partition	initialize_partitions_igw_test_small_2x2		void		functions/partition/initialize_partitions_igw_test_small_2x2__0args.sql
+58387	f	partition	initialize_partitions_igw_training		void		functions/partition/initialize_partitions_igw_training__0args.sql
+58388	f	character_mod	initialize_specialization_keystones	in_keystones text[]	TABLE(keystone_id smallint, keystone_name text)		functions/character_mod/initialize_specialization_keystones__1args.sql
+58389	f	partition	initialize_world_partition	in_map_name text, in_num_servers integer, in_dimension_index integer	SETOF bigint		functions/partition/initialize_world_partition__3args.sql
+58390	f	stock_vendor	interact_get_vendor_items_bought_from_player	in_vendor_id text, in_player_id bigint, in_current_cycle_start_timestamp bigint	TABLE(out_template_id text, out_amount_bought integer)		functions/stock_vendor/interact_get_vendor_items_bought_from_player__3args.sql
+58391	f	party	internal_add_party_member	in_invite_id bigint, in_party_id bigint, in_player_id bigint, in_platform_session_id text, in_platform_name text, in_max_party_member_count integer	dune.partyacceptinviteresult		functions/party/internal_add_party_member__6args.sql
+58392	f	party	internal_create_party	in_invite_id bigint, in_leader_id bigint, in_leader_platform_session_id text, in_leader_platform_name text, in_member_id bigint, in_platform_session_id text, in_platform_name text	bigint		functions/party/internal_create_party__7args.sql
+58393	f	lookup	is_player_guild_admin	in_player_id bigint, in_guild_id bigint	boolean		functions/lookup/is_player_guild_admin__2args.sql
+58394	f	lookup	is_player_offline	in_fls_id text	boolean	Return true if player is marked as offline, taking into account server crashing before players online state was updated in DB.	functions/lookup/is_player_offline__1args.sql
+58395	f	lookup	is_player_party_leader	in_player_id bigint, in_party_id bigint	boolean		functions/lookup/is_player_party_leader__2args.sql
+58396	f	party	join_platform_session_party	in_leader_platform_id text, in_player_platform_id text, in_platform_session_id text, in_platform_name text, in_max_party_member_count integer	dune.partyacceptinviteresult		functions/party/join_platform_session_party__5args.sql
+58397	f	journey_progression	journey_story_node_cooldown_add	in_account_id bigint, in_story_node_id text, in_time_to_expire timestamp without time zone	void		functions/journey_progression/journey_story_node_cooldown_add__3args.sql
+58398	f	journey_progression	journey_story_node_cooldown_delete_expired	in_time_to_check timestamp without time zone	void		functions/journey_progression/journey_story_node_cooldown_delete_expired__1args.sql
+58399	f	landsraad	landsraad_cast_vote	in_term_id bigint, in_player_id bigint, in_decree_name text	void		functions/landsraad/landsraad_cast_vote__3args.sql
+58400	f	landsraad	landsraad_change_term_end_time	end_term_id bigint, new_end_time timestamp without time zone, in_test_term boolean	void		functions/landsraad/landsraad_change_term_end_time__3args.sql
+58401	f	landsraad	landsraad_check_task_completion		trigger		functions/landsraad/landsraad_check_task_completion__0args.sql
+58402	f	landsraad	landsraad_check_term_won		trigger		functions/landsraad/landsraad_check_term_won__0args.sql
+58403	f	landsraad	landsraad_collect_task_telemetry_for_faction	in_term_id bigint, in_faction_name text	TABLE(task_telemetry dune.landsraadtermtasktelemetry[])		functions/landsraad/landsraad_collect_task_telemetry_for_faction__2args.sql
+58404	f	landsraad	landsraad_collect_term_telemetry	in_term_id bigint, in_faction_names text[]	TABLE(term_telemetry dune.landsraadtermtelemetry[], task_telemetry dune.landsraadtermtasktelemetry[])		functions/landsraad/landsraad_collect_term_telemetry__2args.sql
+58405	f	landsraad	landsraad_collect_term_telemetry_for_faction	in_term_id bigint, in_faction_name text	dune.landsraadtermtelemetry		functions/landsraad/landsraad_collect_term_telemetry_for_faction__2args.sql
+58406	f	landsraad	landsraad_collect_vote_telemetry	in_term_id bigint, in_winning_faction_id integer	TABLE(guild_id bigint, decree_name text, voting_influence integer)		functions/landsraad/landsraad_collect_vote_telemetry__2args.sql
+58407	f	landsraad	landsraad_collect_votes	in_term_id bigint	TABLE(elected_decree text, winning_faction_name text, available_decrees text[], guild_votes dune.landsraadguildvotetelemetry[])		functions/landsraad/landsraad_collect_votes__1args.sql
+58408	f	landsraad	landsraad_determine_winner	in_term_id bigint	text		functions/landsraad/landsraad_determine_winner__1args.sql
+58409	f	landsraad	landsraad_force_end_term	end_term_id bigint	void		functions/landsraad/landsraad_force_end_term__1args.sql
+58410	f	landsraad	landsraad_has_term_of_task_ended	in_task_id bigint	boolean		functions/landsraad/landsraad_has_term_of_task_ended__1args.sql
+58411	f	landsraad	landsraad_initialize_system	number_of_weeks_term_retention integer, number_of_nominated_decrees integer, in_end_time timestamp without time zone, in_test_term boolean, faction_names text[], decrees dune.landsraaddecree[], tasks dune.landsraadtask[], task_rewards dune.landsraadtaskreward[]	TABLE(term_id bigint, reigning_faction_name text, active_decree_name text, winning_faction_name text, elected_decree_name text, start_time timestamp without time zone, end_time timestamp without time zone)		functions/landsraad/landsraad_initialize_system__8args.sql
+58412	f	landsraad	landsraad_initialize_term	number_of_weeks_term_retention integer, number_of_nominated_decrees integer, in_end_time timestamp without time zone, in_test_term boolean, tasks dune.landsraadtask[], task_rewards dune.landsraadtaskreward[]	TABLE(term_id bigint, reigning_faction_name text, active_decree_name text, winning_faction_name text, elected_decree_name text, start_time timestamp without time zone, end_time timestamp without time zone)		functions/landsraad/landsraad_initialize_term__6args.sql
+58413	f	landsraad	landsraad_insert_task_progress	in_term_id bigint, in_player_id bigint, in_guild_id bigint, in_house_name text, in_faction_progress integer, in_guild_progress real, in_player_progress real, in_timestamp timestamp without time zone	void		functions/landsraad/landsraad_insert_task_progress__8args.sql
+58414	f	landsraad	landsraad_insert_task_progress_batched	in_term_id bigint, in_task_progress dune.landsraadtaskprogress[]	void		functions/landsraad/landsraad_insert_task_progress_batched__2args.sql
+58415	f	landsraad	landsraad_insert_task_progress_faction	in_term_id bigint, in_faction_name text, in_house_name text, in_faction_progress integer, in_guild_progress real, in_player_progress real	void		functions/landsraad/landsraad_insert_task_progress_faction__6args.sql
+58416	f	landsraad	landsraad_insert_task_progress_random	in_term_id bigint, in_faction_names text[], in_num_rows integer	void		functions/landsraad/landsraad_insert_task_progress_random__3args.sql
+58417	p	landsraad	landsraad_insert_tasks	IN in_term_id bigint, IN in_tasks dune.landsraadtask[], IN in_task_rewards dune.landsraadtaskreward[]			procedures/landsraad_insert_tasks__3args.sql
+58418	f	landsraad	landsraad_load_current_rotation	in_term_id bigint	TABLE(decree_name text, received_votes integer, open_votes integer)		functions/landsraad/landsraad_load_current_rotation__1args.sql
+58419	f	landsraad	landsraad_load_current_term		TABLE(term_id bigint, reigning_faction_name text, active_decree_name text, winning_faction_name text, elected_decree_name text, start_time timestamp without time zone, end_time timestamp without time zone, tasks dune.landsraadtask[], term_task_rewards dune.landsraadtaskreward[], winner_history text[], testterm boolean)		functions/landsraad/landsraad_load_current_term__0args.sql
+58420	f	landsraad	landsraad_load_guild_contribution	in_term_id bigint, in_guild_id bigint, in_faction_id bigint	TABLE(voting_influence real)		functions/landsraad/landsraad_load_guild_contribution__3args.sql
+58421	f	landsraad	landsraad_load_guild_contributions	in_term_id bigint, in_num_guilds integer, in_faction_names text[]	TABLE(faction_name text, guild_name text, voting_influence real)		functions/landsraad/landsraad_load_guild_contributions__3args.sql
+58422	f	landsraad	landsraad_load_guild_vote	in_term_id bigint, in_player_id bigint	TABLE(decree_name text, voting_influence real)		functions/landsraad/landsraad_load_guild_vote__2args.sql
+58423	f	landsraad	landsraad_load_house_rewards	in_player_id bigint	TABLE(house_name text, template_id text, amount integer, last_updated timestamp without time zone)		functions/landsraad/landsraad_load_house_rewards__1args.sql
+58424	f	landsraad	landsraad_load_player_contributions	in_term_id bigint, in_player_ids bigint[]	TABLE(player_id bigint, board_index smallint, amount integer)		functions/landsraad/landsraad_load_player_contributions__2args.sql
+58425	f	landsraad	landsraad_load_task_faction_progress	in_term_id bigint	TABLE(task_board_index integer, faction_name text, progress integer)		functions/landsraad/landsraad_load_task_faction_progress__1args.sql
+58426	f	landsraad	landsraad_load_task_faction_reveal_state	in_term_id bigint	TABLE(task_board_index integer, faction_name text, reveal_state boolean, time_stamp timestamp without time zone)		functions/landsraad/landsraad_load_task_faction_reveal_state__1args.sql
+58427	f	landsraad	landsraad_load_term_progress	in_term_id bigint, in_num_guilds integer, in_faction_names text[], in_player_ids bigint[]	TABLE(faction_progress dune.landsraadtaskfactionprogress[], faction_reveal_state dune.landsraadtaskfactionrevealstate[], guild_contributions dune.landsraadguildcontribution[], player_contributions dune.landsraadplayercontribution[])		functions/landsraad/landsraad_load_term_progress__4args.sql
+58428	p	landsraad	landsraad_nominate_decrees_for_voting	IN last_active_decree_id bigint, IN num_decrees integer			procedures/landsraad_nominate_decrees_for_voting__2args.sql
+58429	f	landsraad	landsraad_notify_house_rewards_changed		trigger		functions/landsraad/landsraad_notify_house_rewards_changed__0args.sql
+58430	f	landsraad	landsraad_perform_daily_task_reveal	in_term_id bigint, in_faction_names text[], in_house_names_to_reveal text[], in_reveal_day integer	TABLE(faction_name text, house_name text, board_index integer)		functions/landsraad/landsraad_perform_daily_task_reveal__4args.sql
+58431	f	landsraad	landsraad_process_house_rewards		trigger		functions/landsraad/landsraad_process_house_rewards__0args.sql
+58432	f	landsraad	landsraad_process_task_progress	max_rows integer	void		functions/landsraad/landsraad_process_task_progress__1args.sql
+58433	f	landsraad	landsraad_task_has_been_completed	in_task_id bigint	boolean		functions/landsraad/landsraad_task_has_been_completed__1args.sql
+58434	p	landsraad	landsraad_update_decrees	IN in_decrees dune.landsraaddecree[]			procedures/landsraad_update_decrees__1args.sql
+58435	p	landsraad	landsraad_update_factions	IN in_faction_names text[]			procedures/landsraad_update_factions__1args.sql
+58436	f	landsraad	landsraad_update_task_faction_reveal_state	in_term_id bigint, in_task_board_index integer, faction_name text, reveal_state boolean	void		functions/landsraad/landsraad_update_task_faction_reveal_state__4args.sql
+58437	f	landsraad	landsraad_withdraw_house_reward	in_player_id bigint, in_house_rewards dune.landsraadplayerhousereward[]	void		functions/landsraad/landsraad_withdraw_house_reward__2args.sql
+58438	f	actors	load_actors	in_actor_ids bigint[], in_actor_state dune.actorstate	TABLE(ord bigint, actor_id bigint, generic_data dune.actorgenericdata, serial bigint)		functions/actors/load_actors__2args.sql
+58439	f	vehicle	load_backup_vehicle	in_account_id bigint	TABLE(out_id bigint, out_class text, out_customization_id text)		functions/vehicle/load_backup_vehicle__1args.sql
+58449	f	building_blueprint	load_building	in_building_id bigint	dune.buildingsavedata		functions/building_blueprint/load_building__1args.sql
+58450	f	communinet	load_communinet_player_data	in_account_id bigint	TABLE(is_active boolean, selected_channel_name text, channel_name text, is_tuned boolean)		functions/communinet/load_communinet_player_data__1args.sql
+58451	f	dialogue	load_dialogue_data	in_player_controller_id bigint, OUT met_npcs text[], OUT taken_nodes integer[]	record		functions/dialogue/load_dialogue_data__3args.sql
+58452	f	misc	load_dimension_index	in_map text, in_partition_id bigint	integer		functions/misc/load_dimension_index__2args.sql
+58453	f	misc	load_events_log_data_from_player	in_actor_id bigint, in_limit_entries_num integer	TABLE(game_event_owner bigint, universe_time timestamp without time zone, map_name text, partition_id bigint, event_type integer, x_location double precision, y_location double precision, z_location double precision, custom_data jsonb)		functions/misc/load_events_log_data_from_player__2args.sql
+58454	f	actors	load_full_actors	in_ids bigint[]	SETOF dune.actordescription		functions/actors/load_full_actors__1args.sql
+58455	f	inventory	load_item	in_item_id bigint	TABLE(item_id bigint, stack_size bigint, quality_level bigint, volume_override real, position_index bigint, template_id text, inventory_id bigint, is_new boolean, acquisition_time bigint, stats jsonb, sub_inventory_id bigint)		functions/inventory/load_item__1args.sql
+58456	f	inventory	load_items	in_inventory_id bigint	TABLE(item_id bigint, stack_size bigint, quality_level bigint, volume_override real, position_index bigint, template_id text, inventory_id bigint, is_new boolean, acquisition_time bigint, stats jsonb, sub_inventory_id bigint)		functions/inventory/load_items__1args.sql
+58457	f	map_areas	load_map_areas_entries	in_account_id bigint, in_map_name text	TABLE(account_id bigint, area_id smallint, time_discovered timestamp without time zone, time_first_entered timestamp without time zone, survey_point_marker_id bigint, items_surveyed_target jsonb, items_surveyed_progress jsonb, map_name text)		functions/map_areas/load_map_areas_entries__2args.sql
+58458	f	markers	load_markers	in_player_id bigint, in_dimension_id integer, in_map_name text	TABLE(out_marker_hash_id integer, out_marker_type text, out_x double precision, out_y double precision, out_z double precision, out_payload_type text, out_area_id smallint, out_area_radius real, out_long_range boolean, out_payload jsonb, out_discovery_level smallint, out_discovery_method smallint, out_player_payload jsonb)		functions/markers/load_markers__3args.sql
+58459	f	partition	load_partition_definition_map		TABLE(out_partition_id bigint, out_server_id text, out_partition_definition jsonb, out_dimension_index integer, out_blocked boolean, out_label text, out_map text)		functions/partition/load_partition_definition_map__0args.sql
+58460	f	building_blueprint	load_placeable	in_placeable_id bigint	dune.placeablesavedata		functions/building_blueprint/load_placeable__1args.sql
+58461	f	vehicle	load_recovered_vehicles	in_account_id bigint, in_restore_time_limit integer	TABLE(out_vehicle_id bigint, out_class text, out_name text, out_time_stored timestamp without time zone, out_chassis_durability real, out_customization_id text, out_migrated boolean)		functions/vehicle/load_recovered_vehicles__2args.sql
+58462	f	misc	load_static_encounter_name	in_map_name text, in_package_name text, in_actor_name text	TABLE(encounter_name text, waiting_for_reset boolean)		functions/misc/load_static_encounter_name__3args.sql
+58463	f	takeover	load_takeoverable_user_ids		SETOF dune.takeovercharacterdatacomposite		functions/takeover/load_takeoverable_user_ids__0args.sql
+58464	f	building_blueprint	load_totem	in_id bigint	dune.totemsavedata		functions/building_blueprint/load_totem__1args.sql
+58465	f	travel	load_travel_return_info	in_player_controller_id bigint	TABLE(map text, transform dune.transform)		functions/travel/load_travel_return_info__1args.sql
+58466	f	travel	load_travel_to_player_info	in_player_controller_id bigint	TABLE(map text, transform dune.transform, partition_id bigint, dimension_index integer)		functions/travel/load_travel_to_player_info__1args.sql
+58467	f	vehicle	load_vehicle_modules	in_vehicle_id bigint	TABLE(module_id bigint, template_id text, stats jsonb)		functions/vehicle/load_vehicle_modules__1args.sql
+58468	f	partition	load_world_partition	in_map_name text, in_server_id text, in_desired_dimension_index bigint, in_desired_partition_id bigint	TABLE(partition_id bigint, partition_definition jsonb, dimension_index integer, blocked boolean, label text)		functions/partition/load_world_partition__4args.sql
+58469	f	anticheat	log_cheating	in_fls_id text, in_cheat_type dune.cheat_type_enum, in_event_time timestamp with time zone	void		functions/anticheat/log_cheating__3args.sql
+58470	f	currency	log_event_solaris	in_function_oid oid, in_message dune.logmessagetype, in_controller_id bigint, in_solaris_balance bigint, in_solaris_delta bigint	void		functions/currency/log_event_solaris__5args.sql
+58471	f	character_mod	login_account	in_user_id text, in_funcom_id text, in_platform_id text, in_platform_name text, in_minimum_returning_player_time_seconds integer, in_character_name text, in_return_dimension_index integer, in_home_dimension_index integer	SETOF dune.playerdescription		functions/character_mod/login_account__8args.sql
+58473	f	server	mark_server_dead	in_server_id text	void		functions/server/mark_server_dead__1args.sql
+58474	f	inventory	merge_inventory_items	in_item_id bigint, in_dst_inventory_id bigint, in_dst_index bigint, in_count bigint	bigint		functions/inventory/merge_inventory_items__4args.sql
+58475	f	inventory	merge_or_move_inventory_item	in_item_id bigint, in_dst_inventory_id bigint, in_dst_index bigint, in_count bigint	bigint		functions/inventory/merge_or_move_inventory_item__4args.sql
+58476	f	transfer	migrate_character	in_account_id bigint, home_dimension integer, max_solaris_allowed bigint	void		functions/transfer/migrate_character__3args.sql
+58477	f	transfer	migrate_clamp_max_allow_solaris	in_pawn_id bigint, max_solaris_allowed bigint	void		functions/transfer/migrate_clamp_max_allow_solaris__2args.sql
+58478	f	inventory	move_inventory_item	in_item_id bigint, in_dst_inventory_id bigint, in_dst_index bigint, in_count bigint	bigint		functions/inventory/move_inventory_item__4args.sql
+58479	f	map_areas	overmap_delete_player_survival_data	in_player_id bigint	void		functions/map_areas/overmap_delete_player_survival_data__1args.sql
+58480	f	map_areas	overmap_load_player_survival_data	in_player_id bigint	TABLE(out_vehicle_id bigint, out_has_polar_psu boolean, out_overmap_location dune.vector)		functions/map_areas/overmap_load_player_survival_data__1args.sql
+58481	f	map_areas	overmap_save_player_survival_data	in_player_id bigint, in_vehicle_id bigint, in_has_polar_psu boolean, in_overmap_location dune.vector	void		functions/map_areas/overmap_save_player_survival_data__4args.sql
+58482	f	actors	ownership_handle_actor_delete	in_player_id bigint	void		functions/actors/ownership_handle_actor_delete__1args.sql
+58483	f	misc	parties_get_exclusive_operation_lock		void		functions/misc/parties_get_exclusive_operation_lock__0args.sql
+58484	f	player_persistence	perform_notify_on_character_delete	in_user_id text	void		functions/player_persistence/perform_notify_on_character_delete__1args.sql
+58485	f	permission	permission_actor_create_or_update_base_marker	in_actor_id bigint, in_player_id bigint, in_rank smallint	void		functions/permission/permission_actor_create_or_update_base_marker__3args.sql
+58486	f	permission	permission_actor_destroy	in_actor_id bigint	void		functions/permission/permission_actor_destroy__1args.sql
+58487	f	permission	permission_actor_register	in_entry dune.actorpermissionentry, in_owner_rank dune.actorpermissionrankdata	void		functions/permission/permission_actor_register__2args.sql
+58488	f	permission	permission_actor_takeover	in_entry dune.actorpermissionentry, in_owner_rank dune.actorpermissionrankdata	void		functions/permission/permission_actor_takeover__2args.sql
+58489	f	permission	permission_actor_update_marker_location	in_actor_id bigint, in_location_x real, in_location_y real, in_location_z real	void		functions/permission/permission_actor_update_marker_location__4args.sql
+58490	f	permission	permission_remove_player_rank	in_actor_id bigint, in_player_id bigint	void		functions/permission/permission_remove_player_rank__2args.sql
+58491	f	permission	permission_set_access_level	in_actor_id bigint, in_access_level smallint	void		functions/permission/permission_set_access_level__2args.sql
+58492	f	permission	permission_set_name	in_actor_id bigint, in_name text	void		functions/permission/permission_set_name__2args.sql
+58493	f	character_mod	permission_set_player_rank	in_actor_id bigint, in_player_id bigint, in_rank smallint, in_map_id text	void		functions/character_mod/permission_set_player_rank__4args.sql
+58494	f	inventory	player_purchased_item_from_vendor	in_vendor_id text, in_player_id bigint, in_template_id text, in_amount_bought integer	void		functions/inventory/player_purchased_item_from_vendor__4args.sql
+58495	f	character_mod	player_state_update	in_data dune.playerstateupdatedata[]	void		functions/character_mod/player_state_update__1args.sql
+58496	f	guild	pledge_guild_allegiance	in_guild_id bigint, in_guild_leader_player_id bigint, in_neutral_faction_id smallint	void		functions/guild/pledge_guild_allegiance__3args.sql
+58497	f	spice_field	produce_spicefield_manifest	in_map_name text, in_dimension_index integer	TABLE(server text, type_id integer, inactive_fields integer, requested_fields integer)		functions/spice_field/produce_spicefield_manifest__2args.sql
+58498	f	guild	promote_guild_member	in_guild_id bigint, in_player_id bigint, in_new_role smallint	void		functions/guild/promote_guild_member__3args.sql
+58499	f	party	promote_new_party_leader	in_party_id bigint	void		functions/party/promote_new_party_leader__1args.sql
+58500	f	party	promote_party_leader_to	in_party_id bigint, in_player_id bigint	void		functions/party/promote_party_leader_to__2args.sql
+58501	f	character_mod	purchase_specialization_keystone	in_player_id bigint, in_keystone text	boolean		functions/character_mod/purchase_specialization_keystone__2args.sql
+58502	f	spice_field	record_deactivated_spice_field	in_server_id text, in_spicefield_type_id integer	void		functions/spice_field/record_deactivated_spice_field__2args.sql
+58503	f	dungeon	record_dungeon_completion	in_dungeon_id text, in_difficulty integer, in_duration_ms integer, players_ids bigint[]	void		functions/dungeon/record_dungeon_completion__4args.sql
+58504	f	player_persistence	record_logoff_persistence_end_time	in_player_pawn_id bigint, in_logoff_persistence_end_time timestamp without time zone	void		functions/player_persistence/record_logoff_persistence_end_time__2args.sql
+58505	f	shifting_sand	record_static_shifting_sand	in_id text, in_alpha double precision, in_x double precision, in_y double precision, in_last_modified_time bigint	void		functions/shifting_sand/record_static_shifting_sand__5args.sql
+58506	f	spice_field	record_unreadied_spice_fields	in_server_id text, in_spicefield_type_id integer, in_num_unreadied integer	void		functions/spice_field/record_unreadied_spice_fields__3args.sql
+58507	f	server	register_lore_pickup	in_lore_pickup_ids text[]	SETOF smallint		functions/server/register_lore_pickup__1args.sql
+58508	f	faction	register_new_factions	factions text[]	TABLE(faction_id smallint, faction_name text)		functions/faction/register_new_factions__1args.sql
+58509	f	journey_progression	register_new_tutorials	tutorials text[]	TABLE(tutorial_id smallint, tutorial_name text)		functions/journey_progression/register_new_tutorials__1args.sql
+58510	f	server	register_per_player_lore_pickup	in_lore_pickup_ids text[], in_use_temporary boolean	SETOF smallint		functions/server/register_per_player_lore_pickup__2args.sql
+58511	f	actors	register_spawned_actor	in_spawner_id bigint, in_actor_id bigint	void		functions/actors/register_spawned_actor__2args.sql
+58512	f	spice_field	register_spice_field_server_resources	in_server_id text, in_spicefield_type_ids integer[], in_inactive_fields_of_types integer[]	void		functions/spice_field/register_spice_field_server_resources__3args.sql
+58513	f	server	register_temporary_lore_pickup	in_lore_pickup_ids text[]	SETOF smallint		functions/server/register_temporary_lore_pickup__1args.sql
+58514	f	guild	reject_guild_invite	in_invite_id bigint	void		functions/guild/reject_guild_invite__1args.sql
+58515	f	actors	remove_aborted_authority_transfer_actors	in_partition_id bigint	SETOF dune.actorspawninfo		functions/actors/remove_aborted_authority_transfer_actors__1args.sql
+58516	f	transfer	remove_character_transfer_state	in_fls_id text	void		functions/transfer/remove_character_transfer_state__1args.sql
+58517	f	communinet	remove_communinet_player_channel	in_account_id bigint, in_channel_name text	void		functions/communinet/remove_communinet_player_channel__2args.sql
+58518	f	guild	remove_guild_members	in_player_ids bigint[], in_guild_id bigint, in_remove_reason smallint	void		functions/guild/remove_guild_members__3args.sql
+58519	f	items_purge	remove_items	items_to_remove text[]	void		functions/items_purge/remove_items__1args.sql
+58520	f	items_purge	remove_items_and_recipes	items_to_remove text[], recipes_to_remove text[]	void		functions/items_purge/remove_items_and_recipes__2args.sql
+58521	f	items_purge	remove_items_or_recipes_from_fgl_entities	item_or_recipes text[]	void		functions/items_purge/remove_items_or_recipes_from_fgl_entities__1args.sql
+58522	f	misc	remove_members_offline_for	in_interval_seconds integer	void		functions/misc/remove_members_offline_for__1args.sql
+58523	f	party	remove_party_invite	in_invite_id bigint, in_remove_reason smallint	void		functions/party/remove_party_invite__2args.sql
+58524	f	party	remove_party_member	in_player_id bigint, in_remove_reason smallint	void		functions/party/remove_party_member__2args.sql
+58525	f	actors	remove_recipes_from_actor_properties	recipes_to_remove text[]	void		functions/actors/remove_recipes_from_actor_properties__1args.sql
+58526	f	items_purge	remove_resourcefield_states	in_map text, in_dimension_index integer, in_field_ids bigint[]	void		functions/items_purge/remove_resourcefield_states__3args.sql
+58527	f	spice_field	request_spawn_spice_field	in_server_id text, in_spicefield_type_id integer	void		functions/spice_field/request_spawn_spice_field__2args.sql
+58528	f	cleanup	reset_all_players_from_server_ids_grace_period_and_logoff_timer	in_server_id text, in_reset_time timestamp without time zone	void		functions/cleanup/reset_all_players_from_server_ids_grace_period_and_logoff_timer__2args.sql
+58529	f	spice_field	reset_global_spice_field_state	in_map_name text, in_dimension_index integer	void		functions/spice_field/reset_global_spice_field_state__2args.sql
+58530	f	journey_progression	reset_journey_story_nodes_for_player	in_player_id text, in_story_node_ids text[]	void		functions/journey_progression/reset_journey_story_nodes_for_player__2args.sql
+58531	f	cleanup	reset_server_all_player_access_codes	in_account_id bigint	void		functions/cleanup/reset_server_all_player_access_codes__1args.sql
+58532	f	character_mod	reset_specialization_keystones	in_player_id bigint	void		functions/character_mod/reset_specialization_keystones__1args.sql
+58533	f	character_mod	reset_specialization_tracks	in_player_id bigint	void		functions/character_mod/reset_specialization_tracks__1args.sql
+58534	f	vehicle	restore_backup_vehicle	in_account_id bigint, in_server_info dune.serverinfo, in_transform dune.transform	bigint		functions/vehicle/restore_backup_vehicle__3args.sql
+58535	f	vehicle	restore_recovered_vehicle	in_account_id bigint, in_vehicle_id bigint, in_server_info dune.serverinfo, in_transform dune.transform, in_restore_time_limit integer	void		functions/vehicle/restore_recovered_vehicle__5args.sql
+58536	f	shifting_sand	retrieve_all_static_shifting_sand		TABLE(out_id text, out_alpha double precision, out_x double precision, out_y double precision, out_last_modified_time bigint)		functions/shifting_sand/retrieve_all_static_shifting_sand__0args.sql
+58537	f	character_mod	returning_player_award_given	in_account_id bigint	void		functions/character_mod/returning_player_award_given__1args.sql
+58538	f	journey_progression	reveal_journey_story_nodes_for_player	in_player_id text, in_story_node_ids text[]	void		functions/journey_progression/reveal_journey_story_nodes_for_player__2args.sql
+58539	f	actors	save_aborted_authority_transfer_actors	in_actor_ids bigint[], in_partition_id bigint	void		functions/actors/save_aborted_authority_transfer_actors__2args.sql
+58540	f	actors	save_actor_dislocation	in_actor_id bigint, in_current_server_info dune.serverinfo, in_target_location dune.vector, in_target_dimension_index integer	void		functions/actors/save_actor_dislocation__4args.sql
+58541	f	actors	save_actors	in_server_info dune.serverinfo, in_actors dune.actordescription[], in_actor_state dune.actorstate	TABLE(actor_id bigint, current_saved_serial bigint, saved boolean)		functions/actors/save_actors__3args.sql
+58543	f	building_blueprint	save_building	in_building_id bigint, in_data dune.buildingsavedata	void		functions/building_blueprint/save_building__2args.sql
+58544	f	building_blueprint	save_building_blueprint_copy	in_building_item_id bigint, in_building_blueprint_id bigint, in_building_blueprint_building_data dune.buildingblueprintpiecesaveitemcontainer[], in_building_blueprint_placeable_data dune.buildingblueprintplaceablesaveitemcontainer[], in_building_blueprint_pentashield_data dune.buildingblueprintpentashielditem[]	bigint		functions/building_blueprint/save_building_blueprint_copy__5args.sql
+58545	f	schema_meta	save_demo_account_time	in_fls_id text, in_demo_playtime_seconds integer	void		functions/schema_meta/save_demo_account_time__2args.sql
+58546	f	dialogue	save_dialogue_data	in_player_controller_id bigint, in_met_npcs text[], in_taken_nodes integer[]	void		functions/dialogue/save_dialogue_data__3args.sql
+58547	f	inventory	save_item	in_item dune.inventoryitem	void		functions/inventory/save_item__1args.sql
+58548	f	journey_progression	save_journey_story_node	in_account_id bigint, in_story_node_id text, in_override_reward_block boolean, in_has_pending_reward boolean, in_complete_condition_state jsonb, in_reveal_condition_state jsonb, in_fail_condition_state jsonb, in_metadata_state jsonb, in_reset_group dune.journeystoryresetgroup	void		functions/journey_progression/save_journey_story_node__9args.sql
+58549	f	journey_progression	save_journey_story_nodes	in_account_id bigint, in_journey_data dune.savejourneydata[]	void		functions/journey_progression/save_journey_story_nodes__2args.sql
+58550	f	misc	save_login_target_dimension	in_fls_id text, in_login_target_dimension_index integer	void		functions/misc/save_login_target_dimension__2args.sql
+58551	f	markers	save_markers	in_player_marker_data dune.saveplayermarkerdata[], in_marker_data dune.savemarkerdata[]	void		functions/markers/save_markers__2args.sql
+58552	f	journey_progression	save_mnemonic_recall_lesson	in_account_id bigint, in_lesson_id text, in_lesson_state bigint, in_lesson_progress integer, in_is_new boolean	void		functions/journey_progression/save_mnemonic_recall_lesson__5args.sql
+58561	f	building_blueprint	save_placeable	in_placeable_id bigint, in_data dune.placeablesavedata	void		functions/building_blueprint/save_placeable__2args.sql
+58562	f	player_persistence	save_player	in_player dune.playerdescription	boolean		functions/player_persistence/save_player__1args.sql
+58563	f	player_persistence	save_player_pawn	in_pawn dune.actordescription, in_server_info dune.serverinfo, in_life_state dune.playerlifestate	boolean		functions/player_persistence/save_player_pawn__3args.sql
+58564	f	misc	save_static_encounter_name	in_map_name text, in_package_name text, in_actor_name text, in_encounter_name text	void		functions/misc/save_static_encounter_name__4args.sql
+58565	f	misc	save_static_encounter_waiting_for_reset	in_map_name text, in_package_name text, in_actor_name text, in_waiting_for_reset boolean	void		functions/misc/save_static_encounter_waiting_for_reset__4args.sql
+58571	f	building_blueprint	save_totem	in_id bigint, in_data dune.totemsavedata	void		functions/building_blueprint/save_totem__2args.sql
+58572	f	player_persistence	save_tracked_journey_cards	in_player_id bigint, in_tracked_journey_card text, in_tracked_landsraad_card text	void		functions/player_persistence/save_tracked_journey_cards__3args.sql
+58573	f	travel	save_travel_return_info	in_player_controller_id bigint, in_map text, in_transform dune.transform	void		functions/travel/save_travel_return_info__3args.sql
+58574	f	vehicle	save_vehicle_modules	in_add_list dune.vehiclemodule[], in_delete_list bigint[], in_stat_update dune.itemstatupdate[]	SETOF bigint		functions/vehicle/save_vehicle_modules__3args.sql
+58575	f	partition	save_world_partition	in_map_name text, in_server_id text, in_dimension_index bigint, in_partition_definition jsonb, in_blocked boolean, in_label text	bigint		functions/partition/save_world_partition__6args.sql
+58586	f	server	server_info_match	in_actor dune.actors, in_server_info dune.serverinfo	boolean		functions/server/server_info_match__2args.sql
+58587	f	takeover	set_account_as_takeoverable	in_user_id text, in_new_user_id text	void		functions/takeover/set_account_as_takeoverable__2args.sql
+58588	f	farm	set_all_inactive_players_in_farm_offline		void		functions/farm/set_all_inactive_players_in_farm_offline__0args.sql
+58589	f	battlegroup	set_battlegroup_close_date	in_close_date timestamp without time zone	timestamp without time zone		functions/battlegroup/set_battlegroup_close_date__1args.sql
+58590	f	character_mod	set_character_import_state	in_fls_id text, in_state dune.transferimportstate	void		functions/character_mod/set_character_import_state__2args.sql
+58591	f	character_mod	set_character_name	in_account_id bigint, in_name text	void		functions/character_mod/set_character_name__2args.sql
+58592	f	schema_meta	set_demo_state	in_user_id text, in_demo_state dune.demostate	void		functions/schema_meta/set_demo_state__2args.sql
+58593	f	inventory	set_item_tracking_enabled	in_enabled boolean	void		functions/inventory/set_item_tracking_enabled__1args.sql
+58594	f	faction	set_player_faction_reputation	in_actor_id bigint, in_faction_id smallint, in_reputation_amount integer	void		functions/faction/set_player_faction_reputation__3args.sql
+58595	f	character_mod	set_players_from_server_ids_offline	in_server_ids text[]	void		functions/character_mod/set_players_from_server_ids_offline__1args.sql
+58596	f	character_mod	set_specialization_xp_and_level	in_player_id bigint, in_track_type dune.specializationtracktype, in_xp_amount integer, in_level real	void		functions/character_mod/set_specialization_xp_and_level__4args.sql
+58597	p	encryption	setup_user_data_encryption	IN in_enable boolean			procedures/setup_user_data_encryption__1args.sql
+58598	f	vehicle	store_backup_vehicle	in_vehicle_id bigint, in_account_id bigint, in_customization_id text	void		functions/vehicle/store_backup_vehicle__3args.sql
+58599	f	vehicle	store_recovered_vehicle	in_vehicle_id bigint, in_chassis_durability real, in_customization_id text, in_is_migration boolean	void		functions/vehicle/store_recovered_vehicle__4args.sql
+58600	f	vehicle	store_recovered_vehicles_wiped_before_spawn	in_vehicle_ids bigint[], in_delete_items boolean	void		functions/vehicle/store_recovered_vehicles_wiped_before_spawn__2args.sql
+58601	f	takeover	takeover_account	in_user_to_takeover text, in_current_user text	void		functions/takeover/takeover_account__2args.sql
+58602	f	taxation	taxation_emit_invoices	new_tax_invoices dune.taxinvoicedata[]	void		functions/taxation/taxation_emit_invoices__1args.sql
+58603	f	taxation	taxation_get_all_invoices_for_player	in_player_id bigint	TABLE(id bigint, totem_id bigint, reference_timestamp bigint, invoice_status smallint, amount integer, actor_name text)		functions/taxation/taxation_get_all_invoices_for_player__1args.sql
+58604	f	taxation	taxation_get_all_invoices_for_server	map_name text, in_dimension_index integer, in_partition_id bigint	TABLE(id bigint, totem_id bigint, reference_timestamp bigint, invoice_status smallint, amount integer, actor_name text)		functions/taxation/taxation_get_all_invoices_for_server__3args.sql
+58605	f	taxation	taxation_get_all_invoices_for_totem	in_totem_id bigint	TABLE(id bigint, totem_id bigint, reference_timestamp bigint, invoice_status smallint, amount integer, actor_name text)		functions/taxation/taxation_get_all_invoices_for_totem__1args.sql
+58606	f	taxation	taxation_pay_invoice	invoice_id bigint, paid_invoice_status smallint	bigint		functions/taxation/taxation_pay_invoice__2args.sql
+58607	f	taxation	taxation_remove_invoices	invoices_to_remove bigint[]	void		functions/taxation/taxation_remove_invoices__1args.sql
+58608	f	taxation	taxation_remove_invoices_from_totem	totem_actor_id bigint	void		functions/taxation/taxation_remove_invoices_from_totem__1args.sql
+58609	f	taxation	taxation_update_invoice_status	invoices_to_overdue bigint[], invoices_to_defaulted bigint[], overdue_invoice_status smallint, defaulted_invoice_status smallint	void		functions/taxation/taxation_update_invoice_status__4args.sql
+58610	f	spice_field	try_prime_spicefield	in_source_server_id text, in_spicefield_id integer	boolean		functions/spice_field/try_prime_spicefield__2args.sql
+58611	f	spice_field	try_restart_spicefield	in_server_id text, in_spicefield_type_id integer	boolean		functions/spice_field/try_restart_spicefield__2args.sql
+58612	f	spice_field	try_spawn_spicefield	in_source_server_id text, in_spicefield_id integer	boolean		functions/spice_field/try_spawn_spicefield__2args.sql
+58613	f	exchange	try_update_exchange_categories_hash	in_new_hash integer	TABLE(item_template_id text, mask integer, depth smallint)		functions/exchange/try_update_exchange_categories_hash__1args.sql
+58614	f	partition	unassign_partition	in_server_id text	boolean		functions/partition/unassign_partition__1args.sql
+58615	f	communinet	update_communinet_player_channel	in_account_id bigint, in_channel_name text, in_is_tuned boolean	void		functions/communinet/update_communinet_player_channel__3args.sql
+58616	f	communinet	update_communinet_player_data	in_account_id bigint, in_is_active boolean, in_selected_channel_name text	void		functions/communinet/update_communinet_player_data__3args.sql
+58617	f	misc	update_consumed_per_player_lore	in_actor_id bigint, in_consumed_bit_array bit, in_use_temporary boolean	void		functions/misc/update_consumed_per_player_lore__3args.sql
+58618	f	journey_progression	update_coriolis_for_player	in_controller_id bigint, OUT out_was_coriolis_processed boolean	boolean		functions/journey_progression/update_coriolis_for_player__2args.sql
+58619	f	player_persistence	update_death_location	in_pawn dune.actordescription, in_server_info dune.serverinfo, in_life_state dune.playerlifestate	void		functions/player_persistence/update_death_location__3args.sql
+58620	f	farm	update_farm_state	in_server_id text, in_outgoing_s2s_connections integer, in_incoming_s2s_connections integer, in_connected_players integer, in_farm_id text, in_igw_addr inet, in_igw_port integer, in_ready boolean, in_alive boolean, in_game_addr inet, in_game_port integer, in_map text, in_revision integer	void		functions/farm/update_farm_state__13args.sql
+58621	f	spice_field	update_global_spice_field_rules	in_max_globally_primed integer, in_max_globally_active integer, in_spicefield_type_id integer	void		functions/spice_field/update_global_spice_field_rules__3args.sql
+58622	f	misc	update_inventories_data	in_inventory_data_list dune.inventorydata[]	void		functions/misc/update_inventories_data__1args.sql
+58623	f	inventory	update_inventory	in_delete_list bigint[], in_stack_update dune.itemstackupdate[], in_quality_update dune.itemqualityupdate[], in_stat_update dune.itemstatupdate[], in_item_locations dune.inventoryitemlocation[]	void		functions/inventory/update_inventory__5args.sql
+58624	f	inventory	update_item_locations	in_item_locations dune.inventoryitemlocation[]	void		functions/inventory/update_item_locations__1args.sql
+58625	f	journey_progression	update_journey_story_ids	old_story_ids text[], new_story_ids text[]	void		functions/journey_progression/update_journey_story_ids__2args.sql
+58626	f	markers	update_marker_ids	in_old_ids integer[], in_new_ids integer[]	void		functions/markers/update_marker_ids__2args.sql
+58627	f	partition	update_partition_labels	in_allow_overwrite boolean	void		functions/partition/update_partition_labels__1args.sql
+58628	f	party	update_party_platform_session	in_party_id bigint, in_platform_session_id text, in_platform_name text	void		functions/party/update_party_platform_session__3args.sql
+58629	f	character_mod	update_player_tags	in_account_id bigint, tags_to_add text[], tags_to_remove text[]	void		functions/character_mod/update_player_tags__3args.sql
+58630	f	items_purge	update_removed_items_and_recipes	items_removed text[], recipes_removed text[]	void		functions/items_purge/update_removed_items_and_recipes__2args.sql
+58631	f	misc	update_resourcefield_states	in_map text, in_dimension_index integer, in_field_kind_id smallint, in_field_states dune.resourcefieldstateentry[]	void		functions/misc/update_resourcefield_states__4args.sql
+58632	f	spawner	update_respawn_locations	player_id bigint, respawn_locations dune.respawnlocation[]	void		functions/spawner/update_respawn_locations__2args.sql
+58633	f	character_mod	update_returning_player_status	in_user_id text, in_minimum_returning_player_time_seconds integer	void		functions/character_mod/update_returning_player_status__2args.sql
+58634	f	misc	update_sell_orders_categories	category_update_data dune.exchangecategoryupdatedata[]	void		functions/misc/update_sell_orders_categories__1args.sql
+58635	f	building_blueprint	update_server_building_favorites	in_account_id bigint, in_building_types text[]	void		functions/building_blueprint/update_server_building_favorites__2args.sql
+58636	f	building_blueprint	update_server_learned_building_sets	in_account_id bigint, in_learned_building_sets text[]	void		functions/building_blueprint/update_server_learned_building_sets__2args.sql
+58637	f	server	update_server_learned_new_buildable_pieces	in_account_id bigint, in_new_buildable_pieces text[]	void		functions/server/update_server_learned_new_buildable_pieces__2args.sql
+58638	f	character_mod	update_specialization_refund_id	in_player_id bigint, in_refund_id smallint, in_removed_keystones smallint[]	void		functions/character_mod/update_specialization_refund_id__3args.sql
+58639	f	spice_field	update_spice_field_spawn_state	in_is_spawning_active boolean, in_spicefield_type_id integer	void		functions/spice_field/update_spice_field_spawn_state__2args.sql
+58640	f	actors	update_traveling_actor_dependencies	in_dep dune.traveldependency[]	void		functions/actors/update_traveling_actor_dependencies__1args.sql
+58641	f	actors	update_traveling_actor_tree	in_actor_id bigint, in_target_transform dune.transform, in_target_map text, in_target_dimension_index integer, in_target_partition_id bigint	TABLE(out_id bigint, out_actor_state text)		functions/actors/update_traveling_actor_tree__5args.sql
+58642	f	schema_meta	update_universe_time	in_farm_id text	TABLE(universe_time_timestamp timestamp without time zone, down_time_accumulation bigint)		functions/schema_meta/update_universe_time__1args.sql
+58643	f	stock_vendor	update_vendor_timestamp_for_player	in_vendor_id text, in_player_id bigint, in_timestamp bigint	void		functions/stock_vendor/update_vendor_timestamp_for_player__3args.sql
+58644	f	misc	upgrade_location_data_list	in_location_data_list jsonb, in_map_field_name text	jsonb		functions/misc/upgrade_location_data_list__2args.sql
+58645	f	misc	upgrade_map_name	in_map_name text	text		functions/misc/upgrade_map_name__1args.sql
+58646	f	misc	upgrade_map_value	in_value jsonb	jsonb		functions/misc/upgrade_map_value__1args.sql
+58647	f	spice_field	upsert_spicefield_types	in_max_globally_active integer[], in_max_globally_primed integer[], in_field_types text[], in_map_name text, in_dimension_index integer	TABLE(type_id integer, max_global integer, max_global_primed integer, spawning_active boolean, out_field_type text)		functions/spice_field/upsert_spicefield_types__5args.sql
+58648	f	map_areas	use_sinkchart	in_player_id bigint, in_account_id bigint, in_area_id smallint, in_item_id bigint, in_sinkchart_map_name text, in_player_map_name text, in_player_current_dimension integer	dune.usesinkchartreturndata		functions/map_areas/use_sinkchart__7args.sql
+58649	f	inventory	verify_item_dup_backup_tool	in_account_id bigint, in_vehicle_id bigint, in_cheat_type dune.cheat_type_enum	void		functions/inventory/verify_item_dup_backup_tool__3args.sql
+58650	f	cleanup	wipe_old_events_log	in_days_limit integer	void		functions/cleanup/wipe_old_events_log__1args.sql
+58651	f	misc	zero_transform		dune.transform		functions/misc/zero_transform__0args.sql

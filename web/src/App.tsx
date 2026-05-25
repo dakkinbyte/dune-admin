@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Show, SignInButton, UserButton, useAuth } from '@clerk/react'
-import { Toast } from '@heroui/react'
-import { Tabs } from '@heroui/react'
+import { Button, Chip, InputGroup, TextField, Toast, Tabs } from '@heroui/react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useStatus } from './hooks/useStatus'
 import BattlegroupTab from './tabs/BattlegroupTab'
 import PlayersTab from './tabs/PlayersTab'
@@ -10,6 +10,16 @@ import LogsTab from './tabs/LogsTab'
 import BlueprintsTab from './tabs/BlueprintsTab'
 import BasesTab from './tabs/BasesTab'
 import StorageTab from './tabs/StorageTab'
+import { Icon } from './dune-ui'
+
+const TAB_IDS = ['battlegroup', 'players', 'database', 'logs', 'blueprints', 'bases', 'storage'] as const
+type TabId = typeof TAB_IDS[number]
+const DEFAULT_TAB: TabId = 'battlegroup'
+
+function currentTabFromPath(pathname: string): TabId {
+  const seg = pathname.replace(/^\//, '').split('/')[0]
+  return (TAB_IDS as readonly string[]).includes(seg) ? (seg as TabId) : DEFAULT_TAB
+}
 
 const hasClerk = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -38,9 +48,20 @@ function isNewer(latest: string, current: string): boolean {
 
 function AppCore({ isSignedIn }: { isSignedIn: boolean }) {
   const status = useStatus()
+  const location = useLocation()
+  const navigate = useNavigate()
   const [showBackendConfig, setShowBackendConfig] = useState(false)
   const [backendUrl, setBackendUrl] = useState(() => localStorage.getItem('dune_admin_backend') || '')
   const [latestVersion, setLatestVersion] = useState<string | null>(null)
+
+  useEffect(() => {
+    const seg = location.pathname.replace(/^\//, '').split('/')[0]
+    if (!seg || !(TAB_IDS as readonly string[]).includes(seg)) {
+      navigate(`/${DEFAULT_TAB}`, { replace: true })
+    }
+  }, [location.pathname, navigate])
+
+  const currentTab = currentTabFromPath(location.pathname)
 
   useEffect(() => {
     fetch('https://api.github.com/repos/Icehunter/dune-admin/releases/latest')
@@ -49,46 +70,40 @@ function AppCore({ isSignedIn }: { isSignedIn: boolean }) {
       .catch(() => {})
   }, [])
 
+  const saveAndReload = () => {
+    localStorage.setItem('dune_admin_backend', backendUrl.trim())
+    window.location.reload()
+  }
+
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--color-background)' }}>
-      {/* Toast provider */}
+    <div className="h-screen flex flex-col overflow-hidden bg-background">
       <Toast.Provider />
 
       {/* Header */}
-      <div
-        className="flex items-center justify-between px-6 py-3 border-b shrink-0"
-        style={{ borderColor: '#2a2418', background: 'var(--color-surface)' }}
-      >
+      <header className="flex items-center justify-between px-6 py-3 border-b border-border bg-surface shrink-0">
         <div className="flex items-center gap-3">
-          <span
-            className="text-xl font-bold tracking-widest uppercase"
-            style={{ color: 'var(--color-primary)', letterSpacing: '0.2em' }}
-          >
+          <span className="text-xl font-bold uppercase tracking-[0.2em] text-accent">
             DUNE ADMIN
           </span>
           {status?.ssh_host && (
-            <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>
-              {status.ssh_host}
-            </span>
+            <span className="text-xs text-muted">{status.ssh_host}</span>
           )}
           {status?.version && (
-            <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>
-              v{status.version}
-            </span>
+            <span className="text-xs text-muted">v{status.version}</span>
           )}
           {latestVersion && status?.version && isNewer(latestVersion, status.version) && (
             <a
               href="https://github.com/Icehunter/dune-admin/releases/latest"
               target="_blank"
               rel="noreferrer"
-              className="text-xs px-2 py-0.5 rounded"
-              style={{ background: '#2a1a00', color: '#f0a830', border: '1px solid #4a3a00', textDecoration: 'none' }}
+              className="no-underline"
             >
-              ↑ {latestVersion}
+              <Chip size="sm" color="warning" variant="soft">↑ {latestVersion}</Chip>
             </a>
           )}
         </div>
-        <div className="flex items-center gap-4 text-xs">
+
+        <div className="flex items-center gap-3">
           {status?.connection_mode !== 'direct' && (
             <ConnectionBadge label="SSH" connected={status?.ssh_connected ?? false} />
           )}
@@ -99,28 +114,26 @@ function AppCore({ isSignedIn }: { isSignedIn: boolean }) {
             </span>
           )}
           {status?.pod_ns && (
-            <span style={{ color: 'var(--color-text-dim)' }}>ns: {status.pod_ns}</span>
+            <span className="text-xs text-muted">ns: {status.pod_ns}</span>
           )}
-          <button
-            onClick={() => setShowBackendConfig(v => !v)}
-            title="Configure backend URL"
-            style={{
-              background: 'transparent',
-              border: '1px solid #2a2418',
-              borderRadius: '4px',
-              color: showBackendConfig ? 'var(--color-primary)' : 'var(--color-text-dim)',
-              cursor: 'pointer',
-              fontSize: '14px',
-              padding: '2px 6px',
-              lineHeight: 1,
-            }}
+
+          <Button
+            size="sm"
+            variant="ghost"
+            isIconOnly
+            aria-label="Configure backend"
+            onPress={() => setShowBackendConfig(v => !v)}
+            className={showBackendConfig ? 'text-accent' : ''}
           >
-            ⚙
-          </button>
+            <Icon name="settings" />
+          </Button>
+
           {hasClerk && (
             <>
               <Show when="signed-out">
-                <SignInButton />
+                <SignInButton>
+                  <Button size="sm" variant="outline">Sign In</Button>
+                </SignInButton>
               </Show>
               <Show when="signed-in">
                 <UserButton />
@@ -128,129 +141,53 @@ function AppCore({ isSignedIn }: { isSignedIn: boolean }) {
             </>
           )}
         </div>
-      </div>
+      </header>
 
-      {/* Backend config panel */}
+      {/* Backend config drawer */}
       {showBackendConfig && (
         <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 100,
-            background: 'rgba(0,0,0,0.6)',
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'flex-end',
-            paddingTop: '52px',
-            paddingRight: '16px',
-          }}
+          className="fixed inset-0 z-50 bg-black/60"
           onClick={e => { if (e.target === e.currentTarget) setShowBackendConfig(false) }}
         >
-          <div
-            style={{
-              background: '#0d0b07',
-              border: '1px solid #2a2418',
-              borderRadius: '8px',
-              padding: '16px',
-              width: '360px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: 'var(--color-primary)', fontWeight: 600, fontSize: '13px' }}>
-                Backend URL
-              </span>
-              <button
-                onClick={() => setShowBackendConfig(false)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--color-text-dim)',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  lineHeight: 1,
-                  padding: '0 2px',
-                }}
-              >
-                ✕
-              </button>
+          <div className="absolute top-[52px] right-4 w-[360px] bg-background border border-border rounded-lg p-4 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-accent">Backend URL</span>
+              <Button size="sm" variant="ghost" isIconOnly aria-label="Close" onPress={() => setShowBackendConfig(false)}>
+                <Icon name="x" />
+              </Button>
             </div>
 
-            <div style={{ fontSize: '11px', color: 'var(--color-text-dim)' }}>
+            <p className="text-xs text-muted">
               Current:{' '}
-              <span style={{ color: 'var(--color-text)', fontFamily: 'monospace' }}>
+              <span className="font-mono text-foreground">
                 {localStorage.getItem('dune_admin_backend') || 'http://localhost:8080'}
               </span>
-            </div>
+            </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '11px', color: 'var(--color-text-dim)' }}>
-                Override URL (e.g. http://192.168.1.10:8080)
-              </label>
-              <input
-                value={backendUrl}
-                onChange={e => setBackendUrl(e.target.value)}
-                placeholder="http://host:port"
-                style={{
-                  background: 'var(--color-surface)',
-                  border: '1px solid #2a2418',
-                  borderRadius: '4px',
-                  color: 'var(--color-text)',
-                  fontFamily: 'monospace',
-                  fontSize: '12px',
-                  outline: 'none',
-                  padding: '6px 10px',
-                }}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    localStorage.setItem('dune_admin_backend', backendUrl.trim())
-                    window.location.reload()
-                  }
-                }}
-              />
-            </div>
+            <TextField aria-label="Backend URL override">
+              <InputGroup className="w-full">
+                <InputGroup.Prefix>URL</InputGroup.Prefix>
+                <InputGroup.Input
+                  value={backendUrl}
+                  onChange={e => setBackendUrl(e.target.value)}
+                  placeholder="http://host:port"
+                  className="font-mono"
+                  onKeyDown={e => { if (e.key === 'Enter') saveAndReload() }}
+                />
+              </InputGroup>
+            </TextField>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={() => {
-                  localStorage.setItem('dune_admin_backend', backendUrl.trim())
-                  window.location.reload()
-                }}
-                style={{
-                  background: 'var(--color-primary)',
-                  border: 'none',
-                  borderRadius: '4px',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  padding: '6px 12px',
-                }}
-              >
+            <div className="flex gap-2">
+              <Button size="sm" className="flex-1" onPress={saveAndReload}>
                 Save &amp; Reload
-              </button>
-              <button
-                onClick={() => {
-                  localStorage.removeItem('dune_admin_backend')
-                  window.location.reload()
-                }}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid #2a2418',
-                  borderRadius: '4px',
-                  color: 'var(--color-text-dim)',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  padding: '6px 12px',
-                }}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onPress={() => { localStorage.removeItem('dune_admin_backend'); window.location.reload() }}
               >
-                Reset to localhost:8080
-              </button>
+                Reset
+              </Button>
             </div>
           </div>
         </div>
@@ -258,41 +195,41 @@ function AppCore({ isSignedIn }: { isSignedIn: boolean }) {
 
       {/* Tabs */}
       <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-        <Tabs className="flex-1 flex flex-col overflow-hidden min-h-0">
+        <Tabs
+          selectedKey={currentTab}
+          onSelectionChange={k => navigate(`/${k}`)}
+          className="flex-1 flex flex-col overflow-hidden min-h-0"
+        >
           <Tabs.ListContainer className="px-4 pt-2 shrink-0">
             <Tabs.List aria-label="Admin sections" className="gap-1">
               <Tabs.Tab id="battlegroup">Battlegroup<Tabs.Indicator /></Tabs.Tab>
               <Tabs.Tab id="players">Players<Tabs.Indicator /></Tabs.Tab>
               <Tabs.Tab id="database">Database<Tabs.Indicator /></Tabs.Tab>
               <Tabs.Tab id="logs">Logs<Tabs.Indicator /></Tabs.Tab>
-              {isSignedIn && <Tabs.Tab id="blueprints">Blueprints<Tabs.Indicator /></Tabs.Tab>}
-              {isSignedIn && <Tabs.Tab id="bases">Bases<Tabs.Indicator /></Tabs.Tab>}
+              <Tabs.Tab id="blueprints">Blueprints<Tabs.Indicator /></Tabs.Tab>
+              <Tabs.Tab id="bases">Bases<Tabs.Indicator /></Tabs.Tab>
               <Tabs.Tab id="storage">Storage<Tabs.Indicator /></Tabs.Tab>
             </Tabs.List>
           </Tabs.ListContainer>
-          <Tabs.Panel id="battlegroup" className="flex-1 overflow-hidden flex flex-col">
+          <Tabs.Panel id="battlegroup" className="flex-1 overflow-hidden flex flex-col p-4 min-h-0">
             <BattlegroupTab />
           </Tabs.Panel>
-          <Tabs.Panel id="players" className="flex-1 overflow-auto p-4">
+          <Tabs.Panel id="players" className="flex-1 overflow-hidden flex flex-col p-4 min-h-0">
             <PlayersTab />
           </Tabs.Panel>
-          <Tabs.Panel id="database" className="flex-1 overflow-auto p-4">
+          <Tabs.Panel id="database" className="flex-1 overflow-hidden flex flex-col p-4 min-h-0">
             <DatabaseTab />
           </Tabs.Panel>
-          <Tabs.Panel id="logs" className="flex-1 overflow-hidden flex flex-col">
+          <Tabs.Panel id="logs" className="flex-1 overflow-hidden flex flex-col p-4 min-h-0">
             <LogsTab />
           </Tabs.Panel>
-          {isSignedIn && (
-            <Tabs.Panel id="blueprints" className="flex-1 overflow-hidden flex flex-col p-4">
-              <BlueprintsTab />
-            </Tabs.Panel>
-          )}
-          {isSignedIn && (
-            <Tabs.Panel id="bases" className="flex-1 overflow-hidden flex flex-col p-4">
-              <BasesTab />
-            </Tabs.Panel>
-          )}
-          <Tabs.Panel id="storage" className="flex-1 overflow-hidden flex flex-col p-4">
+          <Tabs.Panel id="blueprints" className="flex-1 overflow-hidden flex flex-col p-4 min-h-0">
+            <BlueprintsTab isSignedIn={isSignedIn} />
+          </Tabs.Panel>
+          <Tabs.Panel id="bases" className="flex-1 overflow-hidden flex flex-col p-4 min-h-0">
+            <BasesTab isSignedIn={isSignedIn} />
+          </Tabs.Panel>
+          <Tabs.Panel id="storage" className="flex-1 overflow-hidden flex flex-col p-4 min-h-0">
             <StorageTab />
           </Tabs.Panel>
         </Tabs>
@@ -303,14 +240,9 @@ function AppCore({ isSignedIn }: { isSignedIn: boolean }) {
 
 function ConnectionBadge({ label, connected }: { label: string; connected: boolean }) {
   return (
-    <div className="flex items-center gap-1.5">
-      <div
-        className="w-2 h-2 rounded-full"
-        style={{ background: connected ? 'var(--color-success)' : '#555' }}
-      />
-      <span style={{ color: connected ? 'var(--color-text)' : 'var(--color-text-dim)' }}>
-        {label}
-      </span>
+    <div className="flex items-center gap-1.5 text-xs">
+      <div className={`w-2 h-2 rounded-full ${connected ? 'bg-success' : 'bg-muted/40'}`} />
+      <span className={connected ? 'text-foreground' : 'text-muted'}>{label}</span>
     </div>
   )
 }

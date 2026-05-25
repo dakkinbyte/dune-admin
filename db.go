@@ -10,10 +10,45 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+// ── journey-node fetch cache ────────────────────────────────────────────────
+// Journey fetches return ~300-800 rows per character through an SSH tunnel,
+// which makes them visibly slow. A short TTL cache keeps the common
+// "open modal → close → reopen" loop snappy. Mutations call
+// invalidateJourneyCache(accountID) to drop stale entries.
+
+const journeyCacheTTL = 30 * time.Second
+
+type journeyCacheEntry struct {
+	nodes  []journeyNode
+	cached time.Time
+}
+
+var (
+	journeyCacheMu sync.RWMutex
+	journeyCache   = map[int64]journeyCacheEntry{}
+)
+
+func invalidateJourneyCache(accountID int64) {
+	journeyCacheMu.Lock()
+	delete(journeyCache, accountID)
+	journeyCacheMu.Unlock()
+}
+
+// Used by mutations keyed on player_id where we don't have the account_id handy
+// (progression unlock, contract completion). A single-user admin tool, so
+// dropping every entry is cheap.
+func invalidateAllJourneyCache() {
+	journeyCacheMu.Lock()
+	journeyCache = map[int64]journeyCacheEntry{}
+	journeyCacheMu.Unlock()
+}
 
 // ── data fetch commands ───────────────────────────────────────────────────────
 
@@ -1281,6 +1316,15 @@ func cmdFetchJourneyNodes(accountID int64) Cmd {
 		if globalDB == nil {
 			return msgJourney{err: fmt.Errorf("not connected")}
 		}
+
+		// Cache hit?
+		journeyCacheMu.RLock()
+		entry, ok := journeyCache[accountID]
+		journeyCacheMu.RUnlock()
+		if ok && time.Since(entry.cached) < journeyCacheTTL {
+			return msgJourney{rows: entry.nodes}
+		}
+
 		rows, err := globalDB.Query(context.Background(), `
 			SELECT story_node_id,
 			       (complete_condition_state = 'true'::jsonb) AS is_complete,
@@ -1308,6 +1352,9 @@ func cmdFetchJourneyNodes(accountID int64) Cmd {
 		if err := rows.Err(); err != nil {
 			return msgJourney{err: err}
 		}
+		journeyCacheMu.Lock()
+		journeyCache[accountID] = journeyCacheEntry{nodes: nodes, cached: time.Now()}
+		journeyCacheMu.Unlock()
 		return msgJourney{rows: nodes}
 	}
 }
@@ -1608,11 +1655,12 @@ func cmdCompleteContracts(accountID int64, contractIDs []string) Cmd {
 	}
 }
 
-// cmdResetJobSkills removes every Skills.Key.* ModuleData entry for the named
-// job's skill tree, undoing a prior Unlock Trainer that was applied by
-// mistake. Only the Key blocks for the job are touched — Attribute/Perk/
-// Ability child nodes are left alone (those usually have SpSpent: 0 unless
-// the player actually purchased them).
+// cmdResetJobSkills removes every ModuleData entry whose SkillArea matches
+// the named job — Key blocks, Abilities, Attributes, Perks — fully nuking
+// that class's skill tree. Key-block removal alone leaves orphaned ability
+// rows (e.g. SuspensorGrenade_Reduction lingers after Skills.Key.Trooper1
+// is gone) which the game still treats as refundable for 1 SP each (the
+// "phantom SP" bug). Removing every SkillArea-matching module avoids that.
 func cmdResetJobSkills(accountID int64, job string) Cmd {
 	return func() Msg {
 		if globalDB == nil {
@@ -1621,9 +1669,9 @@ func cmdResetJobSkills(accountID int64, job string) Cmd {
 		if accountID == 0 {
 			return msgMutate{err: fmt.Errorf("account ID required")}
 		}
-		blocks := tagsData.JobSkillBlocks[job]
-		if len(blocks) == 0 {
-			return msgMutate{err: fmt.Errorf("unknown job %q", job)}
+		modules := tagsData.JobAllModules[job]
+		if len(modules) == 0 {
+			return msgMutate{err: fmt.Errorf("unknown job %q (check tags-data.json job_all_modules)", job)}
 		}
 		ctx := context.Background()
 
@@ -1635,36 +1683,57 @@ func cmdResetJobSkills(accountID int64, job string) Cmd {
 			return msgMutate{err: fmt.Errorf("no pawn for account %d", accountID)}
 		}
 
-		removed := 0
-		for _, sk := range blocks {
-			key := fmt.Sprintf(`(TagName="%s")`, sk)
-			tag, err := globalDB.Exec(ctx, `
-				UPDATE dune.fgl_entities fe
-				SET components = jsonb_set(
-					fe.components,
-					ARRAY['FLevelComponent','1','ModuleData'],
-					(fe.components->'FLevelComponent'->1->'ModuleData') - $2)
-				WHERE fe.entity_id = (
-					SELECT entity_id FROM dune.actor_fgl_entities
-					WHERE actor_id = $1 AND slot_name = 'DuneCharacter'
-				)
-				AND (fe.components->'FLevelComponent'->1->'ModuleData') ? $2`,
-				pawnID, key)
-			if err != nil {
-				return msgMutate{err: fmt.Errorf("remove %s: %w", sk, err)}
-			}
-			if tag.RowsAffected() > 0 {
-				removed++
-			}
+		// Build the (TagName="...") keyed names in one pass and use the
+		// jsonb minus-text[] operator to drop them all in a single UPDATE.
+		keys := make([]string, len(modules))
+		for i, m := range modules {
+			keys[i] = fmt.Sprintf(`(TagName="%s")`, m)
 		}
-		return msgMutate{ok: fmt.Sprintf("Reset %s skill tree — removed %d block(s)", job, removed)}
+		tag, err := globalDB.Exec(ctx, `
+			UPDATE dune.fgl_entities fe
+			SET components = jsonb_set(
+				fe.components,
+				ARRAY['FLevelComponent','1','ModuleData'],
+				(fe.components->'FLevelComponent'->1->'ModuleData') - $2::text[])
+			WHERE fe.entity_id = (
+				SELECT entity_id FROM dune.actor_fgl_entities
+				WHERE actor_id = $1 AND slot_name = 'DuneCharacter'
+			)`,
+			pawnID, keys)
+		if err != nil {
+			return msgMutate{err: fmt.Errorf("reset %s tree: %w", job, err)}
+		}
+		if tag.RowsAffected() == 0 {
+			return msgMutate{ok: fmt.Sprintf("Reset %s skill tree — no ModuleData on pawn", job)}
+		}
+		return msgMutate{ok: fmt.Sprintf("Reset %s skill tree — scanned %d module slot(s)", job, len(modules))}
 	}
 }
 
-// cmdSetStarterClass writes FLevelComponent.StarterSkillTreeTag to
-// Skills.Key.<Job>1 so the game treats that as the character's base class.
-// Without this set (or with it = "None") characters that have multiple jobs
-// unlocked end up showing several "starter" abilities in the UI.
+// starterAbilityByJob is the canonical tier-1 starter ability the game
+// auto-grants on character creation for each class — empirically observed
+// for BG (VoiceCompel) and Trooper (SuspensorGrenade_Reduction); the others
+// derived from DT_TrainingModules.json by picking the unique
+// PrereqModuleTags_And = [Skills.Key.<Job>1] ability at GridPosition (3,0),
+// which is the slot the game uses for the "middle of the first row" starter.
+var starterAbilityByJob = map[string]string{
+	"BeneGesserit":  "Skills.Ability.VoiceCompel",
+	"Mentat":        "Skills.Ability.PoisonCapsuleLauncher",
+	"Planetologist": "Skills.Ability.SuspensorPad",
+	"Swordmaster":   "Skills.Ability.DeflectionSlow",
+	"Trooper":       "Skills.Ability.SuspensorGrenade_Reduction",
+}
+
+// cmdSetStarterClass swaps the player's starter class:
+//  1. removes the previous starter's Skills.Key.<Old>1 block + its starter
+//     ability from ModuleData (so you don't end up with two starters
+//     stacked after switching), then
+//  2. writes the new StarterSkillTreeTag pointer,
+//  3. activates the new Skills.Key.<Job>1 block at SpSpent: 1,
+//  4. grants the new tier-1 starter ability at SpSpent: 1.
+//
+// Result on next login: only one class is recognised as starter, with its
+// canonical first ability already learned.
 func cmdSetStarterClass(accountID int64, job string) Cmd {
 	return func() Msg {
 		if globalDB == nil {
@@ -1676,6 +1745,10 @@ func cmdSetStarterClass(accountID int64, job string) Cmd {
 		if _, ok := tagsData.JobSkillBlocks[job]; !ok {
 			return msgMutate{err: fmt.Errorf("unknown job %q", job)}
 		}
+		newAbility, ok := starterAbilityByJob[job]
+		if !ok {
+			return msgMutate{err: fmt.Errorf("no starter ability mapping for %q", job)}
+		}
 		ctx := context.Background()
 
 		var pawnID int64
@@ -1686,21 +1759,66 @@ func cmdSetStarterClass(accountID int64, job string) Cmd {
 			return msgMutate{err: fmt.Errorf("no pawn for account %d", accountID)}
 		}
 
-		starterTag := fmt.Sprintf("Skills.Key.%s1", job)
+		// Look up the current starter so we can deactivate it. Format is
+		// "Skills.Key.<Job>1"; we strip the prefix/suffix to recover the
+		// job name and look up its starter-ability for removal.
+		var oldStarterTag string
+		_ = globalDB.QueryRow(ctx, `
+			SELECT fe.components->'FLevelComponent'->1->'StarterSkillTreeTag'->>'TagName'
+			FROM dune.fgl_entities fe
+			JOIN dune.actor_fgl_entities afe ON afe.entity_id = fe.entity_id
+			WHERE afe.actor_id = $1 AND afe.slot_name = 'DuneCharacter'`,
+			pawnID).Scan(&oldStarterTag)
+
+		var keysToRemove []string
+		if strings.HasPrefix(oldStarterTag, "Skills.Key.") && strings.HasSuffix(oldStarterTag, "1") {
+			oldJob := strings.TrimSuffix(strings.TrimPrefix(oldStarterTag, "Skills.Key."), "1")
+			if oldJob != "" && oldJob != job {
+				keysToRemove = append(keysToRemove, fmt.Sprintf(`(TagName="%s")`, oldStarterTag))
+				if oldAb, ok := starterAbilityByJob[oldJob]; ok {
+					keysToRemove = append(keysToRemove, fmt.Sprintf(`(TagName="%s")`, oldAb))
+				}
+			}
+		}
+
+		newStarterTag := fmt.Sprintf("Skills.Key.%s1", job)
+		newStarterKey := fmt.Sprintf(`(TagName="%s")`, newStarterTag)
+		newAbilityKey := fmt.Sprintf(`(TagName="%s")`, newAbility)
+
+		// One chained jsonb update: strip old keys, write new tag, activate
+		// new starter block, grant new starter ability. - operator on an
+		// empty text[] is a no-op so it's safe when there's no old starter
+		// to clean up (e.g. fresh character with StarterSkillTreeTag=None).
 		_, err := globalDB.Exec(ctx, `
 			UPDATE dune.fgl_entities fe
 			SET components = jsonb_set(
-				fe.components,
-				ARRAY['FLevelComponent','1','StarterSkillTreeTag','TagName'],
-				to_jsonb($2::text))
+				jsonb_set(
+					jsonb_set(
+						jsonb_set(
+							fe.components,
+							ARRAY['FLevelComponent','1','ModuleData'],
+							(fe.components->'FLevelComponent'->1->'ModuleData') - $4::text[]),
+						ARRAY['FLevelComponent','1','StarterSkillTreeTag','TagName'],
+						to_jsonb($2::text)),
+					ARRAY['FLevelComponent','1','ModuleData',$3],
+					'{"SkillPointsSpent": 1}'::jsonb,
+					true),
+				ARRAY['FLevelComponent','1','ModuleData',$5],
+				'{"SkillPointsSpent": 1}'::jsonb,
+				true)
 			WHERE fe.entity_id = (
 				SELECT entity_id FROM dune.actor_fgl_entities
 				WHERE actor_id = $1 AND slot_name = 'DuneCharacter'
-			)`, pawnID, starterTag)
+			)`, pawnID, newStarterTag, newStarterKey, keysToRemove, newAbilityKey)
 		if err != nil {
 			return msgMutate{err: fmt.Errorf("set starter tag: %w", err)}
 		}
-		return msgMutate{ok: fmt.Sprintf("Starter class set to %s (%s)", job, starterTag)}
+
+		msg := fmt.Sprintf("Starter class set to %s (%s + %s active)", job, newStarterTag, newAbility)
+		if len(keysToRemove) > 0 {
+			msg += fmt.Sprintf(", cleared previous starter (%d module(s))", len(keysToRemove))
+		}
+		return msgMutate{ok: msg}
 	}
 }
 
@@ -2032,34 +2150,38 @@ var landsraadMissionNodesHarkonnen = []string{
 }
 
 // nodesForPreset returns the journey node IDs to complete for a faction+preset.
-// ch3_start: Rank5To20 onboarding only.
-// rank19_eligible: onboarding + faction-neutral chapter-2 storyline + chosen
-// faction's investigate/test/poisonedspice arc + weekly Landsraad mission tree.
-// The expanded set covers all storyline beats observed completed on the
-// rank-19 / rank-8 reference characters, so a fresh (rank 0) character can be
-// brought to rank 19 in one shot without per-rank login/logout cycles.
+// ch3_start: Rank5To20 onboarding + faction-neutral chapter-2 storyline + chosen
+// faction's Ch2→Ch3 transition / Test of Loyalty(Treachery) / investigations /
+// poisoned spice arc — i.e. everything required for a fresh character to land
+// at rank 5 (House Operator), so rank 6-19 can be earned organically.
+// rank19_eligible: same set + the weekly Landsraad mission tree, fast-forwarded
+// to tier 19.
 func nodesForPreset(faction, preset string) []string {
 	nodes := append([]string{}, climbTheRanksNodes...)
-	if preset != "rank19_eligible" {
-		return nodes
-	}
 	nodes = append(nodes, climbTheRanksStoryNodes...)
 	switch faction {
 	case "atreides":
 		nodes = append(nodes, climbTheRanksStoryNodesAtreides...)
-		nodes = append(nodes, landsraadMissionNodesAtreides...)
 	case "harkonnen":
 		nodes = append(nodes, climbTheRanksStoryNodesHarkonnen...)
-		nodes = append(nodes, landsraadMissionNodesHarkonnen...)
+	}
+	if preset == "rank19_eligible" {
+		switch faction {
+		case "atreides":
+			nodes = append(nodes, landsraadMissionNodesAtreides...)
+		case "harkonnen":
+			nodes = append(nodes, landsraadMissionNodesHarkonnen...)
+		}
 	}
 	return nodes
 }
 
-// cmdProgressionUnlock completes all prerequisite faction story journey nodes
-// and writes the corresponding gameplay tags, optionally setting faction tier.
+// cmdProgressionUnlock completes all prerequisite faction story journey nodes,
+// writes the corresponding gameplay tags, and sets reputation to the preset's
+// target tier.
 //
 // faction: "atreides" | "harkonnen"
-// preset:  "ch3_start" (through Rank03) | "rank19_eligible" (through Rank04 + tier 19)
+// preset:  "ch3_start" (rank 5 — House Operator) | "rank19_eligible" (rank 19)
 func cmdProgressionUnlock(actorID int64, faction, preset string) Cmd {
 	return func() Msg {
 		if globalDB == nil {
@@ -2087,11 +2209,12 @@ func cmdProgressionUnlock(actorID int64, faction, preset string) Cmd {
 			return msgMutate{err: fmt.Errorf("faction must be atreides or harkonnen")}
 		}
 
-		setTier := false
+		var targetTier int
 		switch preset {
 		case "ch3_start":
+			targetTier = 5
 		case "rank19_eligible":
-			setTier = true
+			targetTier = 19
 		default:
 			return msgMutate{err: fmt.Errorf("preset must be ch3_start or rank19_eligible")}
 		}
@@ -2141,7 +2264,7 @@ func cmdProgressionUnlock(actorID int64, faction, preset string) Cmd {
 			"DialogueFlags.Factions.PlayedAllegianceCinematic",
 			"DialogueFlags.Factions.SeenAnvilCinematic",
 		}
-		if setTier {
+		if targetTier >= 19 {
 			allTags = append(allTags, "Journey.LandsraadContractsUnlocked")
 		}
 		for t := 0; t <= maxTier; t++ {
@@ -2175,32 +2298,26 @@ func cmdProgressionUnlock(actorID int64, faction, preset string) Cmd {
 			return msgMutate{err: fmt.Errorf("update player tags: %w", err)}
 		}
 
-		if setTier {
-			// +1 over the tier-19 threshold: the game UI floors at the threshold
-			// (rep == threshold shows the tier below), so we nudge just over.
-			rank19Rep := factionTierThresholds[19] + 1
-			if _, err = tx.Exec(ctx,
-				`SELECT dune.set_player_faction_reputation($1, $2, $3)`,
-				controllerID, factionID, rank19Rep); err != nil {
-				return msgMutate{err: fmt.Errorf("set faction tier: %w", err)}
-			}
-			if _, err = tx.Exec(ctx, factionPlayerComponentRepSQL,
-				controllerID, factionName, rank19Rep); err != nil {
-				return msgMutate{err: fmt.Errorf("update FactionPlayerComponent rep: %w", err)}
-			}
+		// +1 over the tier threshold: the game UI floors at the threshold
+		// (rep == threshold shows the tier below), so we nudge just over.
+		targetRep := factionTierThresholds[targetTier] + 1
+		if _, err = tx.Exec(ctx,
+			`SELECT dune.set_player_faction_reputation($1, $2, $3)`,
+			controllerID, factionID, targetRep); err != nil {
+			return msgMutate{err: fmt.Errorf("set faction rep: %w", err)}
+		}
+		if _, err = tx.Exec(ctx, factionPlayerComponentRepSQL,
+			controllerID, factionName, targetRep); err != nil {
+			return msgMutate{err: fmt.Errorf("update FactionPlayerComponent rep: %w", err)}
 		}
 
 		if err := tx.Commit(ctx); err != nil {
 			return msgMutate{err: err}
 		}
 
-		tierMsg := fmt.Sprintf("%s tier tags 0–%d", factionName, maxTier)
-		if setTier {
-			tierMsg += fmt.Sprintf(" + rep tier 19 on controller %d", controllerID)
-		}
 		return msgMutate{ok: fmt.Sprintf(
-			"Progression unlock (%s/%s): %d journey nodes completed + %s — takes effect on next login",
-			preset, faction, len(journeyNodes), tierMsg)}
+			"Progression unlock (%s/%s): %d journey nodes completed + %s tier tags 0–%d + rep tier %d on controller %d — takes effect on next login",
+			preset, faction, len(journeyNodes), factionName, maxTier, targetTier, controllerID)}
 	}
 }
 
@@ -2504,14 +2621,17 @@ func cmdAwardIntel(playerID int64, amount int64) Cmd {
 // ── blueprint JSON types ──────────────────────────────────────────────────────
 
 type blueprintInstance struct {
-	BuildingType string  `json:"building_type"`
-	X            float64 `json:"x"`
-	Y            float64 `json:"y"`
-	Z            float64 `json:"z"`
-	Rotation     float64 `json:"rotation"`
+	InstanceID        *int    `json:"instance_id,omitempty"`
+	BuildingType      string  `json:"building_type"`
+	X                 float64 `json:"x"`
+	Y                 float64 `json:"y"`
+	Z                 float64 `json:"z"`
+	Rotation          float64 `json:"rotation"`
+	ProvidesStability *bool   `json:"provides_stability,omitempty"`
 }
 
 type blueprintPlaceable struct {
+	PlaceableID  *int    `json:"placeable_id,omitempty"`
 	BuildingType string  `json:"building_type"`
 	X            float64 `json:"x"`
 	Y            float64 `json:"y"`
@@ -3295,19 +3415,41 @@ func cmdListStorageContainers() Msg {
 	if globalDB == nil {
 		return msgStorageContainers{err: fmt.Errorf("not connected")}
 	}
+	// Drive from dune.placeables so we catch player-built containers regardless
+	// of whether they've been promoted to an actor row yet (the game creates the
+	// actor lazily on first interaction). building_type is the in-data identity
+	// of the placeable kind; the four below cover the storage-container tiers,
+	// noting that "Small Storage Container" registers as SpiceSilo_Placeable
+	// despite sharing the type name with world POI silos — owner_entity_id
+	// distinguishes player-built from world-spawned.
+	// User-given container names live on dune.permission_actor.actor_name.
+	// Unnamed containers default to 'None' or '##<PlaceableType>_Placeable' —
+	// filter both out so only real custom names surface.
 	rows, err := globalDB.Query(context.Background(), `
-		SELECT a.id,
-		       COALESCE(MAX(pa.actor_name), '') AS name,
-		       a.class,
-		       COALESCE(a.map, ''),
+		SELECT p.id,
+		       COALESCE(MAX(CASE
+		           WHEN pa.actor_name NOT LIKE '##%' AND pa.actor_name <> 'None'
+		           THEN pa.actor_name
+		       END), '') AS name,
+		       p.building_type AS class,
+		       COALESCE(a.map, '') AS map,
 		       COUNT(i.id) AS item_count
-		FROM dune.actors a
-		LEFT JOIN dune.permission_actor pa ON pa.actor_id = a.id
-		LEFT JOIN dune.inventories inv ON inv.actor_id = a.id
-		LEFT JOIN dune.items i ON i.inventory_id = inv.id
-		WHERE a.class ILIKE '%StorageContainer%'
-		GROUP BY a.id, a.class, a.map
-		ORDER BY a.id`)
+		FROM dune.placeables p
+		LEFT JOIN dune.actors a            ON a.id = p.id
+		LEFT JOIN dune.permission_actor pa ON pa.actor_id = p.id
+		LEFT JOIN dune.inventories inv     ON inv.actor_id = p.id
+		LEFT JOIN dune.items i             ON i.inventory_id = inv.id
+		WHERE p.building_type IN (
+		    'SpiceSilo_Placeable',
+		    'GenericContainer_Placeable',
+		    'StorageContainer_Placeable',
+		    'MediumStorageContainer_Placeable'
+		  )
+		  AND p.is_hologram = false
+		  AND p.owner_entity_id IS NOT NULL
+		  AND p.owner_entity_id != 0
+		GROUP BY p.id, p.building_type, a.map
+		ORDER BY p.id`)
 	if err != nil {
 		return msgStorageContainers{err: err}
 	}

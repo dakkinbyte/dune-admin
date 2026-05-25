@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -40,8 +41,35 @@ func handleExportBlueprint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="blueprint_%d.json"`, id))
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, blueprintFilename(bf.Name, id)))
 	json.NewEncoder(w).Encode(bf)
+}
+
+// blueprintFilename returns the suggested download filename: the in-game name
+// if present (sanitized), otherwise blueprint_<id>.json.
+func blueprintFilename(name string, id int64) string {
+	clean := sanitizeFilename(name)
+	if clean == "" {
+		return fmt.Sprintf("blueprint_%d.json", id)
+	}
+	return clean + ".json"
+}
+
+// sanitizeFilename strips characters that are unsafe in filenames or
+// Content-Disposition values across common filesystems.
+func sanitizeFilename(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case r < 0x20, r == 0x7f:
+			// drop control chars
+		case r == '/', r == '\\', r == ':', r == '*', r == '?', r == '"', r == '<', r == '>', r == '|':
+			b.WriteRune('_')
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return strings.TrimSpace(b.String())
 }
 
 func handleImportBlueprint(w http.ResponseWriter, r *http.Request) {
@@ -84,6 +112,37 @@ func handleImportBlueprint(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// structuralBuildingTypes lists building_type values that game-saved blueprints
+// commonly mark with provides_stability=true (foundations, pillars, columns).
+// Used only as a fallback when importing legacy JSON that doesn't carry the
+// per-instance flag; the game's structural solver actually picks a subset of
+// these per build, so re-exported files always carry the exact bool.
+var structuralBuildingTypes = map[string]bool{
+	"Atreides_Outpost_Column":                  true,
+	"Atreides_Outpost_Column_Corner":           true,
+	"Atreides_Outpost_Foundation":              true,
+	"Atreides_Outpost_Foundation_Round_Corner": true,
+	"Atreides_Outpost_Foundation_Wedge":        true,
+	"Atreides_Outpost_Pillar_Bottom":           true,
+	"Atreides_Outpost_Pillar_Middle":           true,
+	"Atreides_Outpost_Pillar_Top":              true,
+	"Choam_Level2_Column":                      true,
+	"Choam_Level2_Foundation":                  true,
+	"Choam_Level2_Pillar_Bottom":               true,
+	"Choam_Shelter_Column_Corner_New":          true,
+	"Choam_Shelter_Column_New":                 true,
+	"Harkonnen_Outpost_Column":                 true,
+	"Harkonnen_Outpost_Foundation":             true,
+	"MTX_Neut_DesertMechanic_Center_Column":    true,
+	"MTX_Neut_DesertMechanic_Corner_Column":    true,
+	"MTX_Neut_DesertMechanic_Foundation":       true,
+	"MTX_Smug_Foundation":                      true,
+}
+
+func isStructuralBuilding(buildingType string) bool {
+	return structuralBuildingTypes[buildingType]
+}
+
 // fetchBlueprintData fetches blueprint instances, placeables, and pentashields
 // from the DB and returns a blueprintFile ready for JSON serialization.
 func fetchBlueprintData(ctx context.Context, blueprintID int64) (blueprintFile, error) {
@@ -101,7 +160,7 @@ func fetchBlueprintData(ctx context.Context, blueprintID int64) (blueprintFile, 
 
 	// Fetch instances.
 	iRows, err := globalDB.Query(ctx, `
-		SELECT building_type, transform
+		SELECT instance_id, building_type, transform, provides_stability
 		FROM dune.building_blueprint_instances
 		WHERE building_blueprint_id = $1
 		ORDER BY instance_id`, blueprintID)
@@ -112,20 +171,24 @@ func fetchBlueprintData(ctx context.Context, blueprintID int64) (blueprintFile, 
 
 	var instances []blueprintInstance
 	for iRows.Next() {
+		var iid int
 		var btype string
 		var t []float32
-		if err := iRows.Scan(&btype, &t); err != nil {
+		var stability bool
+		if err := iRows.Scan(&iid, &btype, &t, &stability); err != nil {
 			continue
 		}
 		if len(t) < 4 {
 			continue
 		}
 		instances = append(instances, blueprintInstance{
-			BuildingType: btype,
-			X:            float64(t[0]),
-			Y:            float64(t[1]),
-			Z:            float64(t[2]),
-			Rotation:     float64(t[3]),
+			InstanceID:        &iid,
+			BuildingType:      btype,
+			X:                 float64(t[0]),
+			Y:                 float64(t[1]),
+			Z:                 float64(t[2]),
+			Rotation:          float64(t[3]),
+			ProvidesStability: &stability,
 		})
 	}
 	if err := iRows.Err(); err != nil {
@@ -134,7 +197,7 @@ func fetchBlueprintData(ctx context.Context, blueprintID int64) (blueprintFile, 
 
 	// Fetch placeables.
 	pRows, err := globalDB.Query(ctx, `
-		SELECT building_type, transform
+		SELECT placeable_id, building_type, transform
 		FROM dune.building_blueprint_placeables
 		WHERE building_blueprint_id = $1
 		ORDER BY placeable_id`, blueprintID)
@@ -145,15 +208,17 @@ func fetchBlueprintData(ctx context.Context, blueprintID int64) (blueprintFile, 
 
 	var placeables []blueprintPlaceable
 	for pRows.Next() {
+		var pid int
 		var btype string
 		var t []float32
-		if err := pRows.Scan(&btype, &t); err != nil {
+		if err := pRows.Scan(&pid, &btype, &t); err != nil {
 			continue
 		}
 		if len(t) < 6 {
 			continue
 		}
 		placeables = append(placeables, blueprintPlaceable{
+			PlaceableID:  &pid,
 			BuildingType: btype,
 			X:            float64(t[0]),
 			Y:            float64(t[1]),
@@ -276,6 +341,11 @@ func importBlueprintData(ctx context.Context, playerPawnID int64, bf blueprintFi
 	}
 
 	// Insert instances in batches of 50.
+	// Per-row instance_id and provides_stability come from the JSON when present
+	// (fresh exports always include them). Legacy files without these fields fall
+	// back to 1-based sequential ids and a structural-type stability lookup —
+	// matching the indexing scheme used by every existing blueprint in the DB
+	// that the source pentashield placeable_id references assume.
 	const batchSize = 50
 	for start := 0; start < len(bf.Instances); start += batchSize {
 		end := start + batchSize
@@ -286,11 +356,19 @@ func importBlueprintData(ctx context.Context, playerPawnID int64, bf blueprintFi
 		for i, inst := range bf.Instances[start:end] {
 			transform := fmt.Sprintf("{%g,%g,%g,%g}",
 				float32(inst.X), float32(inst.Y), float32(inst.Z), float32(inst.Rotation))
+			instanceID := start + i + 1
+			if inst.InstanceID != nil {
+				instanceID = *inst.InstanceID
+			}
+			stability := isStructuralBuilding(inst.BuildingType)
+			if inst.ProvidesStability != nil {
+				stability = *inst.ProvidesStability
+			}
 			batch.Queue(`
 				INSERT INTO dune.building_blueprint_instances
 					(building_blueprint_id, instance_id, building_type, transform, hologram, provides_stability, health)
-				VALUES ($1, $2, $3, $4::real[], true, false, 0)`,
-				blueprintID, start+i, inst.BuildingType, transform)
+				VALUES ($1, $2, $3, $4::real[], true, $5, 0)`,
+				blueprintID, instanceID, inst.BuildingType, transform, stability)
 		}
 		br := tx.SendBatch(ctx, batch)
 		for i := start; i < end; i++ {
@@ -313,11 +391,15 @@ func importBlueprintData(ctx context.Context, playerPawnID int64, bf blueprintFi
 			transform := fmt.Sprintf("{%g,%g,%g,%g,%g,%g}",
 				float32(pl.X), float32(pl.Y), float32(pl.Z),
 				float32(pl.RX), float32(pl.RY), float32(pl.RZ))
+			placeableID := start + i + 1
+			if pl.PlaceableID != nil {
+				placeableID = *pl.PlaceableID
+			}
 			batch.Queue(`
 				INSERT INTO dune.building_blueprint_placeables
 					(building_blueprint_id, placeable_id, building_type, transform, hologram)
 				VALUES ($1, $2, $3, $4::real[], true)`,
-				blueprintID, start+i, pl.BuildingType, transform)
+				blueprintID, placeableID, pl.BuildingType, transform)
 		}
 		br := tx.SendBatch(ctx, batch)
 		for i := start; i < end; i++ {

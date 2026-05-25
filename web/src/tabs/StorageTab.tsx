@@ -1,13 +1,33 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Button, Modal, Spinner, toast } from '@heroui/react'
+import {
+  Button, Chip, Input, InputGroup, Modal, Spinner, TextField, toast,
+} from '@heroui/react'
 import { api } from '../api/client'
 import type { InventoryItem } from '../api/client'
+import { DataTable, Icon, PageHeader, SideNav, type Column } from '../dune-ui'
+
+type ItemKey = 'id' | 'template' | 'stack_size' | 'quality' | 'durability' | 'actions'
+
+const ITEM_COLUMNS: Column<ItemKey>[] = [
+  { key: 'id',         label: 'ID',         width: 100 },
+  { key: 'template',   label: 'Template',   minWidth: 240 },
+  { key: 'stack_size', label: 'Stack',      width: 100 },
+  { key: 'quality',    label: 'Quality',    width: 100 },
+  { key: 'durability', label: 'Durability', width: 130 },
+  { key: 'actions',    label: '',           width: 120, sortable: false },
+]
 
 type Container = { id: number; name: string; class: string; map: string; item_count: number }
 
+const TYPE_LABELS: Record<string, string> = {
+  SpiceSilo_Placeable: 'Small Storage Container',
+  GenericContainer_Placeable: 'Chest',
+  StorageContainer_Placeable: 'Storage Container',
+  MediumStorageContainer_Placeable: 'Medium Storage Container',
+}
+
 function shortClass(cls: string): string {
-  const m = cls.match(/BP_(\w+StorageContainer)/)
-  return m ? m[1] : cls.split('/').pop()?.replace(/_C$/, '') ?? cls
+  return TYPE_LABELS[cls] ?? cls.replace(/_Placeable$/, '')
 }
 
 export default function StorageTab() {
@@ -16,7 +36,7 @@ export default function StorageTab() {
   const [selected, setSelected] = useState<Container | null>(null)
   const [items, setItems] = useState<InventoryItem[]>([])
   const [itemsLoading, setItemsLoading] = useState(false)
-  const [showGiveItems, setShowGiveItems] = useState(false)
+  const [showAdd, setShowAdd] = useState(false)
   const [search, setSearch] = useState('')
 
   const load = async () => {
@@ -24,7 +44,7 @@ export default function StorageTab() {
     try {
       setContainers(await api.storage.list())
     } catch (e: unknown) {
-      toast.danger((e instanceof Error ? e.message : String(e)))
+      toast.danger(e instanceof Error ? e.message : String(e))
     } finally {
       setLoading(false)
     }
@@ -38,7 +58,7 @@ export default function StorageTab() {
     try {
       setItems(await api.storage.items(c.id))
     } catch (e: unknown) {
-      toast.danger((e instanceof Error ? e.message : String(e)))
+      toast.danger(e instanceof Error ? e.message : String(e))
     } finally {
       setItemsLoading(false)
     }
@@ -51,160 +71,144 @@ export default function StorageTab() {
       if (selected) setContainers(prev => prev.map(c => c.id === selected.id ? { ...c, item_count: c.item_count - 1 } : c))
       toast.success('Item removed')
     } catch (e: unknown) {
-      toast.danger((e instanceof Error ? e.message : String(e)))
+      toast.danger(e instanceof Error ? e.message : String(e))
     }
   }
 
   const filtered = useMemo(() => {
+    if (!search) return containers
     const q = search.toLowerCase()
-    return containers.filter(c => String(c.id).includes(q) || c.map.toLowerCase().includes(q) || shortClass(c.class).toLowerCase().includes(q))
+    return containers.filter(c =>
+      String(c.id).includes(q) ||
+      c.map.toLowerCase().includes(q) ||
+      shortClass(c.class).toLowerCase().includes(q) ||
+      (c.name && c.name.toLowerCase().includes(q)),
+    )
   }, [containers, search])
 
+  const navItems = filtered.map(c => ({
+    key: String(c.id),
+    label: c.name || `#${c.id}`,
+    sublabel: `${c.name ? `#${c.id} · ` : ''}${shortClass(c.class)} · ${c.map}`,
+    hint: <Chip size="sm" variant="soft">{c.item_count}</Chip>,
+  }))
+
   return (
-    <div className="flex flex-col gap-3 h-full overflow-hidden">
-      <div className="shrink-0 rounded-lg px-4 py-2 text-xs font-medium" style={{ background: '#1a0808', border: '1px solid #7a1818', color: '#e88' }}>
-        ⚠ Items added to or removed from storage containers require a <strong>server zone restart</strong> to become visible to other players.
+    <div className="flex flex-col gap-3 h-full min-h-0">
+      {/* Warning banner */}
+      <div className="shrink-0 rounded-md px-4 py-2 text-xs font-medium bg-danger/10 border border-danger/40 text-danger flex items-center gap-2">
+        <Icon name="triangle-alert" />
+        <span>Items added to or removed from storage containers require a <strong>server zone restart</strong> to become visible to other players.</span>
       </div>
-    <div className="flex gap-4 flex-1 overflow-hidden min-h-0">
-      {/* Container list */}
-      <div
-        className="w-64 shrink-0 flex flex-col overflow-hidden"
-        style={{ background: 'var(--color-surface)', border: '1px solid #2a2418', borderRadius: 8 }}
-      >
-        <div className="flex items-center justify-between px-3 py-2 shrink-0" style={{ borderBottom: '1px solid #2a2418' }}>
-          <span className="text-xs font-semibold uppercase" style={{ color: 'var(--color-primary)' }}>
-            Containers ({containers.length})
-          </span>
-          <Button size="sm" variant="ghost" onPress={load} isDisabled={loading}>
-            {loading ? <Spinner size="sm" color="current" /> : '↻'}
-          </Button>
-        </div>
-        <div className="px-2 py-1.5 shrink-0">
-          <input
-            className="w-full rounded px-2 py-1 text-xs border"
-            style={{ background: '#0d0b07', color: 'var(--color-text)', borderColor: '#2a2418', outline: 'none' }}
+
+      <div className="flex gap-3 flex-1 min-h-0">
+        <SideNav
+          items={navItems}
+          active={selected ? String(selected.id) : null}
+          onSelect={id => {
+            const c = containers.find(x => String(x.id) === id)
+            if (c) selectContainer(c)
+          }}
+          title={`Containers (${containers.length})`}
+          titleAction={
+            <Button size="sm" variant="ghost" onPress={load} isDisabled={loading}>
+              {loading ? <Spinner size="sm" color="current" /> : <Icon name="refresh-cw" />}
+            </Button>
+          }
+          width="w-72"
+        >
+          <Input
+            aria-label="Search containers"
             placeholder="Search..."
             value={search}
             onChange={e => setSearch(e.target.value)}
+            className="w-full"
           />
-        </div>
-        <div className="overflow-y-auto flex-1">
-          {filtered.map(c => (
-            <button
-              key={c.id}
-              onClick={() => selectContainer(c)}
-              className="w-full text-left px-3 py-2 text-xs transition-colors"
-              style={{
-                background: selected?.id === c.id ? '#241e12' : 'transparent',
-                borderBottom: '1px solid #1a1610',
-                borderLeft: selected?.id === c.id ? '2px solid var(--color-primary)' : '2px solid transparent',
-                color: 'var(--color-text)',
-              }}
-            >
-              <div className="flex items-center justify-between gap-1">
-                <span className="font-semibold truncate" style={{ color: selected?.id === c.id ? 'var(--color-primary)' : 'var(--color-text)' }}>
-                  {c.name || `#${c.id}`}
-                </span>
-                <span className="text-xs px-1.5 py-0.5 rounded shrink-0" style={{ background: '#2a2418', color: 'var(--color-text-dim)' }}>
-                  {c.item_count} items
-                </span>
-              </div>
-              <div className="text-xs truncate mt-0.5" style={{ color: 'var(--color-text-dim)' }}>
-                {c.name ? `#${c.id} · ` : ''}{shortClass(c.class)} · {c.map}
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
+        </SideNav>
 
-      {/* Items panel */}
-      <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-        {!selected ? (
-          <div className="flex items-center justify-center h-full" style={{ color: 'var(--color-text-dim)' }}>
-            <p className="text-sm">Select a container to view its contents</p>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center justify-between mb-3 shrink-0">
-              <div>
-                <h2 className="text-base font-semibold" style={{ color: 'var(--color-primary)' }}>
-                  {selected.name || `Container #${selected.id}`}
-                </h2>
-                <p className="text-xs" style={{ color: 'var(--color-text-dim)' }}>
-                  {selected.name ? `#${selected.id} · ` : ''}{shortClass(selected.class)} · {selected.map}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="ghost" onPress={() => selectContainer(selected)} isDisabled={itemsLoading}>
-                  {itemsLoading ? <Spinner size="sm" color="current" /> : '↻ Refresh'}
-                </Button>
-                <Button size="sm" onPress={() => setShowGiveItems(true)}>
-                  + Add Items
-                </Button>
-              </div>
+        <div className="flex-1 flex flex-col gap-3 min-h-0">
+          {!selected ? (
+            <div className="flex items-center justify-center h-full text-muted">
+              <p className="text-sm">Select a container to view its contents</p>
             </div>
+          ) : (
+            <>
+              <PageHeader
+                title={selected.name || `Container #${selected.id}`}
+                subtitle={`${selected.name ? `#${selected.id} · ` : ''}${shortClass(selected.class)} · ${selected.map}`}
+              >
+                <Button size="sm" variant="ghost" onPress={() => selectContainer(selected)} isDisabled={itemsLoading}>
+                  {itemsLoading ? <Spinner size="sm" color="current" /> : <><Icon name="refresh-cw" /> Refresh</>}
+                </Button>
+                <Button size="sm" onPress={() => setShowAdd(true)}>
+                  <Icon name="plus" /> Add Items
+                </Button>
+              </PageHeader>
 
-            {itemsLoading ? (
-              <div className="flex justify-center py-12"><Spinner size="lg" /></div>
-            ) : items.length === 0 ? (
-              <div className="flex items-center justify-center flex-1" style={{ color: 'var(--color-text-dim)' }}>
-                <p className="text-sm">Container is empty</p>
-              </div>
-            ) : (
-              <div className="overflow-auto flex-1 rounded-lg" style={{ border: '1px solid #2a2418' }}>
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr style={{ background: '#1a1610', borderBottom: '1px solid #2a2418' }}>
-                      {['ID', 'Template', 'Stack', 'Quality', 'Durability', ''].map(h => (
-                        <th key={h} className="text-left px-3 py-2 font-semibold uppercase tracking-wide" style={{ color: 'var(--color-primary)' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((item, i) => (
-                      <tr key={item.id} style={{ borderBottom: '1px solid #1a1610', background: i % 2 === 0 ? '#0d0b07' : '#0f0d09' }}>
-                        <td className="px-3 py-1.5 font-mono" style={{ color: 'var(--color-text-dim)' }}>{item.id}</td>
-                        <td className="px-3 py-1.5">
-                          <div style={{ color: 'var(--color-text)' }}>{item.name || item.template_id}</div>
-                          {item.name && <div className="text-xs font-mono" style={{ color: 'var(--color-text-dim)' }}>{item.template_id}</div>}
-                        </td>
-                        <td className="px-3 py-1.5" style={{ color: 'var(--color-text)' }}>{item.stack_size}</td>
-                        <td className="px-3 py-1.5" style={{ color: 'var(--color-text)' }}>{item.quality}</td>
-                        <td className="px-3 py-1.5" style={{ color: 'var(--color-text-dim)' }}>{item.durability}</td>
-                        <td className="px-3 py-1.5">
-                          <Button size="sm" variant="danger-soft" onPress={() => handleDeleteItem(item.id)}>Remove</Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </>
-        )}
+              {itemsLoading ? (
+                <div className="flex justify-center py-12"><Spinner size="lg" /></div>
+              ) : (
+                <DataTable<InventoryItem, ItemKey>
+                  aria-label="Container items"
+                  className="min-h-0 max-h-full"
+                  columns={ITEM_COLUMNS}
+                  rows={items}
+                  rowId={i => String(i.id)}
+                  initialSort={{ column: 'id', direction: 'ascending' }}
+                  sortValue={(i, k) => {
+                    if (k === 'template') return i.name || i.template_id
+                    if (k === 'actions')  return ''
+                    return (i as unknown as Record<string, string | number>)[k]
+                  }}
+                  emptyState={<div className="py-8 text-center text-muted">Container is empty</div>}
+                  renderCell={(i, key) => {
+                    switch (key) {
+                      case 'id':         return <span className="font-mono text-muted">{i.id}</span>
+                      case 'template':
+                        return (
+                          <span className="inline-flex flex-col">
+                            <span>{i.name || i.template_id}</span>
+                            {i.name && <span className="text-xs font-mono text-muted">{i.template_id}</span>}
+                          </span>
+                        )
+                      case 'stack_size': return <span>{i.stack_size}</span>
+                      case 'quality':    return <span>{i.quality}</span>
+                      case 'durability': return <span className="text-muted">{i.durability}</span>
+                      case 'actions':
+                        return (
+                          <Button size="sm" variant="danger-soft" className="w-full"
+                            onPress={() => handleDeleteItem(i.id)}>
+                            <Icon name="x" /> Remove
+                          </Button>
+                        )
+                    }
+                  }}
+                />
+              )}
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Add Items Modal */}
       {selected && (
         <AddItemsModal
           container={selected}
-          open={showGiveItems}
-          onClose={() => setShowGiveItems(false)}
-          onSuccess={() => { setShowGiveItems(false); selectContainer(selected) }}
+          open={showAdd}
+          onClose={() => setShowAdd(false)}
+          onSuccess={() => { setShowAdd(false); selectContainer(selected) }}
           onRefresh={() => selectContainer(selected)}
         />
       )}
-    </div>
     </div>
   )
 }
 
 function AddItemsModal({ container, open, onClose, onSuccess, onRefresh }: {
-  container: Container;
-  open: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-  onRefresh: () => void;
+  container: Container
+  open: boolean
+  onClose: () => void
+  onSuccess: () => void
+  onRefresh: () => void
 }) {
   const [templates, setTemplates] = useState<{id: string; name: string}[]>([])
   const [loading, setLoading] = useState(false)
@@ -255,11 +259,8 @@ function AddItemsModal({ container, open, onClose, onSuccess, onRefresh }: {
       const res = await api.storage.giveItems(container.id, staged)
       setResult(res)
       setStaged([])
-      if (res.skipped.length === 0) {
-        onSuccess()
-      } else if (res.given.length > 0) {
-        onRefresh()
-      }
+      if (res.skipped.length === 0) onSuccess()
+      else if (res.given.length > 0) onRefresh()
     } catch (e: unknown) {
       toast.danger(e instanceof Error ? e.message : String(e))
     } finally {
@@ -270,93 +271,128 @@ function AddItemsModal({ container, open, onClose, onSuccess, onRefresh }: {
   return (
     <Modal>
       <Modal.Backdrop isOpen={open} onOpenChange={v => !v && onClose()}>
-        <Modal.Container size="full">
-          <Modal.Dialog style={{ maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+        <Modal.Container size="cover">
+          <Modal.Dialog className="flex flex-col">
             <Modal.CloseTrigger />
-            <Modal.Header><Modal.Heading>Add Items — {container.name || `Container #${container.id}`}</Modal.Heading></Modal.Header>
-            <Modal.Body style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '12px 16px' }}>
+            <Modal.Header>
+              <Modal.Heading className="text-accent">
+                {container.name || `Container #${container.id}`} — Add Items
+              </Modal.Heading>
+            </Modal.Header>
+            <Modal.Body className="flex flex-col gap-3 overflow-hidden">
               {loading ? (
                 <div className="flex justify-center py-6"><Spinner size="lg" /></div>
               ) : (
-                <div className="flex flex-col gap-3 h-full overflow-hidden">
-                  <div className="flex items-end gap-2 shrink-0">
-                    <div className="flex flex-col gap-0.5 flex-1">
-                      <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Template</span>
-                      <div className="relative">
-                      <input
-                        className="w-full rounded px-3 py-1.5 text-sm border"
-                        style={{ background: 'var(--color-surface)', color: 'var(--color-text)', borderColor: '#2a2418', outline: 'none' }}
-                        placeholder="Search templates..."
-                        value={query}
-                        onChange={e => { setQuery(e.target.value); setSelected('') }}
-                      />
-                      {filtered.length > 0 && (
-                        <div className="absolute z-50 w-full mt-1 rounded border overflow-y-auto" style={{ background: 'var(--color-surface)', borderColor: '#2a2418', maxHeight: '200px' }}>
-                          {filtered.map(t => (
-                            <div key={t.id} className="px-3 py-1.5 text-xs cursor-pointer hover:bg-[#2a2418]" onClick={() => pick(t)}>
-                              <span className="font-mono">{t.id}</span>{t.name ? <span style={{ color: 'var(--color-text-dim)' }}>  —  {t.name}</span> : null}
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                <>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <TextField className="flex-1 min-w-0" aria-label="Template">
+                      <div className="relative w-full">
+                        <InputGroup className="w-full">
+                          <InputGroup.Prefix>Template</InputGroup.Prefix>
+                          <InputGroup.Input
+                            className="flex-1 w-full"
+                            placeholder="Search templates..."
+                            value={query}
+                            onChange={e => { setQuery(e.target.value); setSelected('') }}
+                          />
+                        </InputGroup>
+                        {filtered.length > 0 && (
+                          <div className="absolute z-50 w-full mt-1 rounded-md border border-border bg-surface overflow-y-auto max-h-52">
+                            {filtered.map(t => (
+                              <div
+                                key={t.id}
+                                className="px-3 py-1.5 text-xs cursor-pointer hover:bg-surface-hover"
+                                onClick={() => pick(t)}
+                              >
+                                <span className="font-mono">{t.id}</span>
+                                {t.name ? <span className="text-muted">  —  {t.name}</span> : null}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    <div className="flex flex-col items-center gap-0.5">
-                      <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Qty</span>
-                      <input type="number" min={1} value={qty} onChange={e => setQty(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="rounded px-2 py-1.5 text-sm border w-16 text-center"
-                        style={{ background: 'var(--color-surface)', color: 'var(--color-text)', borderColor: '#2a2418', outline: 'none' }} />
-                    </div>
-                    <div className="flex flex-col items-center gap-0.5">
-                      <span className="text-xs" style={{ color: 'var(--color-text-dim)' }}>Quality</span>
-                      <input type="number" min={0} value={quality} onChange={e => setQuality(Math.max(0, parseInt(e.target.value) || 0))}
-                        className="rounded px-2 py-1.5 text-sm border w-16 text-center"
-                        style={{ background: 'var(--color-surface)', color: 'var(--color-text)', borderColor: '#2a2418', outline: 'none' }} />
-                    </div>
-                    <Button size="sm" onPress={addToStaged} isDisabled={!selected}>+ Add</Button>
+                    </TextField>
+                    <TextField className="w-32 shrink-0" aria-label="Quantity">
+                      <InputGroup>
+                        <InputGroup.Prefix>Qty</InputGroup.Prefix>
+                        <InputGroup.Input
+                          type="number" min={1} value={qty}
+                          onChange={e => setQty(Math.max(1, parseInt(e.target.value) || 1))}
+                        />
+                      </InputGroup>
+                    </TextField>
+                    <TextField className="w-40 shrink-0" aria-label="Quality">
+                      <InputGroup>
+                        <InputGroup.Prefix>Quality</InputGroup.Prefix>
+                        <InputGroup.Input
+                          type="number" min={0} value={quality}
+                          onChange={e => setQuality(Math.max(0, parseInt(e.target.value) || 0))}
+                        />
+                      </InputGroup>
+                    </TextField>
+                    <Button size="sm" onPress={addToStaged} isDisabled={!selected} className="shrink-0">
+                      <Icon name="plus" /> Add
+                    </Button>
                   </div>
+
                   {staged.length > 0 && (
                     <>
                       <div className="flex items-center gap-2 px-3 shrink-0">
                         <span className="flex-1" />
-                        <span className="text-xs w-14 text-center" style={{ color: 'var(--color-text-dim)' }}>Qty</span>
-                        <span className="text-xs w-14 text-center" style={{ color: 'var(--color-text-dim)' }}>Qual</span>
+                        <span className="text-xs w-20 text-center text-muted">Qty</span>
+                        <span className="text-xs w-20 text-center text-muted">Quality</span>
                         <span className="w-6" />
                       </div>
-                      <div className="flex flex-col gap-1 overflow-y-auto flex-1">
+                      <div className="flex flex-col gap-1 overflow-y-auto flex-1 min-h-0">
                         {staged.map((item, idx) => (
-                          <div key={idx} className="flex items-center gap-2 px-3 py-1.5 rounded text-xs" style={{ background: 'var(--color-surface)', border: '1px solid #2a2418' }}>
+                          <div
+                            key={idx}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs bg-surface border border-border"
+                          >
                             <span className="flex-1 font-mono">{item.template}</span>
-                            <input type="number" min={1} value={item.qty} onChange={e => updateStaged(idx, 'qty', Math.max(1, parseInt(e.target.value) || 1))}
-                              className="rounded px-2 py-1 border w-14 text-center"
-                              style={{ background: 'var(--color-bg)', color: 'var(--color-text)', borderColor: '#2a2418', outline: 'none' }} />
-                            <input type="number" min={0} value={item.quality} onChange={e => updateStaged(idx, 'quality', Math.max(0, parseInt(e.target.value) || 0))}
-                              className="rounded px-2 py-1 border w-14 text-center"
-                              style={{ background: 'var(--color-bg)', color: 'var(--color-text)', borderColor: '#2a2418', outline: 'none' }} />
-                            <button onClick={() => removeFromStaged(idx)} className="text-red-400 hover:text-red-300 px-1" style={{ cursor: 'pointer' }}>✕</button>
+                            <Input
+                              type="number" min={1} value={item.qty}
+                              onChange={e => updateStaged(idx, 'qty', Math.max(1, parseInt(e.target.value) || 1))}
+                              aria-label={`Qty for ${item.template}`} className="w-20 text-center"
+                            />
+                            <Input
+                              type="number" min={0} value={item.quality}
+                              onChange={e => updateStaged(idx, 'quality', Math.max(0, parseInt(e.target.value) || 0))}
+                              aria-label={`Quality for ${item.template}`} className="w-20 text-center"
+                            />
+                            <Button
+                              size="sm" variant="danger-soft"
+                              onPress={() => removeFromStaged(idx)}
+                              aria-label="Remove"
+                            >
+                              <Icon name="x" />
+                            </Button>
                           </div>
                         ))}
                       </div>
                     </>
                   )}
+
                   {result && (
-                    <div className="text-xs shrink-0 rounded px-3 py-2" style={{ background: 'var(--color-surface)', border: '1px solid #2a2418' }}>
-                      {result.given.length > 0 && <div style={{ color: 'var(--color-success)' }}>✓ Added: {result.given.join(', ')}</div>}
+                    <div className="text-xs shrink-0 rounded-md px-3 py-2 bg-surface border border-border">
+                      {result.given.length > 0 && (
+                        <div className="text-success">✓ Added: {result.given.join(', ')}</div>
+                      )}
                       {result.skipped.map((s, i) => (
-                        <div key={i} style={{ color: 'var(--color-danger)' }}>✕ Skipped {s.template}: {s.reason}</div>
+                        <div key={i} className="text-danger">✕ Skipped {s.template}: {s.reason}</div>
                       ))}
                     </div>
                   )}
-                  <div className="flex items-center gap-3 shrink-0">
-                    <Button variant="tertiary" size="sm" onPress={onClose}>Cancel</Button>
-                    <Button size="sm" onPress={handleSubmit} isDisabled={submitting || staged.length === 0}>
-                      {submitting ? <Spinner size="sm" color="current" /> : null}
-                      Add {staged.length} Item{staged.length !== 1 ? 's' : ''}
-                    </Button>
-                  </div>
-                </div>
+                </>
               )}
             </Modal.Body>
+            <Modal.Footer>
+              <Button variant="tertiary" size="sm" onPress={onClose}>Cancel</Button>
+              <Button size="sm" onPress={handleSubmit} isDisabled={submitting || staged.length === 0}>
+                {submitting ? <Spinner size="sm" color="current" /> : <Icon name="plus" />}
+                Add {staged.length} Item{staged.length !== 1 ? 's' : ''}
+              </Button>
+            </Modal.Footer>
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>

@@ -1,254 +1,222 @@
-import { useState, useEffect, useRef } from 'react'
-import { Button, Modal, Spinner, toast, Label } from '@heroui/react'
-import { api } from '../api/client'
-import type { BlueprintRow, Player } from '../api/client'
+import { useState, useEffect } from "react";
+import {
+  Button,
+  Label,
+  ListBox,
+  ListLayout,
+  Modal,
+  Select,
+  Spinner,
+  TextField,
+  Virtualizer,
+  toast,
+} from "@heroui/react";
+import { api } from "../api/client";
+import type { BlueprintRow, Player } from "../api/client";
+import { DataTable, Dropzone, Icon, PageHeader, type Column } from "../dune-ui";
 
-export default function BlueprintsTab() {
-  const [blueprints, setBlueprints] = useState<BlueprintRow[]>([])
-  const [loading, setLoading] = useState(false)
-  const [showImport, setShowImport] = useState(false)
+type Key = "id" | "owner_name" | "name" | "item_id" | "pieces" | "placeables" | "actions";
+
+const COLUMNS: Column<Key>[] = [
+  { key: "id",         label: "ID",         width: 80 },
+  { key: "owner_name", label: "Owner",      minWidth: 140 },
+  { key: "name",       label: "Name",       minWidth: 200 },
+  { key: "item_id",    label: "Item ID",    minWidth: 200 },
+  { key: "pieces",     label: "Pieces",     width: 100 },
+  { key: "placeables", label: "Placeables", width: 110 },
+  { key: "actions",    label: "",           width: 110, sortable: false },
+];
+
+export default function BlueprintsTab({ isSignedIn = true }: { isSignedIn?: boolean }) {
+  const [blueprints, setBlueprints] = useState<BlueprintRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   const load = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const data = await api.blueprints.list()
-      setBlueprints(data)
+      setBlueprints(await api.blueprints.list());
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e)
-      toast.danger(`Failed to load blueprints: ${msg}`)
+      toast.danger(`Failed to load blueprints: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  useEffect(() => {
-    load()
-  }, [])
+  useEffect(() => { load(); }, []);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '16px' }}>
-      <div className="flex items-center justify-between shrink-0">
-        <div>
-          <h2 className="text-lg font-semibold" style={{ color: 'var(--color-primary)' }}>
-            Blueprints
-          </h2>
-          <p className="text-sm" style={{ color: 'var(--color-text-dim)' }}>
-            Manage saved base blueprints. Export or import player constructions.
-          </p>
+    <div className="flex flex-col h-full gap-3 min-h-0">
+      {!isSignedIn && (
+        <div className="shrink-0 rounded-md px-4 py-2 text-xs font-medium bg-danger/10 border border-danger/40 text-danger flex items-center gap-2">
+          <Icon name="triangle-alert" />
+          <span>A <strong>Layout Tools</strong> account is required to export or import blueprints. Sign in using the button in the top right.</span>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onPress={load} isDisabled={loading}>
-            {loading ? <Spinner size="sm" color="current" /> : null}
-            Refresh
-          </Button>
-          <Button size="sm" onPress={() => setShowImport(true)}>
-            Import Blueprint
-          </Button>
-        </div>
-      </div>
+      )}
+
+      <PageHeader
+        title={`Blueprints (${blueprints.length})`}
+        subtitle="Manage saved base blueprints. Export or import player constructions."
+      >
+        <Button size="sm" variant="ghost" onPress={load} isDisabled={loading}>
+          {loading ? <Spinner size="sm" color="current" /> : <><Icon name="refresh-cw" /> Refresh</>}
+        </Button>
+        <Button size="sm" onPress={() => setShowImport(true)} isDisabled={!isSignedIn}>
+          <Icon name="upload" /> Import Blueprint
+        </Button>
+      </PageHeader>
 
       {loading ? (
         <div className="flex justify-center py-12">
           <Spinner size="lg" />
         </div>
       ) : (
-        <div className="rounded-lg" style={{ flex: 1, minHeight: 0, overflowY: 'auto', border: '1px solid #2a2418' }}>
-          <table className="w-full text-sm">
-              <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: '#1a1610' }}>
-                <tr style={{ borderBottom: '1px solid #2a2418' }}>
-                  {['ID', 'Owner', 'Name', 'Item ID', 'Pieces', 'Placeables', 'Actions'].map(h => (
-                    <th key={h} className="text-left px-4 py-2 font-semibold text-xs uppercase tracking-wide" style={{ color: 'var(--color-primary)' }}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {blueprints.map((bp, i) => (
-                  <tr key={bp.id} style={{ borderBottom: '1px solid #1a1610', background: i % 2 === 0 ? '#0d0b07' : '#111009' }}>
-                    <td className="px-4 py-2 font-mono text-xs" style={{ color: 'var(--color-text)' }}>{bp.id}</td>
-                    <td className="px-4 py-2 text-xs" style={{ color: 'var(--color-text)' }}>{bp.owner_name}</td>
-                    <td className="px-4 py-2 text-xs" style={{ color: 'var(--color-text)' }}>{bp.name || '—'}</td>
-                    <td className="px-4 py-2 font-mono text-xs" style={{ color: 'var(--color-text-dim)' }}>{bp.item_id}</td>
-                    <td className="px-4 py-2 text-xs" style={{ color: 'var(--color-text-dim)' }}>{bp.pieces}</td>
-                    <td className="px-4 py-2 text-xs" style={{ color: 'var(--color-text-dim)' }}>{bp.placeables}</td>
-                    <td className="px-4 py-2">
-                      <a
-                        href={api.blueprints.exportUrl(bp.id)}
-                        download={bp.name ? `${bp.name}.json` : `blueprint-${bp.id}-${bp.owner_name}.json`}
-                      >
-                        <Button size="sm" variant="outline">
-                          Export
-                        </Button>
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-                {blueprints.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--color-text-dim)' }}>
-                      No blueprints found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-        </div>
+        <DataTable<BlueprintRow, Key>
+          aria-label="Blueprints"
+          className="min-h-0 max-h-full"
+          columns={COLUMNS}
+          rows={blueprints}
+          rowId={(b) => String(b.id)}
+          initialSort={{ column: "id", direction: "ascending" }}
+          sortValue={(b, k) => (k === "actions" ? "" : (b as unknown as Record<string, string | number>)[k])}
+          emptyState={<div className="py-8 text-center text-muted">No blueprints found.</div>}
+          renderCell={(b, key) => {
+            switch (key) {
+              case "id":         return <span className="font-mono text-muted">{b.id}</span>;
+              case "owner_name": return b.owner_name;
+              case "name":       return b.name || <span className="text-muted">—</span>;
+              case "item_id":    return <span className="font-mono text-muted">{b.item_id}</span>;
+              case "pieces":     return <span className="text-muted">{b.pieces}</span>;
+              case "placeables": return <span className="text-muted">{b.placeables}</span>;
+              case "actions":
+                return isSignedIn ? (
+                  <a
+                    href={api.blueprints.exportUrl(b.id)}
+                    download={b.name ? `${b.name.replace(/[/\\:*?"<>|]/g, "_")}.json` : `blueprint_${b.id}.json`}
+                  >
+                    <Button size="sm" variant="outline" className="w-full">
+                      <Icon name="download" /> Export
+                    </Button>
+                  </a>
+                ) : (
+                  <Button size="sm" variant="outline" className="w-full" isDisabled>
+                    <Icon name="download" /> Export
+                  </Button>
+                );
+            }
+          }}
+        />
       )}
 
-      {/* Import Modal */}
       <ImportModal
         open={showImport}
         onClose={() => setShowImport(false)}
-        onSuccess={() => { setShowImport(false); load() }}
-        players={[]}
+        onSuccess={() => { setShowImport(false); load(); }}
       />
     </div>
-  )
+  );
 }
 
-function ImportModal({
-  open,
-  onClose,
-  onSuccess,
-}: {
-  open: boolean
-  onClose: () => void
-  onSuccess: () => void
-  players: { id: number; name: string }[]
-}) {
-  const [file, setFile] = useState<File | null>(null)
-  const [search, setSearch] = useState('')
-  const [players, setPlayers] = useState<Player[]>([])
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
-  const [showDropdown, setShowDropdown] = useState(false)
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null)
-  const [submitting, setSubmitting] = useState(false)
-  const searchRef = useRef<HTMLInputElement>(null)
+function ImportModal({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess: () => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!open) return
-    setFile(null)
-    setSearch('')
-    setSelectedPlayer(null)
-    api.players.list().then(setPlayers).catch(() => {})
-  }, [open])
+    if (!open) return;
+    setFile(null);
+    setSelectedPlayerId(null);
+    api.players.list().then(setPlayers).catch(() => {});
+  }, [open]);
 
-  const openDropdown = () => {
-    if (searchRef.current) {
-      const r = searchRef.current.getBoundingClientRect()
-      setDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width })
-    }
-    setShowDropdown(true)
-  }
-
-  const filtered = search.trim()
-    ? players.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
-    : players
+  const selectedPlayer = players.find((p) => p.id === selectedPlayerId) ?? null;
 
   const handleSubmit = async () => {
-    if (!file) { toast.warning('Select a blueprint file'); return }
-    if (!selectedPlayer) { toast.warning('Select a player'); return }
-    setSubmitting(true)
+    if (!file) { toast.warning("Select a blueprint file"); return; }
+    if (!selectedPlayer) { toast.warning("Select a player"); return; }
+    setSubmitting(true);
     try {
-      const res = await api.blueprints.import(file, selectedPlayer.id)
+      const res = await api.blueprints.import(file, selectedPlayer.id);
       if (res.ok) {
-        toast.success('Blueprint imported successfully')
-        onSuccess()
+        toast.success("Blueprint imported successfully");
+        onSuccess();
       } else {
-        toast.danger(`Import failed: ${res.error ?? 'unknown error'}`)
+        toast.danger(`Import failed: ${res.error ?? "unknown error"}`);
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e)
-      toast.danger(`Import failed: ${msg}`)
+      toast.danger(`Import failed: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   return (
     <Modal>
-      <Modal.Backdrop isOpen={open} onOpenChange={v => !v && onClose()}>
+      <Modal.Backdrop isOpen={open} onOpenChange={(v) => !v && onClose()}>
         <Modal.Container>
           <Modal.Dialog>
             <Modal.CloseTrigger />
             <Modal.Header>
-              <Modal.Heading>Import Blueprint</Modal.Heading>
+              <Modal.Heading className="text-accent">Import Blueprint</Modal.Heading>
             </Modal.Header>
-            <Modal.Body>
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1">
-                  <Label className="text-sm" style={{ color: 'var(--color-text-dim)' }}>
-                    Blueprint File (.json)
-                  </Label>
-                  <input
-                    type="file"
-                    accept=".json"
-                    className="text-sm"
-                    style={{ color: 'var(--color-text)' }}
-                    onChange={e => setFile(e.target.files?.[0] ?? null)}
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <Label className="text-sm" style={{ color: 'var(--color-text-dim)' }}>
-                    Player
-                  </Label>
-                  <input
-                    ref={searchRef}
-                    className="rounded px-3 py-1.5 text-sm border"
-                    style={{ background: 'var(--color-surface)', color: 'var(--color-text)', borderColor: '#2a2418', outline: 'none' }}
-                    placeholder="Search by name…"
-                    value={selectedPlayer ? selectedPlayer.name : search}
-                    onChange={e => { setSearch(e.target.value); setSelectedPlayer(null); openDropdown() }}
-                    onFocus={openDropdown}
-                    onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-                  />
-                  {selectedPlayer && (
-                    <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-dim)' }}>
-                      Actor ID: {selectedPlayer.id}
-                    </p>
-                  )}
-                </div>
-              </div>
+            <Modal.Body className="flex flex-col gap-4">
+              <TextField>
+                <Label>Blueprint File</Label>
+                <Dropzone
+                  accept=".json"
+                  file={file}
+                  onSelect={setFile}
+                  prompt="Drop or click to upload a .json blueprint file"
+                />
+              </TextField>
+
+              <TextField>
+                <Label>Player</Label>
+                <Select
+                  aria-label="Player"
+                  placeholder="Select a player…"
+                  selectedKey={selectedPlayerId !== null ? String(selectedPlayerId) : null}
+                  onSelectionChange={(k) => setSelectedPlayerId(k ? Number(k) : null)}
+                  className="w-full"
+                >
+                  <Select.Trigger>
+                    <Select.Value />
+                    <Select.Indicator />
+                  </Select.Trigger>
+                  <Select.Popover className="!w-[320px] !max-w-[90vw]">
+                    <Virtualizer layout={ListLayout} layoutOptions={{ rowHeight: 36 }}>
+                      <ListBox
+                        aria-label="Players"
+                        className="overflow-y-auto"
+                        style={{ height: Math.min(players.length * 36 + 8, 320) }}
+                        items={players.map((p) => ({ id: String(p.id), name: p.name, actorId: p.id }))}
+                      >
+                        {(item: { id: string; name: string; actorId: number }) => (
+                          <ListBox.Item id={item.id} textValue={item.name}>
+                            <span className="flex items-baseline gap-2">
+                              <span>{item.name}</span>
+                              <span className="text-xs text-muted font-mono">#{item.actorId}</span>
+                            </span>
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                        )}
+                      </ListBox>
+                    </Virtualizer>
+                  </Select.Popover>
+                </Select>
+              </TextField>
             </Modal.Body>
             <Modal.Footer>
               <Button variant="tertiary" onPress={onClose}>Cancel</Button>
               <Button onPress={handleSubmit} isDisabled={submitting || !file || !selectedPlayer}>
-                {submitting ? <Spinner size="sm" color="current" /> : null}
+                {submitting ? <Spinner size="sm" color="current" /> : <Icon name="upload" />}
                 Import
               </Button>
             </Modal.Footer>
-            {showDropdown && filtered.length > 0 && dropdownPos && (
-              <div style={{
-                position: 'fixed',
-                top: dropdownPos.top,
-                left: dropdownPos.left,
-                width: dropdownPos.width,
-                zIndex: 9999,
-                background: '#0d0b07',
-                border: '1px solid #2a2418',
-                borderRadius: 6,
-                maxHeight: 220,
-                overflowY: 'auto',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
-              }}>
-                {filtered.slice(0, 20).map(p => (
-                  <div
-                    key={p.id}
-                    onMouseDown={() => { setSelectedPlayer(p); setSearch(''); setShowDropdown(false) }}
-                    style={{ padding: '7px 12px', cursor: 'pointer', borderBottom: '1px solid #1a1610' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#1a1610')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <span className="text-sm" style={{ color: 'var(--color-text)' }}>{p.name}</span>
-                    <span className="text-xs ml-2" style={{ color: 'var(--color-text-dim)' }}>#{p.id}</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>
     </Modal>
-  )
+  );
 }
