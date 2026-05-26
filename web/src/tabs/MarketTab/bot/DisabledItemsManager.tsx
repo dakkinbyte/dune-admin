@@ -3,22 +3,23 @@ import { Button, InputGroup, TextField } from '@heroui/react'
 import { Icon } from '../../../dune-ui'
 
 type Props = {
-  items: string[]
+  items: string[] | null | undefined
   onChange: (items: string[]) => void
 }
 
 export default function DisabledItemsManager({ items, onChange }: Props) {
   const [input, setInput] = useState('')
+  const safeItems = items ?? []
 
   const add = () => {
     const val = input.trim()
-    if (!val || items.includes(val)) return
-    onChange([...items, val])
+    if (!val || safeItems.includes(val)) return
+    onChange([...safeItems, val])
     setInput('')
   }
 
   const remove = (item: string) => {
-    onChange(items.filter(i => i !== item))
+    onChange(safeItems.filter(i => i !== item))
   }
 
   return (
@@ -38,11 +39,11 @@ export default function DisabledItemsManager({ items, onChange }: Props) {
           <Icon name="plus" /> Add
         </Button>
       </div>
-      {items.length === 0 ? (
+      {safeItems.length === 0 ? (
         <p className="text-xs text-muted">No items disabled.</p>
       ) : (
         <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
-          {items.map(item => (
+          {safeItems.map(item => (
             <span
               key={item}
               className="flex items-center gap-1 text-xs font-mono bg-surface border border-border rounded px-2 py-0.5"

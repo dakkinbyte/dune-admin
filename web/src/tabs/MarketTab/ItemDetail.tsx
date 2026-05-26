@@ -3,12 +3,7 @@ import { Button, Spinner } from '@heroui/react'
 import { api } from '../../api/client'
 import type { MarketItem, MarketListing } from '../../api/client'
 import { Icon } from '../../dune-ui'
-
-const QUALITY_LABELS = ['Standard', 'Refined', 'Superior', 'Masterwork', 'Pristine', 'Flawless']
-
-function qualityLabel(q: number): string {
-  return QUALITY_LABELS[q] ?? `Q${q}`
-}
+import { iconUrl, qualityLabel } from '../../utils/icons'
 
 type Props = {
   item: MarketItem | null
@@ -31,6 +26,7 @@ export default function ItemDetail({ item, onClose }: Props) {
 
   if (!item) return null
 
+  const img = iconUrl(item.template_id)
   const byQuality = listings.reduce<Record<number, MarketListing[]>>((acc, l) => {
     ;(acc[l.quality] ??= []).push(l)
     return acc
@@ -40,9 +36,19 @@ export default function ItemDetail({ item, onClose }: Props) {
   return (
     <div className="w-80 shrink-0 flex flex-col border-l border-border bg-surface overflow-y-auto">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-        <span className="font-semibold text-sm text-accent truncate pr-2">
-          {item.display_name || item.template_id}
-        </span>
+        <div className="flex items-center gap-2 min-w-0">
+          {img && (
+            <img
+              src={img}
+              alt=""
+              className="w-8 h-8 object-contain shrink-0 rounded"
+              onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+            />
+          )}
+          <span className="font-semibold text-sm text-accent truncate">
+            {item.display_name || item.template_id}
+          </span>
+        </div>
         <Button size="sm" variant="ghost" isIconOnly aria-label="Close" onPress={onClose}>
           <Icon name="x" />
         </Button>

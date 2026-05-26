@@ -51,6 +51,7 @@ func cmdFetchMarketItems() Msg {
 	rows, err := globalDB.Query(context.Background(), `
 		SELECT
 			o.template_id,
+			o.quality_level,
 			MIN(o.item_price)                                              AS lowest_price,
 			COALESCE(SUM(COALESCE(i.stack_size, s.initial_stack_size)), 0) AS total_stock,
 			COALESCE(SUM(CASE WHEN o.is_npc_order
@@ -59,8 +60,8 @@ func cmdFetchMarketItems() Msg {
 		FROM dune.dune_exchange_orders o
 		JOIN dune.dune_exchange_sell_orders s ON s.order_id = o.id
 		LEFT JOIN dune.items i ON i.id = o.item_id
-		GROUP BY o.template_id
-		ORDER BY o.template_id`)
+		GROUP BY o.template_id, o.quality_level
+		ORDER BY o.template_id, o.quality_level`)
 	if err != nil {
 		return msgMarketItems{err: err}
 	}
@@ -69,15 +70,20 @@ func cmdFetchMarketItems() Msg {
 	var items []marketItem
 	for rows.Next() {
 		var tmpl string
-		var lowestPrice, totalStock, botStock, listingCount int64
-		if err := rows.Scan(&tmpl, &lowestPrice, &totalStock, &botStock, &listingCount); err != nil {
+		var quality, lowestPrice, totalStock, botStock, listingCount int64
+		if err := rows.Scan(&tmpl, &quality, &lowestPrice, &totalStock, &botStock, &listingCount); err != nil {
 			continue
 		}
 		rule, _ := itemRuleLookup(tmpl)
 		cat := schematicCategory(tmpl, rule.Category)
+		name := itemNameLookup(tmpl)
+		if strings.HasSuffix(strings.ToLower(tmpl), "_schematic") {
+			name += " (Schematic)"
+		}
 		items = append(items, marketItem{
 			TemplateID:   tmpl,
-			DisplayName:  itemNameLookup(tmpl),
+			Quality:      quality,
+			DisplayName:  name,
 			Category:     cat,
 			Tier:         rule.Tier,
 			Rarity:       rule.Rarity,

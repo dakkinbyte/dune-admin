@@ -148,6 +148,7 @@ export type BackupFile = { name: string; size_bytes: number; modified: string; h
 
 export type MarketItem = {
   template_id: string
+  quality: number
   display_name: string
   category: string
   tier: number

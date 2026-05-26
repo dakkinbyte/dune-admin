@@ -6,6 +6,8 @@ import { Icon, PageHeader } from '../../dune-ui'
 import MarketSidebar from './MarketSidebar'
 import MarketSearch, { type MarketFilters } from './MarketSearch'
 import MarketTable from './MarketTable'
+import MarketGrid from './MarketGrid'
+import ViewToggle, { type MarketView } from './ViewToggle'
 import ItemDetail from './ItemDetail'
 import BotControlPanel from './bot/BotControlPanel'
 
@@ -21,6 +23,7 @@ export default function MarketTab({ isSignedIn = false }: Props) {
   const [loading, setLoading] = useState(false)
   const [filters, setFilters] = useState<MarketFilters>(DEFAULT_FILTERS)
   const [selected, setSelected] = useState<MarketItem | null>(null)
+  const [view, setView] = useState<MarketView>('table')
   const [botOpen, setBotOpen] = useState(false)
 
   const load = useCallback(async () => {
@@ -37,7 +40,7 @@ export default function MarketTab({ isSignedIn = false }: Props) {
       setItems(res.items)
       if (categories.length === 0) setCategories(cats)
     } catch {
-      // errors surfaced via empty state
+      // errors surface via empty state
     } finally {
       setLoading(false)
     }
@@ -63,6 +66,7 @@ export default function MarketTab({ isSignedIn = false }: Props) {
             <Icon name="bot" /> Bot Control
           </Button>
         )}
+        <ViewToggle view={view} onChange={setView} />
         <Button size="sm" variant="ghost" onPress={load} isDisabled={loading}>
           {loading ? <Spinner size="sm" color="current" /> : <><Icon name="refresh-cw" /> Refresh</>}
         </Button>
@@ -84,6 +88,8 @@ export default function MarketTab({ isSignedIn = false }: Props) {
         <div className="flex flex-1 min-w-0 min-h-0 overflow-hidden">
           {loading ? (
             <div className="flex flex-1 justify-center py-12"><Spinner size="lg" /></div>
+          ) : view === 'grid' ? (
+            <MarketGrid items={items} onSelect={setSelected} />
           ) : (
             <MarketTable items={items} onSelect={setSelected} />
           )}

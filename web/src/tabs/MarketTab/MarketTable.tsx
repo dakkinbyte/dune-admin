@@ -1,10 +1,12 @@
 import { DataTable, type Column } from '../../dune-ui'
 import type { MarketItem } from '../../api/client'
+import { qualityLabel } from '../../utils/icons'
 
-type Key = 'display_name' | 'category' | 'tier' | 'rarity' | 'lowest_price' | 'total_stock' | 'bot_stock' | 'listing_count'
+type Key = 'display_name' | 'quality' | 'category' | 'tier' | 'rarity' | 'lowest_price' | 'total_stock' | 'bot_stock' | 'listing_count'
 
 const COLUMNS: Column<Key>[] = [
   { key: 'display_name',  label: 'Item',          minWidth: 200 },
+  { key: 'quality',       label: 'Grade',         width: 100 },
   { key: 'category',      label: 'Category',      minWidth: 140 },
   { key: 'tier',          label: 'Tier',          width: 60 },
   { key: 'rarity',        label: 'Rarity',        width: 100 },
@@ -36,11 +38,12 @@ export default function MarketTable({ items, onSelect }: Props) {
       className="min-h-0 max-h-full"
       columns={COLUMNS}
       rows={items}
-      rowId={it => it.template_id}
+      rowId={it => `${it.template_id}:${it.quality}`}
       initialSort={{ column: 'display_name', direction: 'ascending' }}
       sortValue={(it, k) => {
         switch (k) {
           case 'display_name':  return it.display_name
+          case 'quality':       return it.quality
           case 'category':      return it.category
           case 'rarity':        return it.rarity
           case 'tier':          return it.tier
@@ -56,6 +59,10 @@ export default function MarketTable({ items, onSelect }: Props) {
         switch (key) {
           case 'display_name':
             return <span className="font-medium">{it.display_name || it.template_id}</span>
+          case 'quality':
+            return it.quality > 0
+              ? <span className="text-xs text-muted">{qualityLabel(it.quality)}</span>
+              : <span className="text-xs text-muted/50">Standard</span>
           case 'category':
             return <span className="text-muted text-xs">{it.category || '—'}</span>
           case 'tier':

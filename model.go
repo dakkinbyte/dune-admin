@@ -225,6 +225,7 @@ type dungeonRecord struct {
 
 type marketItem struct {
 	TemplateID   string  `json:"template_id"`
+	Quality      int64   `json:"quality"`
 	DisplayName  string  `json:"display_name"`
 	Category     string  `json:"category"`
 	Tier         int     `json:"tier"`
