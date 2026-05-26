@@ -35,24 +35,66 @@ var (
 	sshKeyPath      string
 	itemDataPath    string
 	scripCurrencyID int
+	dbHost          string
 	dbPort          int
 	dbUser          string
 	dbPass          string
 	dbName          string
 	dbSchema        string
 	listenAddr      string
+	controlPlane    string
+	controlNS       string
+	brokerGameAddr  string
+	brokerAdminAddr string
+	brokerTLS       bool
+	backupDir       string
 )
 
 // appConfig mirrors the fields written to ~/.dune-admin/config.yaml.
 type appConfig struct {
-	SSHHost       string `yaml:"ssh_host"`
-	SSHUser       string `yaml:"ssh_user"`
-	SSHKey        string `yaml:"ssh_key"`
-	DBPort        int    `yaml:"db_port"`
-	DBUser        string `yaml:"db_user"`
-	DBPass        string `yaml:"db_pass"`
-	DBName        string `yaml:"db_name"`
-	DBSchema      string `yaml:"db_schema"`
+	// Transport — SSH fields. If ssh_host is set all commands + TCP connections
+	// tunnel through SSH. If omitted everything runs/connects locally.
+	SSHHost string `yaml:"ssh_host"`
+	SSHUser string `yaml:"ssh_user"`
+	SSHKey  string `yaml:"ssh_key"`
+
+	// Database — always required.
+	DBHost   string `yaml:"db_host"`
+	DBPort   int    `yaml:"db_port"`
+	DBUser   string `yaml:"db_user"`
+	DBPass   string `yaml:"db_pass"`
+	DBName   string `yaml:"db_name"`
+	DBSchema string `yaml:"db_schema"`
+
+	// Control plane: "kubectl" | "docker" | "local"
+	// Defaults to "kubectl" when ssh_host is set, "local" otherwise.
+	Control string `yaml:"control"`
+
+	// kubectl-specific
+	ControlNamespace string `yaml:"control_namespace"`
+
+	// docker-specific — container names
+	DockerGameserver  string `yaml:"docker_gameserver"`
+	DockerBrokerGame  string `yaml:"docker_broker_game"`
+	DockerBrokerAdmin string `yaml:"docker_broker_admin"`
+	DockerDB          string `yaml:"docker_db"`
+
+	// local-specific — configurable shell commands
+	CmdStart   string `yaml:"cmd_start"`
+	CmdStop    string `yaml:"cmd_stop"`
+	CmdRestart string `yaml:"cmd_restart"`
+	CmdStatus  string `yaml:"cmd_status"`
+
+	// Broker — optional; if set, notifications and capture are available.
+	BrokerGameAddr  string `yaml:"broker_game_addr"`
+	BrokerAdminAddr string `yaml:"broker_admin_addr"`
+	BrokerTLS       bool   `yaml:"broker_tls"`
+	BrokerUser      string `yaml:"broker_user"`
+	BrokerPass      string `yaml:"broker_pass"`
+
+	// Backups — optional path accessed via the executor.
+	BackupDir string `yaml:"backup_dir"`
+
 	ScripCurrency int    `yaml:"scrip_currency"`
 	ListenAddr    string `yaml:"listen_addr"`
 }
@@ -75,6 +117,11 @@ func setEnvIfMissing(key, val string) {
 	}
 }
 
+// loadedConfig holds the full parsed config.yaml so provider-specific fields
+// (docker_*, cmd_*) remain available to connectAll() even though they have no
+// corresponding env var or flag.
+var loadedConfig appConfig
+
 // loadConfig reads ~/.dune-admin/config.yaml and falls back to .env in the
 // working directory for backward compatibility with existing unzipped-release
 // installs.
@@ -83,9 +130,11 @@ func loadConfig() {
 	if err == nil {
 		var cfg appConfig
 		if yaml.Unmarshal(data, &cfg) == nil {
+			loadedConfig = cfg
 			setEnvIfMissing("SSH_HOST", cfg.SSHHost)
 			setEnvIfMissing("SSH_USER", cfg.SSHUser)
 			setEnvIfMissing("SSH_KEY", cfg.SSHKey)
+			setEnvIfMissing("DB_HOST", cfg.DBHost)
 			if cfg.DBPort != 0 {
 				setEnvIfMissing("DB_PORT", strconv.Itoa(cfg.DBPort))
 			}
@@ -97,6 +146,11 @@ func loadConfig() {
 				setEnvIfMissing("SCRIP_CURRENCY", strconv.Itoa(cfg.ScripCurrency))
 			}
 			setEnvIfMissing("LISTEN_ADDR", cfg.ListenAddr)
+			setEnvIfMissing("CONTROL", cfg.Control)
+			setEnvIfMissing("CONTROL_NAMESPACE", cfg.ControlNamespace)
+			setEnvIfMissing("BROKER_GAME_ADDR", cfg.BrokerGameAddr)
+			setEnvIfMissing("BROKER_ADMIN_ADDR", cfg.BrokerAdminAddr)
+			setEnvIfMissing("BACKUP_DIR", cfg.BackupDir)
 			return
 		}
 	}
@@ -146,19 +200,25 @@ func envIntOr(key string, def int) int {
 
 func init() {
 	loadConfig()
-	flag.StringVar(&sshHost, "host", envOr("SSH_HOST", "192.168.0.72:22"), "SSH host:port")
+	flag.StringVar(&sshHost, "host", envOr("SSH_HOST", ""), "SSH host:port (if set, all connections tunnel through SSH)")
 	flag.StringVar(&sshUser, "user", envOr("SSH_USER", "dune"), "SSH user")
 	flag.StringVar(&sshKeyPath, "key", envOr("SSH_KEY", ""), "SSH private key path (auto-detected if empty)")
 	flag.StringVar(&itemDataPath, "itemdata", envOr("ITEM_DATA", ""), "Item data JSON path")
 	flag.IntVar(&scripCurrencyID, "scripcurrency", envIntOr("SCRIP_CURRENCY", 1), "Scrip currency id")
-	flag.IntVar(&dbPort, "dbport", envIntOr("DB_PORT", 15432), "PostgreSQL port inside the cluster")
+	flag.StringVar(&dbHost, "dbhost", envOr("DB_HOST", "127.0.0.1"), "PostgreSQL host or DNS name")
+	flag.IntVar(&dbPort, "dbport", envIntOr("DB_PORT", 15432), "PostgreSQL port")
 	flag.StringVar(&dbUser, "dbuser", envOr("DB_USER", "dune"), "PostgreSQL user")
 	flag.StringVar(&dbPass, "dbpass", envOr("DB_PASS", ""), "PostgreSQL password")
 	flag.StringVar(&dbName, "dbname", envOr("DB_NAME", "dune"), "PostgreSQL database name")
 	flag.StringVar(&dbSchema, "schema", envOr("DB_SCHEMA", "dune"), "PostgreSQL schema")
 	flag.StringVar(&listenAddr, "addr", envOr("LISTEN_ADDR", ":8080"), "HTTP listen address")
+	flag.StringVar(&controlPlane, "control", envOr("CONTROL", ""), "Control plane: kubectl | docker | local")
+	flag.StringVar(&controlNS, "control-ns", envOr("CONTROL_NAMESPACE", ""), "Kubernetes namespace (kubectl control plane)")
+	flag.StringVar(&brokerGameAddr, "broker-game", envOr("BROKER_GAME_ADDR", ""), "mq-game broker address host:port")
+	flag.StringVar(&brokerAdminAddr, "broker-admin", envOr("BROKER_ADMIN_ADDR", ""), "mq-admin broker address host:port")
+	flag.StringVar(&backupDir, "backup-dir", envOr("BACKUP_DIR", ""), "Backup directory path")
 	flag.BoolVar(&captureMode, "capture", false, "Capture RabbitMQ messages (grant + notifications) and print to stdout")
-	flag.BoolVar(&setupMode, "setup", false, "Interactive setup wizard — writes ~/.dune-admin/config.yaml from SSH autodiscovery")
+	flag.BoolVar(&setupMode, "setup", false, "Interactive setup wizard — writes ~/.dune-admin/config.yaml")
 	flag.StringVar(&sqlQuery, "sql", "", "Run a SQL query and print results to stdout, then exit")
 }
 

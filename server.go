@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -179,37 +178,46 @@ func decode(r *http.Request, v any) error {
 	return json.NewDecoder(r.Body).Decode(v)
 }
 
-// handleStatus returns SSH and DB connection state.
+// handleStatus returns connection state and provider info.
 func handleStatus(w http.ResponseWriter, r *http.Request) {
+	executorType := "none"
+	controlName := "none"
+	if globalExecutor != nil {
+		executorType = globalExecutor.Type()
+	}
+	if globalControl != nil {
+		controlName = globalControl.Name()
+	}
 	jsonOK(w, map[string]any{
+		"executor":      executorType,
+		"control":       controlName,
 		"ssh_connected": globalSSH != nil,
 		"db_connected":  globalDB != nil,
 		"pod_ns":        globalPodNS,
 		"pod_ip":        globalPodIP,
 		"ssh_host":      sshHost,
+		"db_host":       dbHost,
 		"version":       AppVersion,
 		"commit":        GitCommit,
 		"build_time":    BuildTime,
 	})
 }
 
-// handleReconnect attempts to re-establish SSH+DB connections.
+// handleReconnect tears down and re-establishes all connections.
 func handleReconnect(w http.ResponseWriter, r *http.Request) {
 	if globalDB != nil {
 		globalDB.Close()
 		globalDB = nil
 	}
-	if globalSSH != nil {
-		globalSSH.Close()
-		globalSSH = nil
+	if globalExecutor != nil {
+		globalExecutor.Close()
+		globalExecutor = nil
 	}
-	msg, ok := cmdConnect().(msgConnect)
-	if !ok || msg.err != nil {
-		var errMsg string
-		if msg.err != nil {
-			errMsg = msg.err.Error()
-		}
-		jsonErr(w, fmt.Errorf("%s", errMsg), 500)
+	globalSSH = nil
+	globalControl = nil
+
+	if err := connectAll(); err != nil {
+		jsonErr(w, err, 500)
 		return
 	}
 	handleStatus(w, r)

@@ -29,28 +29,19 @@ func isValidK8sName(name string) bool {
 }
 
 func handleLogPods(w http.ResponseWriter, r *http.Request) {
-	out, err := sshExec(fmt.Sprintf(
-		"sudo kubectl get pods -n %s --no-headers -o custom-columns=NAME:.metadata.name 2>&1", globalPodNS))
-	if err != nil {
-		jsonErr(w, fmt.Errorf("kubectl: %w", err), 500)
+	if globalControl == nil {
+		jsonErr(w, fmt.Errorf("not connected"), 503)
 		return
 	}
-	// Also get funcom-operators namespace pods
-	out2, _ := sshExec(
-		"sudo kubectl get pods -n funcom-operators --no-headers -o custom-columns=NAME:.metadata.name 2>&1")
-
-	var pods []logPod
-	for _, line := range splitLines(out) {
-		name := strings.TrimSpace(line)
-		if name != "" && !strings.Contains(name, "db-dbdepl") {
-			pods = append(pods, logPod{Namespace: globalPodNS, Name: name})
-		}
+	sources, err := globalControl.ListLogSources(r.Context(), globalExecutor)
+	if err != nil {
+		jsonErr(w, err, 500)
+		return
 	}
-	for _, line := range splitLines(out2) {
-		name := strings.TrimSpace(line)
-		if name != "" {
-			pods = append(pods, logPod{Namespace: "funcom-operators", Name: name})
-		}
+	// Convert to logPod for frontend compat.
+	var pods []logPod
+	for _, s := range sources {
+		pods = append(pods, logPod{Namespace: s.Namespace, Name: s.Name})
 	}
 	if pods == nil {
 		pods = []logPod{}
@@ -65,8 +56,15 @@ func handleLogStream(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "ns and pod required", 400)
 		return
 	}
-	if !isValidK8sName(ns) || !isValidK8sName(pod) {
-		http.Error(w, "invalid ns or pod name", 400)
+	if isValidK8sName(ns) && isValidK8sName(pod) {
+		// K8s names validated — safe for kubectl.
+	} else if strings.ContainsAny(ns+pod, ";|&`$(){}\\") {
+		http.Error(w, "invalid characters in ns or pod", 400)
+		return
+	}
+
+	if globalControl == nil {
+		http.Error(w, "not connected", 503)
 		return
 	}
 
@@ -77,10 +75,9 @@ func handleLogStream(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 	conn.SetWriteDeadline(time.Time{})
 
-	cmd := fmt.Sprintf("sudo kubectl logs -f -n %s %s 2>&1", ns, pod)
-	ch, cancel, err := sshStream(cmd)
+	ch, cancel, err := globalControl.StreamLog(r.Context(), globalExecutor, ns, pod)
 	if err != nil {
-		conn.WriteMessage(websocket.TextMessage, []byte("error: "+err.Error()))
+		conn.WriteMessage(websocket.TextMessage, []byte("error: "+err.Error())) //nolint:errcheck
 		return
 	}
 	defer cancel()

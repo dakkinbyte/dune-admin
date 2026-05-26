@@ -12,8 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// exitSetup prints a pause prompt on Windows (so the CMD window doesn't vanish
-// before the user can read the error), then exits with the given code.
+// exitSetup prints a pause prompt on Windows, then exits with the given code.
 func exitSetup(code int) {
 	if runtime.GOOS == "windows" {
 		fmt.Println()
@@ -47,8 +46,51 @@ func runSetup() {
 	fmt.Println("=== dune-admin setup ===")
 	fmt.Println()
 
-	// ── 1. SSH key ─────────────────────────────────────────────────────────────
+	// ── 1. Control plane ───────────────────────────────────────────────────────
 
+	fmt.Println("Control plane:")
+	fmt.Println("  kubectl — Kubernetes (k3s) via SSH (current default)")
+	fmt.Println("  docker  — Docker containers (docker CLI with named containers)")
+	fmt.Println("  local   — Local/AMP/LGSM (configurable shell commands)")
+	fmt.Println()
+	ctrl := ask("Control plane", "kubectl")
+	if ctrl != "kubectl" && ctrl != "docker" && ctrl != "local" {
+		ctrl = "kubectl"
+	}
+	fmt.Println()
+
+	var cfg appConfig
+	cfg.Control = ctrl
+
+	switch ctrl {
+	case "kubectl":
+		runKubectlSetup(ask, ok, fail, &cfg)
+	case "docker":
+		runDockerSetup(ask, ok, fail, &cfg)
+	case "local":
+		runLocalSetup(ask, ok, fail, &cfg)
+	}
+
+	// ── Common: listen address ─────────────────────────────────────────────────
+
+	fmt.Println("Server config:")
+	cfg.ListenAddr = ask("HTTP listen address", listenAddr)
+	fmt.Println()
+
+	// ── Write config ───────────────────────────────────────────────────────────
+
+	writeSetupConfig(ok, fail, cfg)
+
+	fmt.Println("Setup complete.")
+	fmt.Println()
+	fmt.Println("  Run: dune-admin")
+	fmt.Println()
+}
+
+// ── kubectl setup flow ────────────────────────────────────────────────────────
+
+func runKubectlSetup(ask func(string, string) string, ok, fail func(string), cfg *appConfig) {
+	// SSH key
 	fmt.Println("Checking for SSH key...")
 	keyPath := resolveKeyPath()
 	if _, err := os.Stat(keyPath); err != nil {
@@ -70,17 +112,15 @@ func runSetup() {
 	}
 	fmt.Println()
 
-	// ── 2. Connection details ──────────────────────────────────────────────────
-
+	// SSH connection details
 	fmt.Println("SSH connection:")
-	sshHost = ask("VM host:port", sshHost)
-	sshUser = ask("SSH user", sshUser)
+	sshHost = ask("VM host:port", envOr("SSH_HOST", "192.168.0.72:22"))
+	sshUser = ask("SSH user", envOr("SSH_USER", "dune"))
 	fmt.Println()
 
-	// ── 3. SSH dial ────────────────────────────────────────────────────────────
-
+	// Dial
 	fmt.Printf("Connecting via SSH to %s...\n", sshHost)
-	client, err := dialSSH(keyPath)
+	client, err := dialSSH(sshHost, sshUser, keyPath)
 	if err != nil {
 		fail("SSH failed: " + err.Error())
 		fmt.Println()
@@ -97,10 +137,10 @@ func runSetup() {
 	ok("SSH connected")
 	fmt.Println()
 
-	// ── 4. Discover DB pod ─────────────────────────────────────────────────────
-
+	// Discover DB pod
 	fmt.Println("Discovering database pod...")
-	ns, pod, podIP, err := discoverDBPod(client)
+	sshExecWrap := &sshExecutor{client: client}
+	ns, pod, podIP, err := discoverDBPod(sshExecWrap)
 	if err != nil {
 		fail("Pod discovery failed: " + err.Error())
 		fmt.Println()
@@ -114,21 +154,16 @@ func runSetup() {
 	ok("Database pod: " + pod)
 	fmt.Println()
 
-	// ── 5. Discover DB password ────────────────────────────────────────────────
-
+	// Discover DB password
 	fmt.Println("Discovering database password...")
-
 	discoveredUser := "postgres"
 	discoveredPass := ""
 
-	// Try 1: battlegroup YAML — application-level credentials.
-	// Derive the battlegroup name from the already-discovered pod name, then
-	// fall back to `battlegroup list` if that doesn't work.
 	var battlegroups []string
 	if bg := battlegroupFromPod(globalPod); bg != "" {
 		battlegroups = []string{bg}
 	} else {
-		battlegroups = listBattlegroups(client)
+		battlegroups = listBattlegroups(sshExecWrap)
 	}
 
 	if len(battlegroups) == 0 {
@@ -148,18 +183,18 @@ func runSetup() {
 				chosen = battlegroups[idx-1]
 			}
 		}
-
 		yamlPath := fmt.Sprintf("~/.dune/%s.yaml", chosen)
-		if u, pass := extractPasswordFromYAML(client, yamlPath); pass != "" {
+		if u, pass := extractPasswordFromYAML(sshExecWrap, yamlPath); pass != "" {
 			discoveredUser = u
 			discoveredPass = pass
 			ok(fmt.Sprintf("Password found in %s (user: %s)", yamlPath, u))
 		} else {
 			fail("No password found in " + yamlPath)
 		}
+		cfg.ControlNamespace = ns
+		controlNS = ns
 	}
 
-	// Try 2: manual prompt
 	if discoveredPass == "" {
 		fmt.Println()
 		fmt.Println("  Could not auto-discover the database password.")
@@ -172,8 +207,7 @@ func runSetup() {
 	}
 	fmt.Println()
 
-	// ── 6. Connect to database ─────────────────────────────────────────────────
-
+	// Connect to DB
 	fmt.Println("Connecting to database...")
 	dbUser = discoveredUser
 	dbPass = discoveredPass
@@ -185,40 +219,137 @@ func runSetup() {
 		exitSetup(1)
 	}
 	globalDB = pool
+	globalExecutor = sshExecWrap
+	globalControl = newControlPlane("kubectl", *cfg)
 	ok("Database connected as: " + dbUser)
 	fmt.Println()
 
-	// ── 7. Listen address ──────────────────────────────────────────────────────
-
-	fmt.Println("Server config:")
-	listenAddr = ask("HTTP listen address", listenAddr)
-	fmt.Println()
-
-	// ── 8. Write ~/.dune-admin/config.yaml ────────────────────────────────────
-
-	// Always store an absolute path so the config works regardless of where
-	// the binary is launched from.
 	if abs, err := filepath.Abs(keyPath); err == nil {
 		keyPath = abs
 	}
+	cfg.SSHHost = sshHost
+	cfg.SSHUser = sshUser
+	cfg.SSHKey = keyPath
+	cfg.DBHost = "127.0.0.1"
+	cfg.DBPort = dbPort
+	cfg.DBUser = dbUser
+	cfg.DBPass = dbPass
+	cfg.DBName = dbName
+	cfg.DBSchema = dbSchema
+	cfg.ScripCurrency = scripCurrencyID
+}
 
+// ── docker setup flow ─────────────────────────────────────────────────────────
+
+func runDockerSetup(ask func(string, string) string, ok, fail func(string), cfg *appConfig) {
+	fmt.Println("Docker container names:")
+	cfg.DockerGameserver = ask("Game server container name", "dune-gameserver")
+	cfg.DockerBrokerGame = ask("mq-game broker container name (optional)", "")
+	cfg.DockerBrokerAdmin = ask("mq-admin broker container name (optional)", "")
+	fmt.Println()
+
+	// Test docker access
+	exec := &localExecutor{}
+	out, err := exec.Exec(fmt.Sprintf("docker inspect --format '{{.State.Status}}' %s 2>&1", cfg.DockerGameserver))
+	if err != nil {
+		fail(fmt.Sprintf("docker inspect failed: %s", out))
+		fmt.Println("  Make sure Docker is running and the container name is correct.")
+		fmt.Println("  Continuing anyway...")
+	} else {
+		ok(fmt.Sprintf("Container %s is %s", cfg.DockerGameserver, strings.TrimSpace(out)))
+	}
+	fmt.Println()
+
+	fmt.Println("Database connection:")
+	cfg.DBHost = ask("DB host (Docker DNS or IP)", "database")
+	cfg.DBPort = dbPort
+	portStr := ask(fmt.Sprintf("DB port [%d]", dbPort), fmt.Sprintf("%d", dbPort))
+	fmt.Sscanf(portStr, "%d", &cfg.DBPort)
+	cfg.DBUser = ask("DB user", envOr("DB_USER", "dune"))
+	cfg.DBPass = ask("DB password", "")
+	if cfg.DBPass == "" {
+		fmt.Fprintln(os.Stderr, "Database password is required. Aborting.")
+		exitSetup(1)
+	}
+	cfg.DBName = ask("DB name", envOr("DB_NAME", "dune"))
+	cfg.DBSchema = ask("DB schema", envOr("DB_SCHEMA", "dune"))
+	fmt.Println()
+
+	fmt.Println("Connecting to database...")
+	dbHost = cfg.DBHost
+	dbPort = cfg.DBPort
+	dbUser = cfg.DBUser
+	dbPass = cfg.DBPass
+	dbName = cfg.DBName
+	dbSchema = cfg.DBSchema
+	globalExecutor = exec
+	pool, err := connectDBDirect(context.Background(), *cfg)
+	if err != nil {
+		fail("DB connect failed: " + err.Error())
+		exitSetup(1)
+	}
+	globalDB = pool
+	globalControl = newControlPlane("docker", *cfg)
+	ok("Database connected as: " + cfg.DBUser)
+	fmt.Println()
+
+	cfg.ScripCurrency = scripCurrencyID
+}
+
+// ── local setup flow ──────────────────────────────────────────────────────────
+
+func runLocalSetup(ask func(string, string) string, ok, fail func(string), cfg *appConfig) {
+	fmt.Println("Database connection:")
+	cfg.DBHost = ask("DB host", "127.0.0.1")
+	cfg.DBPort = dbPort
+	portStr := ask(fmt.Sprintf("DB port [%d]", dbPort), fmt.Sprintf("%d", dbPort))
+	fmt.Sscanf(portStr, "%d", &cfg.DBPort)
+	cfg.DBUser = ask("DB user", envOr("DB_USER", "dune"))
+	cfg.DBPass = ask("DB password", "")
+	if cfg.DBPass == "" {
+		fmt.Fprintln(os.Stderr, "Database password is required. Aborting.")
+		exitSetup(1)
+	}
+	cfg.DBName = ask("DB name", envOr("DB_NAME", "dune"))
+	cfg.DBSchema = ask("DB schema", envOr("DB_SCHEMA", "dune"))
+	fmt.Println()
+
+	fmt.Println("Server control commands (optional — leave blank to skip):")
+	cfg.CmdStart = ask("Start command (e.g. 'amp start dune')", "")
+	cfg.CmdStop = ask("Stop command", "")
+	cfg.CmdRestart = ask("Restart command", "")
+	cfg.CmdStatus = ask("Status command", "")
+	fmt.Println()
+
+	fmt.Println("Connecting to database...")
+	dbHost = cfg.DBHost
+	dbPort = cfg.DBPort
+	dbUser = cfg.DBUser
+	dbPass = cfg.DBPass
+	dbName = cfg.DBName
+	dbSchema = cfg.DBSchema
+	exec := &localExecutor{}
+	globalExecutor = exec
+	pool, err := connectDBDirect(context.Background(), *cfg)
+	if err != nil {
+		fail("DB connect failed: " + err.Error())
+		exitSetup(1)
+	}
+	globalDB = pool
+	globalControl = newControlPlane("local", *cfg)
+	ok("Database connected as: " + cfg.DBUser)
+	fmt.Println()
+
+	cfg.ScripCurrency = scripCurrencyID
+}
+
+// ── Write config ──────────────────────────────────────────────────────────────
+
+func writeSetupConfig(ok, fail func(string), cfg appConfig) {
 	cfgDir := configDir()
 	if err := os.MkdirAll(cfgDir, 0700); err != nil {
 		fail("Failed to create config directory: " + err.Error())
 		exitSetup(1)
-	}
-
-	cfg := appConfig{
-		SSHHost:       sshHost,
-		SSHUser:       sshUser,
-		SSHKey:        keyPath,
-		DBPort:        dbPort,
-		DBUser:        dbUser,
-		DBPass:        dbPass,
-		DBName:        dbName,
-		DBSchema:      dbSchema,
-		ScripCurrency: scripCurrencyID,
-		ListenAddr:    listenAddr,
 	}
 	cfgData, err := yaml.Marshal(cfg)
 	if err != nil {
@@ -231,10 +362,5 @@ func runSetup() {
 		exitSetup(1)
 	}
 	ok("Config written to " + cfgFile)
-	fmt.Println()
-
-	fmt.Println("Setup complete.")
-	fmt.Println()
-	fmt.Println("  Run: dune-admin")
 	fmt.Println()
 }
