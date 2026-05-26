@@ -116,9 +116,8 @@ function RawSectionPanel({ section, onSaved }: { section: RawSection; onSaved: (
   const [saving, setSaving]   = useState(false)
   const textareaRef           = useRef<HTMLTextAreaElement>(null)
 
-  // userGame edits go to UserOverrides.ini; engine edits go to UserEngine.ini
-  const target = section.source === 'userEngine' ? 'userEngine' : 'userOverrides'
-  const targetLabel = target === 'userEngine' ? 'UserEngine.ini' : 'UserOverrides.ini'
+  const target = 'userOverrides' as const
+  const targetLabel = 'UserOverrides.ini'
 
   const startEdit = () => {
     setDraft(linesToText(section.lines))
@@ -163,9 +162,6 @@ function RawSectionPanel({ section, onSaved }: { section: RawSection; onSaved: (
         <div className="ml-auto flex items-center gap-1">
           {editing ? (
             <>
-              {section.source === 'userGame' && (
-                <span className="text-xs text-muted mr-1">→ {targetLabel}</span>
-              )}
               <Button size="sm" variant="ghost" onPress={cancel} isDisabled={saving}>
                 Cancel
               </Button>
@@ -349,7 +345,7 @@ export default function ServerSettingsTab() {
           return (
             <div key={src} className="flex flex-col gap-3">
               <p className="text-xs text-muted shrink-0 px-0.5">
-                Read-only reference — <span className="font-mono">{SOURCE_FILE[src]}</span>
+                <span className="font-mono">{SOURCE_FILE[src]}</span>
               </p>
               {sections.map((sec, i) => (
                 <RawSectionPanel key={`${src}-${i}`} section={sec} onSaved={load} />

@@ -472,9 +472,9 @@ func handleUpdateServerSettings(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleUpdateRawSection replaces a single INI section in UserOverrides.ini or
-// UserEngine.ini with the caller-supplied raw lines. Edits to userGame sections
-// are redirected to UserOverrides.ini (same section name, override pattern).
+// handleUpdateRawSection replaces a single INI section in UserOverrides.ini
+// with the caller-supplied raw lines. All edits go to UserOverrides.ini
+// regardless of source — it is the final overlay layer for all settings.
 func handleUpdateRawSection(w http.ResponseWriter, r *http.Request) {
 	if globalExecutor == nil {
 		jsonErr(w, fmt.Errorf("not connected"), 503)
@@ -488,7 +488,6 @@ func handleUpdateRawSection(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		Section string `json:"section"` // INI section name (without brackets)
-		Target  string `json:"target"`  // "userOverrides" | "userEngine"
 		Lines   string `json:"lines"`   // raw INI lines for this section (no header)
 	}
 	if err := decode(r, &req); err != nil {
@@ -496,13 +495,7 @@ func handleUpdateRawSection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var filePath string
-	switch req.Target {
-	case "userEngine":
-		filePath = dir + "/UserEngine.ini"
-	default:
-		filePath = dir + "/UserOverrides.ini"
-	}
+	filePath := dir + "/UserOverrides.ini"
 
 	existing := readINIContent(filePath)
 	updated := replaceSectionContent(existing, req.Section, strings.TrimSpace(req.Lines))

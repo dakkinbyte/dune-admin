@@ -151,7 +151,7 @@ export const api = {
     get: () => req<ServerSettingsResponse>('GET', '/server-settings'),
     update: (updates: ServerSettingUpdate[]) =>
       req<{ ok: string; applied: number; cleared: number }>('PUT', '/server-settings', { updates }),
-    updateRaw: (section: string, target: 'userOverrides' | 'userEngine', lines: string) =>
+    updateRaw: (section: string, target: 'userOverrides', lines: string) =>
       req<{ ok: string }>('PUT', '/server-settings/raw', { section, target, lines }),
   },
 
