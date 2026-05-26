@@ -71,6 +71,10 @@ func runSetup() {
 		runLocalSetup(ask, ok, fail, &cfg)
 	}
 
+	// ── Market bot (optional) ──────────────────────────────────────────────────
+
+	runMarketBotSetup(ask, ok, ctrl, &cfg)
+
 	// ── Common: listen address ─────────────────────────────────────────────────
 
 	fmt.Println("Server config:")
@@ -341,6 +345,56 @@ func runLocalSetup(ask func(string, string) string, ok, fail func(string), cfg *
 	fmt.Println()
 
 	cfg.ScripCurrency = scripCurrencyID
+}
+
+// ── Market bot setup (optional) ───────────────────────────────────────────────
+
+// runMarketBotSetup asks optional market-bot connection details.
+// Defaults: container/deployment = "market-bot"; addr derived from SSH host
+// (kubectl) or localhost (docker/local). Blank responses skip the section.
+func runMarketBotSetup(ask func(string, string) string, ok func(string), ctrl string, cfg *appConfig) {
+	fmt.Println("Market bot (optional — press Enter to skip each field):")
+
+	// Compute a sensible default address.
+	defaultAddr := "http://localhost:8081"
+	if ctrl == "kubectl" && sshHost != "" {
+		host := sshHost
+		if h, _, err := splitHostPort(host); err == nil {
+			host = h
+		}
+		defaultAddr = "http://" + host + ":8081"
+	}
+
+	cfg.MarketBotAddr = ask("Bot API address", defaultAddr)
+	if cfg.MarketBotAddr == defaultAddr && defaultAddr == "http://localhost:8081" {
+		// Treat unchanged localhost default as "not configured" on docker/local only
+		// when user didn't explicitly confirm it.
+	}
+
+	// Only ask for the rest if an address was supplied.
+	if cfg.MarketBotAddr != "" {
+		cfg.MarketBotToken = ask("Bot API token (optional)", "")
+		cfg.MarketBotContainer = ask("Bot deployment/container name", "market-bot")
+		if ctrl == "kubectl" {
+			cfg.MarketBotNamespace = ask("Bot k8s namespace", "dune-market-bot")
+		}
+		marketBotAddr = cfg.MarketBotAddr
+		marketBotToken = cfg.MarketBotToken
+		marketBotContainer = cfg.MarketBotContainer
+		marketBotNamespace = cfg.MarketBotNamespace
+		ok("Market bot configured at " + cfg.MarketBotAddr)
+	}
+	fmt.Println()
+}
+
+// splitHostPort splits host:port. Returns an error if no port is present.
+func splitHostPort(hostport string) (host, port string, err error) {
+	for i := len(hostport) - 1; i >= 0; i-- {
+		if hostport[i] == ':' {
+			return hostport[:i], hostport[i+1:], nil
+		}
+	}
+	return "", "", fmt.Errorf("no port")
 }
 
 // ── Write config ──────────────────────────────────────────────────────────────
