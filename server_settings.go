@@ -1,8 +1,17 @@
 package main
 
 // Server Settings — read/write tuning keys for the running Dune dedicated
-// server via the AMP-blessed UserOverrides.ini append file. Direct mode only;
-// SSH mode would need a different file path and mechanism.
+// server. Writes a clearly-marked dune-admin block into UserGame.ini ABOVE
+// the AMP marker. Direct mode only; SSH mode would need a different file
+// path and mechanism.
+//
+// History: an earlier version wrote to state/UserOverrides.ini and relied
+// on AMP's prestart.sh to append it past the marker at instance start. That
+// append step was empirically not picking up our writes (the prestart merge
+// produced the empty template instead of our content, root cause unconfirmed),
+// so writes were silently dropped. Pivoted to writing UserGame.ini directly,
+// in a delimited section we own — the game reads UserGame.ini at startup so
+// values land correctly.
 
 import (
 	"encoding/json"
@@ -13,31 +22,27 @@ import (
 	"strings"
 )
 
-// Where AMP appends overrides to UserGame.ini at server start.
-// This path is also baked into /etc/sudoers.d/dune-admin — keep them in sync.
-const userOverridesPath = "/home/amp/.ampdata/instances/MehDune01/duneawakening/server/state/UserOverrides.ini"
-
-// AMP's primary UserGame.ini, edited by the AMP UI (or by hand above the
-// marker line). We read this so the dune-admin UI can reflect what's already
-// set there. WRITES still go only to UserOverrides.ini — we don't touch
-// UserGame.ini ever.
+// AMP's primary UserGame.ini — the file Unreal actually reads at startup.
+// Our managed section goes INSIDE this file, above the AMP marker.
+// This path is baked into /etc/sudoers.d/dune-admin — keep them in sync.
 const userGameIniPath = "/home/amp/.ampdata/instances/MehDune01/duneawakening/server/state/ue5-saved/UserSettings/UserGame.ini"
 
-// The literal marker AMP writes into UserGame.ini before appending
-// UserOverrides.ini. We read only the content above this line.
-const userOverridesMarker = "; >>>>> AMP: UserOverrides.ini appended below"
+// AMP's marker — appended UserOverrides.ini contents live BELOW this line.
+// We insert our managed section immediately ABOVE this line.
+const ampMarker = "; >>>>> AMP: UserOverrides.ini appended below"
 
-const userOverridesHeader = `; ============================================================================
-; UserOverrides.ini  -  managed by dune-admin (Server Settings tab)
+// dune-admin's own BEGIN/END markers, demarcating the section we manage.
+// Anything outside these markers in UserGame.ini is untouched on write.
+const dabBegin = "; >>>>> dune-admin: managed section below — do not edit by hand >>>>>"
+const dabEnd = "; <<<<< dune-admin: end of managed section <<<<<"
+
+const dabHeader = `; ============================================================================
+; Managed by dune-admin (Server Settings tab). Anything between the
+; dune-admin BEGIN and END markers is overwritten on each save here. Hand
+; edits to other parts of UserGame.ini are preserved.
 ;
-; Anything in this file is appended to UserGame.ini on every server start,
-; AFTER AMP has written its managed settings. Keys here win over AMP's.
-;
-; Hand-edits are preserved on next dune-admin save IF the section/key is one
-; dune-admin doesn't know about. Known keys may be overwritten.
-;
-; To apply changes: restart the Dune instance via AMP UI or:
-;   sudo ampinstmgr -q MehDune01 && sudo ampinstmgr -s MehDune01
+; To apply changes: restart the Dune instance via the AMP UI or:
+;   sudo -i -u amp ampinstmgr -q MehDune01 && sudo -i -u amp ampinstmgr -s MehDune01
 ; ============================================================================
 `
 
@@ -152,26 +157,63 @@ func findSettingDef(section, key string) *settingDef {
 
 // ── Read / parse ────────────────────────────────────────────────────────────
 
-func readUserOverrides() (map[string]map[string]string, error) {
-	out, err := exec.Command("sudo", "-u", "amp", "/usr/bin/cat", userOverridesPath).Output()
+// readUserGameRaw returns the full UserGame.ini content (or an error).
+func readUserGameRaw() (string, error) {
+	out, err := exec.Command("sudo", "-u", "amp", "/usr/bin/cat", userGameIniPath).Output()
 	if err != nil {
-		return nil, fmt.Errorf("read %s: %w", userOverridesPath, err)
+		return "", fmt.Errorf("read %s: %w", userGameIniPath, err)
 	}
-	return parseINI(string(out)), nil
+	return string(out), nil
 }
 
-// readUserGameIni reads the content of UserGame.ini ABOVE the AMP marker.
-// Best-effort: returns an empty map (no error) if sudo/read fails, since
-// UserGame.ini access is optional — we still serve the UI from UserOverrides
-// + defaults if this is unreachable.
-func readUserGameIni() map[string]map[string]string {
-	out, err := exec.Command("sudo", "-u", "amp", "/usr/bin/cat", userGameIniPath).Output()
+// extractDuneAdminBlock returns the substring of UserGame.ini between dabBegin
+// and dabEnd (exclusive). Empty string if no markers present.
+func extractDuneAdminBlock(content string) string {
+	bi := strings.Index(content, dabBegin)
+	if bi < 0 {
+		return ""
+	}
+	bi += len(dabBegin)
+	rest := content[bi:]
+	ei := strings.Index(rest, dabEnd)
+	if ei < 0 {
+		return ""
+	}
+	return rest[:ei]
+}
+
+// readManagedSection reads the dune-admin managed block inside UserGame.ini
+// and parses it as INI. This is "what dune-admin has written".
+func readManagedSection() (map[string]map[string]string, error) {
+	raw, err := readUserGameRaw()
+	if err != nil {
+		return nil, err
+	}
+	return parseINI(extractDuneAdminBlock(raw)), nil
+}
+
+// readUserGameHandEdits returns UserGame.ini content ABOVE the AMP marker AND
+// OUTSIDE the dune-admin managed block, parsed as INI. This is "what the user
+// set via AMP UI / hand-edits", distinct from our managed values.
+// Best-effort: returns empty map on read failure (no error).
+func readUserGameHandEdits() map[string]map[string]string {
+	raw, err := readUserGameRaw()
 	if err != nil {
 		return map[string]map[string]string{}
 	}
-	content := string(out)
-	if idx := strings.Index(content, userOverridesMarker); idx >= 0 {
+	content := raw
+	// Trim everything from the AMP marker onward (that's UserOverrides.ini
+	// content appended by AMP; not user hand-edits).
+	if idx := strings.Index(content, ampMarker); idx >= 0 {
 		content = content[:idx]
+	}
+	// Also strip the dune-admin managed block — those are OUR writes, not
+	// hand-edits.
+	if bi := strings.Index(content, dabBegin); bi >= 0 {
+		ei := strings.Index(content, dabEnd)
+		if ei > bi {
+			content = content[:bi] + content[ei+len(dabEnd):]
+		}
 	}
 	return parseINI(content)
 }
@@ -205,11 +247,22 @@ func parseINI(content string) map[string]map[string]string {
 
 // ── Write ───────────────────────────────────────────────────────────────────
 
-func writeUserOverrides(values map[string]map[string]string) error {
-	var sb strings.Builder
-	sb.WriteString(userOverridesHeader)
+// writeManagedSection rewrites the dune-admin block inside UserGame.ini
+// without touching anything outside the BEGIN..END markers. If the markers
+// don't exist yet, the block is inserted directly above the AMP marker
+// (or appended at end-of-file if the AMP marker is also missing).
+func writeManagedSection(values map[string]map[string]string) error {
+	raw, err := readUserGameRaw()
+	if err != nil {
+		return err
+	}
 
-	// Stable section order (schema order, then anything else alphabetically)
+	// Build the new managed block (what goes between dabBegin..dabEnd).
+	var block strings.Builder
+	block.WriteString("\n")
+	block.WriteString(dabHeader)
+
+	// Stable section order (schema order, then anything else alphabetically).
 	written := map[string]bool{}
 	for _, def := range serverSettingsSchema {
 		if written[def.Section] {
@@ -217,20 +270,54 @@ func writeUserOverrides(values map[string]map[string]string) error {
 		}
 		written[def.Section] = true
 		if kvs, ok := values[def.Section]; ok && len(kvs) > 0 {
-			writeSection(&sb, def.Section, kvs)
+			writeSection(&block, def.Section, kvs)
 		}
 	}
 	for section, kvs := range values {
 		if written[section] || len(kvs) == 0 {
 			continue
 		}
-		writeSection(&sb, section, kvs)
+		writeSection(&block, section, kvs)
+	}
+	block.WriteString("\n")
+
+	full := dabBegin + "\n" + block.String() + dabEnd + "\n"
+
+	// Splice into UserGame.ini.
+	var newContent string
+	if bi := strings.Index(raw, dabBegin); bi >= 0 {
+		// Existing managed block — replace BEGIN..END (inclusive) in place.
+		ei := strings.Index(raw, dabEnd)
+		if ei < bi {
+			return fmt.Errorf("malformed UserGame.ini: dabBegin without matching dabEnd")
+		}
+		ei += len(dabEnd)
+		// Skip trailing newline after dabEnd if present, so we don't accumulate blank lines.
+		if ei < len(raw) && raw[ei] == '\n' {
+			ei++
+		}
+		newContent = raw[:bi] + full + raw[ei:]
+	} else if mi := strings.Index(raw, ampMarker); mi >= 0 {
+		// No existing managed block — insert immediately above the AMP marker.
+		// Walk back to the start of the AMP marker's line.
+		lineStart := mi
+		for lineStart > 0 && raw[lineStart-1] != '\n' {
+			lineStart--
+		}
+		newContent = raw[:lineStart] + full + raw[lineStart:]
+	} else {
+		// No AMP marker either — append at end of file.
+		sep := ""
+		if len(raw) > 0 && raw[len(raw)-1] != '\n' {
+			sep = "\n"
+		}
+		newContent = raw + sep + full
 	}
 
-	cmd := exec.Command("sudo", "-u", "amp", "/usr/bin/tee", userOverridesPath)
-	cmd.Stdin = strings.NewReader(sb.String())
+	cmd := exec.Command("sudo", "-u", "amp", "/usr/bin/tee", userGameIniPath)
+	cmd.Stdin = strings.NewReader(newContent)
 	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("write %s: %w (%s)", userOverridesPath, err, out)
+		return fmt.Errorf("write %s: %w (%s)", userGameIniPath, err, out)
 	}
 	return nil
 }
@@ -312,24 +399,24 @@ func handleGetServerSettings(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 
-	overrides, err := readUserOverrides()
+	managed, err := readManagedSection()
 	if err != nil {
 		jsonErr(w, err, http.StatusInternalServerError)
 		return
 	}
-	// UserGame.ini is best-effort: returns empty map on read failure.
-	userGame := readUserGameIni()
+	// Hand-edits in UserGame.ini outside our managed block — best-effort.
+	handEdits := readUserGameHandEdits()
 
 	items := make([]serverSettingItem, 0, len(serverSettingsSchema))
 	for _, def := range serverSettingsSchema {
 		var current, source string
-		// UserOverrides.ini wins (it's appended after UserGame.ini at server start).
-		if v := overrides[def.Section][def.Key]; v != "" {
+		// Our managed section wins (it's an explicit dune-admin write).
+		if v := managed[def.Section][def.Key]; v != "" {
 			current = v
-			source = "userOverrides"
-		} else if v := userGame[def.Section][def.Key]; v != "" {
+			source = "userOverrides" // kept for UI-payload compatibility — means "dune-admin managed"
+		} else if v := handEdits[def.Section][def.Key]; v != "" {
 			current = v
-			source = "userGame"
+			source = "userGame" // means "AMP UI / hand-edit"
 		}
 		items = append(items, serverSettingItem{
 			settingDef:   def,
@@ -359,7 +446,7 @@ func handleUpdateServerSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	overrides, err := readUserOverrides()
+	managed, err := readManagedSection()
 	if err != nil {
 		jsonErr(w, err, http.StatusInternalServerError)
 		return
@@ -374,8 +461,8 @@ func handleUpdateServerSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if u.Value == "" {
-			if overrides[u.Section] != nil {
-				delete(overrides[u.Section], u.Key)
+			if managed[u.Section] != nil {
+				delete(managed[u.Section], u.Key)
 				cleared++
 			}
 			continue
@@ -385,14 +472,14 @@ func handleUpdateServerSettings(w http.ResponseWriter, r *http.Request) {
 			jsonErr(w, fmt.Errorf("%s/%s: %w", u.Section, u.Key, err), http.StatusBadRequest)
 			return
 		}
-		if overrides[u.Section] == nil {
-			overrides[u.Section] = map[string]string{}
+		if managed[u.Section] == nil {
+			managed[u.Section] = map[string]string{}
 		}
-		overrides[u.Section][u.Key] = formatted
+		managed[u.Section][u.Key] = formatted
 		applied++
 	}
 
-	if err := writeUserOverrides(overrides); err != nil {
+	if err := writeManagedSection(managed); err != nil {
 		jsonErr(w, err, http.StatusInternalServerError)
 		return
 	}
