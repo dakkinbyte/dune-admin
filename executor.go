@@ -169,7 +169,7 @@ func (e *localExecutor) Stream(cmd string) (<-chan string, func(), error) {
 }
 
 func (e *localExecutor) PipeToWriter(cmd string, w io.Writer) error {
-	c := exec.Command("sh", "-c", cmd)
+	c := exec.Command("sh", "-c", cmd) // #nosec G702 -- all callers build cmd via shellQuote
 	c.Stdout = w
 	var errBuf bytes.Buffer
 	c.Stderr = &errBuf

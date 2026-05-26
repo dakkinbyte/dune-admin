@@ -70,7 +70,7 @@ gosec:
 	go tool github.com/securego/gosec/v2/cmd/gosec -severity high -confidence high ./...
 
 npm-audit:
-	cd web && npm audit --audit-level=high
+	cd web && pnpm audit --audit-level=high
 
 verify:
 	@$(MAKE) fmt-check && \
