@@ -1,4 +1,4 @@
-.PHONY: build web go linux dev-server setup deploy-web \
+.PHONY: build web go linux dev dev-server setup deploy-web \
         vulncheck gosec pnpm-audit \
         test test-race vet fmt fmt-check \
         tools verify \
@@ -31,6 +31,9 @@ linux:
 
 dev-server:
 	go run .
+
+dev:
+	go tool github.com/air-verse/air
 
 setup:
 	go run . -setup
@@ -86,6 +89,7 @@ tools:
 	@echo "Caching dev tools (versions pinned in go.mod)..."
 	@go tool golang.org/x/vuln/cmd/govulncheck -version || true
 	@go tool github.com/securego/gosec/v2/cmd/gosec --version || true
+	@go tool github.com/air-verse/air -v || true
 	@echo "Done!"
 
 # Print current version.
