@@ -155,6 +155,12 @@ export const api = {
       req<MutateResult>('POST', '/players/grant-max-spec', { player_id, track_type }),
     grantAllKeystones: (player_id: number) =>
       req<MutateResult>('POST', '/players/grant-all-keystones', { player_id }),
+    resetAllKeystones: (player_id: number) =>
+      req<MutateResult>('POST', '/players/reset-all-keystones', { player_id }),
+    reverseContracts: (account_id: number, contract_ids: string[]) =>
+      req<MutateResult>('POST', '/players/contracts/reverse', { account_id, contract_ids }),
+    progressionReverse: (player_id: number, faction: string, preset: string) =>
+      req<MutateResult>('POST', '/players/progression-reverse', { player_id, faction, preset }),
     vehicles: (controller_id: number) => req<VehicleRow[]>('GET', `/players/${controller_id}/vehicles`),
     repairItem: (id: number) => req<MutateResult>('POST', '/players/repair-item', { id }),
     repairGear: (player_id: number) =>
