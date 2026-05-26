@@ -269,9 +269,10 @@ func handleBGBackupUpload(w http.ResponseWriter, r *http.Request) {
 // can be extended without touching the HTTP handler.
 func restoreViaControl(ctx context.Context, filename string) (string, error) {
 	// kubectl uses the battlegroup.sh import script.
+	// TODO: NEVER run battlegroup.sh with sudo — see ExecCommand in control_kubectl.go.
 	if globalControl != nil && globalControl.Name() == "kubectl" {
 		return globalExecutor.Exec(fmt.Sprintf(
-			`echo yes | sudo ~/.dune/download/scripts/battlegroup.sh import %s 2>&1`,
+			`echo yes | ~/.dune/download/scripts/battlegroup.sh import %s 2>&1`,
 			shellQuote(filename)))
 	}
 	// docker / local: pg_restore from the backup directory.

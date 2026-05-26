@@ -90,8 +90,12 @@ func (c *kubectlControl) ExecCommand(_ context.Context, exec Executor, cmd strin
 			`sudo kubectl patch battlegroup %s -n %s --type=merge -p '{"spec":{"stop":true}}' 2>/dev/null && sleep 5 && sudo kubectl patch battlegroup %s -n %s --type=merge -p '{"spec":{"stop":false}}' 2>/dev/null && echo "Battlegroup restarting"`,
 			bgName, ns, bgName, ns))
 	default:
-		// update / backup delegate to the battlegroup script.
-		return exec.Exec(fmt.Sprintf("sudo ~/.dune/download/scripts/battlegroup.sh %s 2>&1", cmd))
+		// TODO: NEVER run battlegroup.sh with sudo. The script manages files under
+		// /home/dune/.dune/ and runs as the dune user. Using sudo corrupts ownership
+		// of those files (bin/, symlinks, etc.) and breaks all subsequent battlegroup
+		// commands until permissions are manually repaired. kubectl commands above
+		// legitimately need sudo; battlegroup.sh does NOT.
+		return exec.Exec(fmt.Sprintf("~/.dune/download/scripts/battlegroup.sh %s 2>&1", cmd))
 	}
 }
 
