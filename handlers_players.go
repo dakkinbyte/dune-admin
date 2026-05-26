@@ -635,6 +635,29 @@ func handleProgressionUnlock(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+func handleProgressionReverse(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		PlayerID int64  `json:"player_id"`
+		Faction  string `json:"faction"`
+		Preset   string `json:"preset"`
+	}
+	if err := decode(r, &req); err != nil {
+		jsonErr(w, err, 400)
+		return
+	}
+	msg, ok := cmdReverseProgressionUnlock(req.PlayerID, req.Faction, req.Preset)().(msgMutate)
+	if !ok {
+		jsonErr(w, fmt.Errorf("internal error"), 500)
+		return
+	}
+	if msg.err != nil {
+		jsonErr(w, msg.err, 500)
+		return
+	}
+	invalidateAllJourneyCache()
+	jsonOK(w, map[string]string{"ok": msg.ok})
+}
+
 func handleJourneyComplete(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		AccountID int64  `json:"account_id"`
@@ -752,6 +775,28 @@ func handleCompleteContracts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	msg, ok := cmdCompleteContracts(req.AccountID, req.ContractIDs)().(msgMutate)
+	if !ok {
+		jsonErr(w, fmt.Errorf("internal error"), 500)
+		return
+	}
+	if msg.err != nil {
+		jsonErr(w, msg.err, 500)
+		return
+	}
+	invalidateJourneyCache(req.AccountID)
+	jsonOK(w, map[string]string{"ok": msg.ok})
+}
+
+func handleReverseContracts(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		AccountID   int64    `json:"account_id"`
+		ContractIDs []string `json:"contract_ids"`
+	}
+	if err := decode(r, &req); err != nil {
+		jsonErr(w, err, 400)
+		return
+	}
+	msg, ok := cmdReverseContracts(req.AccountID, req.ContractIDs)().(msgMutate)
 	if !ok {
 		jsonErr(w, fmt.Errorf("internal error"), 500)
 		return
@@ -897,6 +942,26 @@ func handleGrantAllKeystones(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	msg, ok := cmdGrantAllKeystones(req.PlayerID)().(msgMutate)
+	if !ok {
+		jsonErr(w, fmt.Errorf("internal error"), 500)
+		return
+	}
+	if msg.err != nil {
+		jsonErr(w, msg.err, 500)
+		return
+	}
+	jsonOK(w, map[string]string{"ok": msg.ok})
+}
+
+func handleResetAllKeystones(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		PlayerID int64 `json:"player_id"`
+	}
+	if err := decode(r, &req); err != nil {
+		jsonErr(w, err, 400)
+		return
+	}
+	msg, ok := cmdResetAllKeystones(req.PlayerID)().(msgMutate)
 	if !ok {
 		jsonErr(w, fmt.Errorf("internal error"), 500)
 		return

@@ -1655,6 +1655,102 @@ func cmdCompleteContracts(accountID int64, contractIDs []string) Cmd {
 	}
 }
 
+// cmdReverseContracts removes the AddedFlagsOnCompletion tags and strips the
+// Skills.Key.* ModuleData entries that cmdCompleteContracts wrote. Skill blocks
+// are only removed when SkillPointsSpent <= 1 — branches the player genuinely
+// levelled beyond the admin grant are left intact.
+func cmdReverseContracts(accountID int64, contractIDs []string) Cmd {
+	return func() Msg {
+		if globalDB == nil {
+			return msgMutate{err: fmt.Errorf("not connected")}
+		}
+		if accountID == 0 {
+			return msgMutate{err: fmt.Errorf("account ID required")}
+		}
+		if len(contractIDs) == 0 {
+			return msgMutate{err: fmt.Errorf("at least one contract required")}
+		}
+
+		seenTag := map[string]bool{}
+		var removeTags []string
+		seenSkill := map[string]bool{}
+		var removeSkills []string
+		var resolved []string
+
+		for _, id := range contractIDs {
+			name, tags, err := resolveContractTags(id)
+			if err != nil {
+				return msgMutate{err: err}
+			}
+			resolved = append(resolved, name)
+			for _, t := range tags {
+				if !seenTag[t] {
+					seenTag[t] = true
+					removeTags = append(removeTags, t)
+				}
+			}
+			for _, sk := range tagsData.ContractSkillGrants[name] {
+				if !seenSkill[sk] {
+					seenSkill[sk] = true
+					removeSkills = append(removeSkills, sk)
+				}
+			}
+		}
+
+		ctx := context.Background()
+
+		if len(removeTags) > 0 {
+			if _, err := globalDB.Exec(ctx,
+				`SELECT dune.update_player_tags($1, '{}'::text[], $2::text[])`,
+				accountID, removeTags); err != nil {
+				return msgMutate{err: fmt.Errorf("remove tags: %w", err)}
+			}
+		}
+
+		stripped := 0
+		if len(removeSkills) > 0 {
+			var pawnID int64
+			_ = globalDB.QueryRow(ctx,
+				`SELECT player_pawn_id FROM dune.player_state WHERE account_id = $1 LIMIT 1`,
+				accountID).Scan(&pawnID)
+			if pawnID != 0 {
+				for _, sk := range removeSkills {
+					key := fmt.Sprintf(`(TagName="%s")`, sk)
+					tag, err := globalDB.Exec(ctx, `
+						UPDATE dune.fgl_entities fe
+						SET components = jsonb_set(
+							fe.components,
+							ARRAY['FLevelComponent','1','ModuleData'],
+							(fe.components->'FLevelComponent'->1->'ModuleData') - $2::text)
+						WHERE fe.entity_id = (
+							SELECT entity_id FROM dune.actor_fgl_entities
+							WHERE actor_id = $1 AND slot_name = 'DuneCharacter'
+						)
+						AND COALESCE(
+							(fe.components->'FLevelComponent'->1->'ModuleData'->$2->>'SkillPointsSpent')::int,
+							0
+						) <= 1`,
+						pawnID, key)
+					if err != nil {
+						return msgMutate{err: fmt.Errorf("strip %s: %w", sk, err)}
+					}
+					if tag.RowsAffected() > 0 {
+						stripped++
+					}
+				}
+			}
+		}
+
+		summary := resolved[0]
+		if len(resolved) > 1 {
+			summary = fmt.Sprintf("%d contracts", len(resolved))
+		}
+		return msgMutate{ok: fmt.Sprintf(
+			"Reversed %s: removed %d tag(s), stripped %d skill block(s) — takes effect on next login",
+			summary, len(removeTags), stripped)}
+	}
+}
+
 // cmdResetJobSkills removes every ModuleData entry whose SkillArea matches
 // the named job — Key blocks, Abilities, Attributes, Perks — fully nuking
 // that class's skill tree. Key-block removal alone leaves orphaned ability
@@ -2318,6 +2414,124 @@ func cmdProgressionUnlock(actorID int64, faction, preset string) Cmd {
 		return msgMutate{ok: fmt.Sprintf(
 			"Progression unlock (%s/%s): %d journey nodes completed + %s tier tags 0–%d + rep tier %d on controller %d — takes effect on next login",
 			preset, faction, len(journeyNodes), factionName, maxTier, targetTier, controllerID)}
+	}
+}
+
+// cmdReverseProgressionUnlock undoes cmdProgressionUnlock: resets the journey
+// nodes from nodesForPreset back to not-complete and removes all tags the
+// forward function wrote. Reputation and faction alignment are not touched —
+// matching the existing per-node reset behaviour.
+func cmdReverseProgressionUnlock(actorID int64, faction, preset string) Cmd {
+	return func() Msg {
+		if globalDB == nil {
+			return msgMutate{err: fmt.Errorf("not connected")}
+		}
+
+		var factionID int16
+		var dialogueFlag, alignedFlag, metRecruiterFlag, factionUnlocked, recruitmentDone string
+		switch faction {
+		case "atreides":
+			factionID = 1
+			dialogueFlag = "DialogueFlags.Factions.SentToMeetHawat"
+			alignedFlag = "DialogueFlags.Factions.AlignedAtreides"
+			metRecruiterFlag = "DialogueFlags.Factions.MetHawat"
+			factionUnlocked = "Contract.Tracking.AtreidesFactionUnlocked"
+			recruitmentDone = "Contract.Tracking.AtreidesRecruitmentCompleted"
+		case "harkonnen":
+			factionID = 2
+			dialogueFlag = "DialogueFlags.Factions.SentToPiterDeVries"
+			alignedFlag = "DialogueFlags.Factions.AlignedHarkonnen"
+			metRecruiterFlag = "DialogueFlags.Factions.MetPiterDeVries"
+			factionUnlocked = "Contract.Tracking.HarkonnenFactionUnlocked"
+			recruitmentDone = "Contract.Tracking.HarkonnenRecruitmentCompleted"
+		default:
+			return msgMutate{err: fmt.Errorf("faction must be atreides or harkonnen")}
+		}
+
+		var targetTier int
+		switch preset {
+		case "ch3_start":
+			targetTier = 5
+		case "rank19_eligible":
+			targetTier = 19
+		default:
+			return msgMutate{err: fmt.Errorf("preset must be ch3_start or rank19_eligible")}
+		}
+
+		ctx := context.Background()
+
+		var accountID int64
+		if err := globalDB.QueryRow(ctx,
+			`SELECT COALESCE(owner_account_id, 0) FROM dune.actors WHERE id = $1`,
+			actorID).Scan(&accountID); err != nil || accountID == 0 {
+			return msgMutate{err: fmt.Errorf("player %d not found or has no account", actorID)}
+		}
+
+		// Build the exact same tag set the forward function writes so we can remove it.
+		factionName := factionDisplayName(factionID)
+		const maxTier = 5
+		allTags := []string{
+			dialogueFlag, alignedFlag, metRecruiterFlag,
+			factionUnlocked, recruitmentDone,
+			"DialogueFlags.Factions.FactionIntro",
+			"DialogueFlags.Factions.FactionRank1",
+			"DialogueFlags.Factions.FactionRank3",
+			"DialogueFlags.Factions.MetARecruiter",
+			"DialogueFlags.Factions.PlayedAllegianceCinematic",
+			"DialogueFlags.Factions.SeenAnvilCinematic",
+		}
+		if targetTier >= 19 {
+			allTags = append(allTags, "Journey.LandsraadContractsUnlocked")
+		}
+		for t := 0; t <= maxTier; t++ {
+			allTags = append(allTags, fmt.Sprintf("Faction.%s.Tier%d", factionName, t))
+		}
+
+		// Also collect any tags the journey nodes themselves emit on completion.
+		nodes := nodesForPreset(faction, preset)
+		seen := map[string]bool{}
+		for _, t := range allTags {
+			seen[t] = true
+		}
+		for _, node := range nodes {
+			for _, t := range tagsForJourneyNodeSubtree(node) {
+				if !seen[t] {
+					seen[t] = true
+					allTags = append(allTags, t)
+				}
+			}
+		}
+
+		tx, err := globalDB.Begin(ctx)
+		if err != nil {
+			return msgMutate{err: err}
+		}
+		defer tx.Rollback(ctx)
+
+		if _, err = tx.Exec(ctx,
+			`SELECT dune.update_player_tags($1, '{}'::text[], $2::text[])`,
+			accountID, allTags); err != nil {
+			return msgMutate{err: fmt.Errorf("remove tags: %w", err)}
+		}
+
+		result, err := tx.Exec(ctx, `
+			UPDATE dune.journey_story_node
+			SET complete_condition_state = 'false'::jsonb,
+			    has_pending_reward       = false
+			WHERE account_id = $1
+			  AND story_node_id = ANY($2::text[])`,
+			accountID, nodes)
+		if err != nil {
+			return msgMutate{err: fmt.Errorf("reset journey nodes: %w", err)}
+		}
+
+		if err := tx.Commit(ctx); err != nil {
+			return msgMutate{err: err}
+		}
+
+		return msgMutate{ok: fmt.Sprintf(
+			"Reversed progression unlock (%s/%s): reset %d node(s), removed %d tag(s) — takes effect on next login",
+			preset, faction, result.RowsAffected(), len(allTags))}
 	}
 }
 
@@ -3129,6 +3343,83 @@ func cmdGrantAllKeystones(playerID int64) Cmd {
 		return msgMutate{ok: fmt.Sprintf(
 			"Granted all keystones to player %d — SP %d → %d total, %d unspent (+%d keystone bonus)",
 			playerID, currentTotal, expectedTotal, expectedUnspent, keystoneBonus)}
+	}
+}
+
+// cmdResetAllKeystones is the inverse of cmdGrantAllKeystones: it deletes all
+// purchased keystones and rolls TotalSkillPoints/UnspentSkillPoints back to
+// the XP-derived baseline (no keystone bonus). Requires the player to be offline.
+func cmdResetAllKeystones(playerID int64) Cmd {
+	return func() Msg {
+		if globalDB == nil {
+			return msgMutate{err: fmt.Errorf("not connected")}
+		}
+
+		ctx := context.Background()
+
+		if err := checkPlayerOffline(ctx, playerID); err != nil {
+			return msgMutate{err: err}
+		}
+
+		// Read XP, current total SP, and non-starter spent SP — same query as
+		// cmdGrantAllKeystones so the arithmetic is symmetric.
+		var xp, currentTotal, spentSP int64
+		err := globalDB.QueryRow(ctx, `
+			SELECT
+				(fe.components->'FLevelComponent'->1->>'TotalXPEarned')::bigint,
+				(fe.components->'FLevelComponent'->1->>'TotalSkillPoints')::bigint,
+				COALESCE((
+					SELECT SUM((v->>'SkillPointsSpent')::int)
+					FROM jsonb_each(fe.components->'FLevelComponent'->1->'ModuleData') AS kv(k, v)
+					WHERE k != format('(TagName="%s")',
+						fe.components->'FLevelComponent'->1->'StarterSkillTreeTag'->>'TagName')
+				), 0)
+			FROM dune.fgl_entities fe
+			JOIN dune.actor_fgl_entities afe ON afe.entity_id = fe.entity_id
+			WHERE afe.slot_name = 'DuneCharacter'
+			  AND afe.actor_id = (
+				SELECT player_pawn_id FROM dune.player_state
+				WHERE player_controller_id = $1 LIMIT 1
+			  )`, playerID).Scan(&xp, &currentTotal, &spentSP)
+		if err != nil {
+			return msgMutate{err: fmt.Errorf("read FLevelComponent: %w", err)}
+		}
+
+		if _, err := globalDB.Exec(ctx,
+			`DELETE FROM dune.purchased_specialization_keystones WHERE player_id = $1`,
+			playerID); err != nil {
+			return msgMutate{err: fmt.Errorf("delete keystones: %w", err)}
+		}
+
+		level := int64(xpToLevel(xp))
+		newTotal := level
+		newUnspent := newTotal - spentSP - 1
+		if newUnspent < 0 {
+			newUnspent = 0
+		}
+
+		if _, err := globalDB.Exec(ctx, `
+			UPDATE dune.fgl_entities
+			SET components = jsonb_set(jsonb_set(
+				components,
+				'{FLevelComponent,1,TotalSkillPoints}',
+				to_jsonb($2::bigint)),
+				'{FLevelComponent,1,UnspentSkillPoints}',
+				to_jsonb($3::bigint))
+			WHERE entity_id = (
+				SELECT entity_id FROM dune.actor_fgl_entities
+				WHERE slot_name = 'DuneCharacter'
+				  AND actor_id = (
+					SELECT player_pawn_id FROM dune.player_state
+					WHERE player_controller_id = $1 LIMIT 1
+				  )
+			)`, playerID, newTotal, newUnspent); err != nil {
+			return msgMutate{err: fmt.Errorf("update skill points: %w", err)}
+		}
+
+		return msgMutate{ok: fmt.Sprintf(
+			"Reset all keystones for player %d — SP %d → %d total, %d unspent",
+			playerID, currentTotal, newTotal, newUnspent)}
 	}
 }
 

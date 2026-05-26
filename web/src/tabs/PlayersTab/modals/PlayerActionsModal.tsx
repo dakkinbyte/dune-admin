@@ -335,6 +335,13 @@ export function PlayerActionsModal({ player, open, onClose }: Props) {
                         ).then(() => setSpecsLoaded(false))}>
                         Grant Max Keystones
                       </Button>
+                      <Button size="sm" variant="danger-soft" isDisabled={busy}
+                        onPress={() => run(
+                          () => api.players.resetAllKeystones(player.controller_id),
+                          `Reset all keystones for ${player.name}`,
+                        ).then(() => setSpecsLoaded(false))}>
+                        Reset All Keystones
+                      </Button>
                     </div>
                     {player.online_status === 'Online' && onlineWarning}
                     {specsLoading ? (
@@ -485,6 +492,13 @@ export function PlayerActionsModal({ player, open, onClose }: Props) {
                           ).then(() => setNodesLoaded(false))}>
                           Apply Unlock
                         </Button>
+                        <Button size="sm" variant="danger-soft" isDisabled={busy}
+                          onPress={() => run(
+                            () => api.players.progressionReverse(player.id, unlockFaction, unlockPreset),
+                            `Reversed ${unlockPreset} (${unlockFaction}) for ${player.name}`,
+                          ).then(() => setNodesLoaded(false))}>
+                          Reverse Unlock
+                        </Button>
                       </div>
                     </Panel>
 
@@ -614,6 +628,13 @@ export function PlayerActionsModal({ player, open, onClose }: Props) {
                             `Completed ${selectedContracts.length} contract(s) for ${player.name}`,
                           ).then(() => { setSelectedContracts([]); setNodesLoaded(false) })}>
                           Apply Contract(s) ({selectedContracts.length})
+                        </Button>
+                        <Button size="sm" variant="danger-soft" isDisabled={busy || selectedContracts.length === 0}
+                          onPress={() => run(
+                            () => api.players.reverseContracts(player.account_id, selectedContracts),
+                            `Reversed ${selectedContracts.length} contract(s) for ${player.name}`,
+                          ).then(() => { setSelectedContracts([]); setNodesLoaded(false) })}>
+                          Reverse Contract(s) ({selectedContracts.length})
                         </Button>
                       </div>
 
