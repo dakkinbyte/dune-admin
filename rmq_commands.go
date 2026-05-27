@@ -2,15 +2,99 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"sync"
 	"time"
 )
+
+// randomChatGUID returns a 32-char uppercase hex string for FChatMessageData.m_Id.
+// Real game GUIDs are random across all bytes — formatting a UnixNano timestamp
+// as hex produces leading zeros that text-router's pre-filter rejects.
+func randomChatGUID() string {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		// Fallback: timestamp-based but still distinct, in case rand fails.
+		return strings.ToUpper(fmt.Sprintf("%032x", time.Now().UnixNano()))
+	}
+	return strings.ToUpper(hex.EncodeToString(b))
+}
 
 // serverCmdAuthToken is the static AuthToken the game server validates on
 // incoming server command envelopes. Extracted from send-dune-broadcast.
 const serverCmdAuthToken = "Nu6VmPWUMvdPMeB7qErr"
+
+// chatHostIDCache holds the captured HostId for publishCourierMessage's
+// AMQP user_id field. text-router's redirect filter only accepts messages
+// where user_id matches a known game-host identity (it silently drops
+// publishes with user_id="fls"). The HostId comes from the game-server JWT
+// in process args and is stable for the lifetime of the game-server
+// instance. We refresh on miss but otherwise cache it.
+var (
+	chatHostIDCacheMu  sync.RWMutex
+	chatHostIDCacheVal string
+)
+
+func cachedChatHostID() string {
+	chatHostIDCacheMu.RLock()
+	cached := chatHostIDCacheVal
+	chatHostIDCacheMu.RUnlock()
+	if cached != "" {
+		return cached
+	}
+	if globalControl == nil || globalExecutor == nil {
+		return "fls"
+	}
+	// Real chat publishes use a service-grain user_id of the form
+	//   sg.sh-{host-lowercase}-onhuqk.{server-grain-id}.game
+	// where server-grain-id is one of the partition-server identifiers
+	// (visible in `queue.server.<id>` queue names). We grab the first
+	// server grain we find — text-router maps grain → redirect-exchange,
+	// and any server's grain works for admin-side publishes.
+	host, _, err := globalControl.CaptureJWT(context.Background(), globalExecutor)
+	if err != nil || host == "" {
+		return "fls"
+	}
+	serverGrain := lookupAnyServerGrain()
+	if serverGrain == "" {
+		// Fall back to bare host id — text-router won't redirect but the
+		// publish still succeeds at the broker layer.
+		chatHostIDCacheMu.Lock()
+		chatHostIDCacheVal = host
+		chatHostIDCacheMu.Unlock()
+		return host
+	}
+	full := fmt.Sprintf("sg.sh-%s-onhuqk.%s.game", strings.ToLower(host), serverGrain)
+	chatHostIDCacheMu.Lock()
+	chatHostIDCacheVal = full
+	chatHostIDCacheMu.Unlock()
+	return full
+}
+
+// lookupAnyServerGrain returns one of the AMP-managed server-grain IDs by
+// listing the `queue.server.<id>` queues on the game broker and stripping the
+// prefix. Any one works for admin-side chat publishes.
+func lookupAnyServerGrain() string {
+	if globalControl == nil || globalExecutor == nil {
+		return ""
+	}
+	// rabbitmqctl list_queues name | grep ^queue.server.
+	amp, ok := globalControl.(*ampControl)
+	if !ok {
+		return ""
+	}
+	cmd := amp.buildRabbitmqctl("mq-game", "list_queues name")
+	out, err := globalExecutor.Exec(cmd + " 2>/dev/null | grep '^queue.server.' | head -1")
+	if err != nil || out == "" {
+		return ""
+	}
+	line := strings.TrimSpace(strings.Split(out, "\n")[0])
+	return strings.TrimPrefix(line, "queue.server.")
+}
 
 // ── core publish ──────────────────────────────────────────────────────────────
 
@@ -63,6 +147,26 @@ func publishServerCommand(fields map[string]any) error {
 
 // ── courier (chat) publish ────────────────────────────────────────────────────
 
+// channelExchange maps an m_ChannelType value to the chat output exchange the
+// text-router should redirect to. Used as the RedirectExchange AMQP header.
+func channelExchange(channel string) string {
+	switch channel {
+	case "Whispers":
+		return "chat.whispers"
+	case "Proximity":
+		return "chat.proximity"
+	case "Map":
+		return "chat.map"
+	case "Party":
+		return "" // party.{id} — caller must override
+	case "Faction":
+		return "" // faction.{id} — caller must override
+	case "Guild":
+		return "" // guild.{id} — caller must override
+	}
+	return ""
+}
+
 // publishCourierMessage publishes a chat / courier message to the game broker.
 // Unlike publishServerCommand (which goes to exchange=heartbeats,
 // routingKey=notifications via the ServerCommand AuthToken-protected envelope),
@@ -79,28 +183,43 @@ func publishServerCommand(fields map[string]any) error {
 // body should be the JSON-serialized FCourierMessageContent — caller's
 // responsibility. typeStr is the AMQP basic_properties `type` value, set to
 // "12" for text_chat per the FNotificationsSystemMessage type-byte mapping.
-func publishCourierMessage(exchange, routingKey string, body []byte, typeStr string) error {
+func publishCourierMessage(exchange, routingKey string, body []byte, typeStr, redirectExchange string) error {
 	bodyB64 := base64.StdEncoding.EncodeToString(body)
 	msgID := fmt.Sprintf("dune-admin-chat-%d", time.Now().UnixMilli())
+
+	userID := cachedChatHostID()
 
 	// AMQP basic_properties P_basic record order:
 	//   content_type, content_encoding, headers, delivery_mode, priority,
 	//   correlation_id, reply_to, expiration, message_id, timestamp, type,
 	//   user_id, app_id, cluster_id
-	// We set type to the courier message-type byte string ("12") and reuse
-	// the fls / fls_backend user/app identity that the game expects.
+	// Best-known wire format as of 2026-05-27 (partial — does NOT yet land in
+	// player chat UI). Status notes:
+	//   ✓ broker accepts the publish
+	//   ✓ text-router consumes from chat.intercept and logs "received message"
+	//   ✗ text-router's GetMessageRedirectExchange returns "" so "Starting
+	//     filtering ... for exchange ___" has empty exchange — no redirect
+	//
+	// Tried and ruled out: type values ("12", "text_chat", channel name);
+	// user_id (fls, bare host id, full grain id); 9 different header names
+	// for RedirectExchange; reply_to as the destination. None caused the
+	// redirect-exchange lookup to return a non-empty value.
+	//
+	// Next investigation: AMQP-snooper to capture real-message basic_properties
+	// (esp. binary headers) — those aren't visible in text-router's text log.
 	erlang := fmt.Sprintf(
 		`Body = base64:decode(<<"%s">>),`+
 			`XName = rabbit_misc:r(<<"/">>, exchange, <<"%s">>),`+
 			`X = rabbit_exchange:lookup_or_die(XName),`+
 			`MsgId = <<"%s">>,`+
-			`P = {list_to_atom("P_basic"), <<"Content">>, undefined, [], undefined,`+
+			`Hdrs = [{<<"RedirectExchange">>, longstr, <<"%s">>}],`+
+			`P = {list_to_atom("P_basic"), <<"Content">>, undefined, Hdrs, undefined,`+
 			` undefined, undefined, undefined, undefined, MsgId, undefined,`+
-			` <<"%s">>, <<"fls">>, <<"fls_backend">>, undefined},`+
+			` <<"%s">>, <<"%s">>, <<"fls_backend">>, undefined},`+
 			`Content = rabbit_basic:build_content(P, Body),`+
 			`{ok, Msg} = rabbit_basic:message(XName, <<"%s">>, Content),`+
 			`rabbit_queue_type:publish_at_most_once(X, Msg).`,
-		bodyB64, exchange, msgID, typeStr, routingKey)
+		bodyB64, exchange, msgID, redirectExchange, typeStr, userID, routingKey)
 
 	if globalControl == nil || globalExecutor == nil {
 		return fmt.Errorf("control plane not connected")
@@ -112,45 +231,103 @@ func publishCourierMessage(exchange, routingKey string, body []byte, typeStr str
 	return nil
 }
 
-// rmqSendWhisper sends a private chat message ("whisper") to one player.
-// The target sees it in their whispers chat tab; only they receive it.
+// rmqSendChat sends a chat message into one of the courier channels. The wire
+// format is captured from a real in-game chat message (text-router.log on the
+// test VM, 2026-05-27): the inner FChatMessageData JSON keeps its m_-prefixed
+// field names, m_ChannelType uses bare enum values ("Whispers", "Proximity",
+// "Faction", "Guild", "Map"), and the outer Type discriminator is just
+// "TextChat" not "ECourierMessageType::TextChat".
 //
-// senderName is the display name shown on the whisper. impersonatedFlsID is
-// optional — if non-empty, the message appears to come from that FLS player
-// (admin-only feature, useful for "GM" personas). Leave empty for an unsigned
-// admin whisper.
-func rmqSendWhisper(targetFlsID, targetName, senderName, message, impersonatedFlsID string) error {
-	// FChatMessageData per chat-and-courier.md. JSON field names match the C++
-	// member names with the m_ prefix stripped (broadcast struct uses the same
-	// convention).
+// Routing differs per channel — caller supplies exchange + routingKey directly.
+//
+//	Whisper:   exchange="chat.whispers",    routingKey=<target FLS id>
+//	Proximity: exchange="chat.proximity",   routingKey=<sender FLS id>  (game server filters by location)
+//	Map:       exchange="chat.map",         routingKey="<map>.<dimension>"
+//	Faction:   exchange="chat.faction.<n>", routingKey="" (fanout)
+//	Guild:     exchange="chat.guild.<id>",  routingKey="" (fanout)
+//
+// senderFlsID is the m_FuncomIdFrom value. For admin use it can be any valid
+// player FLS id (impersonation) or a synthetic admin id. spoofedDisplayName
+// overrides the visible author — if non-empty, m_bUseSpoofedUserName is true
+// and the name shows in the chat UI instead of senderFlsID's character name.
+// userNameTo is only meaningful for Whispers (target character name).
+func rmqSendChat(exchange, routingKey, channelType, senderFlsID, userNameTo, spoofedDisplayName, message string) error {
+	// 32-char uppercase hex GUID (matches the format in real captures).
+	// Must be random across all bytes — text-router rejects IDs with leading
+	// zero bytes (the timestamp-as-hex pattern).
+	msgID := randomChatGUID()
+
+	emptyFText := map[string]any{
+		"m_TableId":          "",
+		"m_Key":              "",
+		"m_UnlocalizedName":  "",
+	}
+	spoofedAuthor := emptyFText
+	if spoofedDisplayName != "" {
+		spoofedAuthor = map[string]any{
+			"m_TableId":         "",
+			"m_Key":             "",
+			"m_UnlocalizedName": spoofedDisplayName,
+		}
+	}
+
 	chatMsg := map[string]any{
-		"Id":              fmt.Sprintf("%d", time.Now().UnixNano()),
-		"ChannelType":     "ETextChatChannelType::Whispers",
-		"FuncomIdFrom":    impersonatedFlsID,
-		"UserNameTo":      targetName,
-		"Message":         map[string]any{"Body": message},
-		"TimeStamp":       time.Now().UTC().Format(time.RFC3339),
-		"bUseSpoofedUserName": senderName != "",
-		"SpoofedUserNameFrom": map[string]any{"AuthorName": senderName},
+		"m_Id":                  msgID,
+		"m_ChannelType":         channelType,
+		"m_bUseSpoofedUserName": spoofedDisplayName != "",
+		"m_SpoofedUserNameFrom": spoofedAuthor,
+		"m_FuncomIdFrom":        senderFlsID,
+		"m_UserNameTo":          userNameTo,
+		"m_Message": map[string]any{
+			"m_UnlocalizedMessage": message,
+			"m_LocalizedMessage": map[string]any{
+				"m_TableId":   "",
+				"m_Key":       "",
+				"m_FormatArgs": []any{},
+			},
+		},
+		"m_Timestamp":      time.Now().UTC().Format("2006.01.02-15.04.05"),
+		"m_OriginLocation": map[string]any{"X": 0.0, "Y": 0.0, "Z": 0.0},
+		"m_HasSeenMessage": false,
 	}
 	chatJSON, err := json.Marshal(chatMsg)
 	if err != nil {
 		return fmt.Errorf("marshal chat message: %w", err)
 	}
 
-	// FCourierMessageContent: outer wrapper with stringified inner Content +
-	// Type discriminator.
 	envelope := map[string]any{
 		"Content": string(chatJSON),
-		"Type":    "ECourierMessageType::TextChat",
+		"Type":    "TextChat",
 	}
 	envelopeJSON, err := json.Marshal(envelope)
 	if err != nil {
 		return fmt.Errorf("marshal courier envelope: %w", err)
 	}
 
-	// Whisper routing: exchange=chat.whispers, routing key=target's FLS id.
-	return publishCourierMessage("chat.whispers", targetFlsID, envelopeJSON, "12")
+	// AMQP `type` basic property = the channel name. Iteration history:
+	//   "12"        → NullReferenceException in GetMessageRedirectExchange
+	//   "text_chat" → past NRE but redirect exchange returns empty string
+	//   <channel>   → trying this — text-router may use type as the lookup key
+	return publishCourierMessage(exchange, routingKey, envelopeJSON, channelType, channelExchange(channelType))
+}
+
+// rmqSendWhisper is a convenience wrapper for the Whispers channel.
+//
+// IMPORTANT — Adain's docs imply direct publish to chat.whispers should land
+// at the player's queue, but live testing shows the player's GAME CLIENT
+// rejects messages that didn't transit the text-router. Publishing to
+// chat.intercept (the topic exchange the text-router consumes from) lets the
+// text-router pick the message up, filter, and re-publish to the appropriate
+// output exchange (chat.whispers / chat.proximity / chat.map / etc.) based on
+// the m_ChannelType in the body. text-router logs every redirect, so failed
+// delivery shows up in /AMP/duneawakening/logs/text-router.log immediately.
+//
+// Routing key on chat.intercept: the captured "received message from <host>
+// to <target>" log line suggests text-router only inspects the body (no
+// routing-key parsing), so any non-empty routing key works. We use the
+// target FLS so capture/replay tooling can still filter by target.
+func rmqSendWhisper(targetFlsID, targetName, senderFlsID, spoofedDisplayName, message string) error {
+	return rmqSendChat("chat.intercept", targetFlsID, "Whispers", senderFlsID, targetName, spoofedDisplayName, message)
 }
 
 // ── typed wrappers ────────────────────────────────────────────────────────────

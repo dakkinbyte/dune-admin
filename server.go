@@ -179,6 +179,7 @@ func startServer(addr string) {
 	mux.HandleFunc("POST /api/v1/broadcast", handleRMQBroadcast)
 	mux.HandleFunc("POST /api/v1/broadcast/shutdown", handleRMQBroadcastShutdown)
 	mux.HandleFunc("POST /api/v1/chat/whisper", handleRMQWhisper)
+	mux.HandleFunc("POST /api/v1/chat/send-raw", handleRMQChatSendRaw)
 	mux.HandleFunc("GET /api/v1/players/{id}/player-ids", handlePlayerIDDebug)
 
 	// ── storage ───────────────────────────────────────────────────────────────

@@ -318,7 +318,14 @@ func handleRMQWhisper(w http.ResponseWriter, r *http.Request) {
 	if req.SenderName == "" {
 		req.SenderName = "GM"
 	}
-	if err := rmqSendWhisper(req.TargetFlsID, req.TargetName, req.SenderName, req.Message, req.ImpersonatedFlsID); err != nil {
+	// rmqSendWhisper(targetFlsID, targetName, senderFlsID, spoofedDisplayName, message)
+	// senderFlsID = the impersonated FLS (or target's own id as a fallback placeholder);
+	// spoofedDisplayName = what shows in the chat UI as the author.
+	senderFlsID := req.ImpersonatedFlsID
+	if senderFlsID == "" {
+		senderFlsID = req.TargetFlsID
+	}
+	if err := rmqSendWhisper(req.TargetFlsID, req.TargetName, senderFlsID, req.SenderName, req.Message); err != nil {
 		jsonErr(w, err, 500)
 		return
 	}
@@ -326,6 +333,34 @@ func handleRMQWhisper(w http.ResponseWriter, r *http.Request) {
 		"ok":   fmt.Sprintf("whisper sent to %s (broker accepted; in-game delivery is experimental)", req.TargetFlsID),
 		"note": "Adain's chat publish recipe is not live-tested externally — check the target's whispers tab to confirm delivery.",
 	})
+}
+
+// POST /api/v1/chat/send-raw — diagnostic endpoint for iterating on the chat
+// wire format. Takes channel + sender + target + message directly so we can
+// flex any combination via curl without redeploying.
+func handleRMQChatSendRaw(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Channel       string `json:"channel"`         // "Whispers" | "Proximity" | "Map" | "Faction" | "Guild" | ...
+		Exchange      string `json:"exchange"`        // "chat.intercept" or any chat.* exchange
+		RoutingKey    string `json:"routing_key"`     // target FLS, map.dim, or empty for fanout
+		SenderFlsID   string `json:"sender_fls_id"`   // m_FuncomIdFrom — usually a real player FLS
+		UserNameTo    string `json:"user_name_to"`    // m_UserNameTo — target character name (whispers only)
+		SpoofedName   string `json:"spoofed_name"`    // m_SpoofedUserNameFrom.m_UnlocalizedName (empty for no spoof)
+		Message       string `json:"message"`
+	}
+	if err := decode(r, &req); err != nil {
+		jsonErr(w, err, 400)
+		return
+	}
+	if req.Channel == "" || req.Exchange == "" || req.Message == "" {
+		jsonErr(w, fmt.Errorf("channel, exchange, message required"), 400)
+		return
+	}
+	if err := rmqSendChat(req.Exchange, req.RoutingKey, req.Channel, req.SenderFlsID, req.UserNameTo, req.SpoofedName, req.Message); err != nil {
+		jsonErr(w, err, 500)
+		return
+	}
+	jsonOK(w, map[string]string{"ok": "published"})
 }
 
 // Returns both ID forms for an actor so you can verify which PlayerId the
