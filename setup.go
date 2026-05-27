@@ -51,10 +51,11 @@ func runSetup() {
 	fmt.Println("Control plane:")
 	fmt.Println("  kubectl — Kubernetes (k3s) via SSH (current default)")
 	fmt.Println("  docker  — Docker containers (docker CLI with named containers)")
-	fmt.Println("  local   — Local/AMP/LGSM (configurable shell commands)")
+	fmt.Println("  local   — Generic local (configurable shell commands)")
+	fmt.Println("  amp     — CubeCoders AMP with podman game-server container")
 	fmt.Println()
 	ctrl := ask("Control plane", "kubectl")
-	if ctrl != "kubectl" && ctrl != "docker" && ctrl != "local" {
+	if ctrl != "kubectl" && ctrl != "docker" && ctrl != "local" && ctrl != "amp" {
 		ctrl = "kubectl"
 	}
 	fmt.Println()
@@ -69,6 +70,8 @@ func runSetup() {
 		runDockerSetup(ask, ok, fail, &cfg)
 	case "local":
 		runLocalSetup(ask, ok, fail, &cfg)
+	case "amp":
+		runAmpSetup(ask, ok, fail, &cfg)
 	}
 
 	// ── Market bot (optional) ──────────────────────────────────────────────────
@@ -342,6 +345,102 @@ func runLocalSetup(ask func(string, string) string, ok, fail func(string), cfg *
 	globalDB = pool
 	globalControl = newControlPlane("local", *cfg)
 	ok("Database connected as: " + cfg.DBUser)
+	fmt.Println()
+
+	cfg.ScripCurrency = scripCurrencyID
+}
+
+// ── amp setup flow ────────────────────────────────────────────────────────────
+
+// runAmpSetup configures the AMP control plane (CubeCoders AMP). AMP supports
+// two deployment topologies — game server in a podman container, or running
+// natively on the host as the AMP user. All paths/names are configurable.
+func runAmpSetup(ask func(string, string) string, ok, fail func(string), cfg *appConfig) {
+	fmt.Println("AMP instance:")
+	cfg.AmpInstance = ask("Instance name (ampinstmgr instance)", "DuneAwakening01")
+	cfg.AmpUser = ask("OS user that runs AMP", "amp")
+	fmt.Println()
+
+	fmt.Println("AMP topology:")
+	fmt.Println("  container — game server runs inside `podman exec AMP_<instance>` (default template)")
+	fmt.Println("  native    — game server runs directly on the host as the AMP user")
+	topology := ask("Topology [container/native]", "container")
+	useContainer := topology != "native"
+	cfg.AmpUseContainer = &useContainer
+
+	defaultLogPath := "/AMP/duneawakening/logs"
+	defaultIniDir := fmt.Sprintf("/home/%s/.ampdata/instances/%s/duneawakening/server/state",
+		cfg.AmpUser, cfg.AmpInstance)
+	if !useContainer {
+		// Native topology: game files live under /AMP/<game>/extracted/...
+		defaultLogPath = "/AMP/duneawakening/extracted/game-server/home/dune/server/DuneSandbox/Saved/Logs"
+		defaultIniDir = "/AMP/duneawakening/extracted/game-server/home/dune/server/DuneSandbox/Saved/Config/LinuxServer"
+	}
+
+	if useContainer {
+		defaultContainer := "AMP_" + cfg.AmpInstance
+		cfg.AmpContainer = ask("Podman container name", defaultContainer)
+	}
+	cfg.AmpLogPath = ask("Log directory", defaultLogPath)
+	cfg.DirectorURL = ask("Battlegroup Director URL (optional)", "http://127.0.0.1:11717")
+	fmt.Println()
+
+	fmt.Println("INI directories:")
+	cfg.ServerIniDir = ask("UserGame.ini directory (host path)", defaultIniDir)
+	cfg.DefaultIniDir = ask("DefaultGame.ini directory (optional)", "")
+	fmt.Println()
+
+	fmt.Println("RabbitMQ broker (used by capture mode AND live RMQ commands):")
+	var defaultBrokerPrefix string
+	if useContainer {
+		defaultBrokerPrefix = fmt.Sprintf("sudo -i -u %s podman exec %s", cfg.AmpUser, cfg.AmpContainer)
+	} else {
+		defaultBrokerPrefix = fmt.Sprintf("sudo -i -u %s", cfg.AmpUser)
+	}
+	cfg.BrokerExecPrefix = ask("Broker exec prefix", defaultBrokerPrefix)
+	// AMP bundles its own rabbitmqctl and doesn't put it on $PATH. The Dune
+	// Awakening module ships it at the path below; other AMP game modules use
+	// the same /AMP/<game>/extracted/mq/opt/rabbitmq/sbin/ layout.
+	cfg.AmpRabbitmqctlPath = ask("rabbitmqctl absolute path", defaultDuneRabbitmqctl)
+	fmt.Println()
+
+	fmt.Println("Database connection:")
+	cfg.DBHost = ask("DB host", "127.0.0.1")
+	cfg.DBPort = dbPort
+	portStr := ask(fmt.Sprintf("DB port [%d]", dbPort), fmt.Sprintf("%d", dbPort))
+	fmt.Sscanf(portStr, "%d", &cfg.DBPort)
+	cfg.DBUser = ask("DB user", envOr("DB_USER", "dune"))
+	cfg.DBPass = ask("DB password", "")
+	if cfg.DBPass == "" {
+		fmt.Fprintln(os.Stderr, "Database password is required. Aborting.")
+		exitSetup(1)
+	}
+	cfg.DBName = ask("DB name", envOr("DB_NAME", "dune"))
+	cfg.DBSchema = ask("DB schema", envOr("DB_SCHEMA", "dune"))
+	fmt.Println()
+
+	fmt.Println("Connecting to database...")
+	dbHost = cfg.DBHost
+	dbPort = cfg.DBPort
+	dbUser = cfg.DBUser
+	dbPass = cfg.DBPass
+	dbName = cfg.DBName
+	dbSchema = cfg.DBSchema
+	exec := &localExecutor{}
+	globalExecutor = &ampExecutor{localExecutor: exec, ampUser: cfg.AmpUser}
+	pool, err := connectDBDirect(context.Background(), *cfg)
+	if err != nil {
+		fail("DB connect failed: " + err.Error())
+		exitSetup(1)
+	}
+	globalDB = pool
+	globalControl = newControlPlane("amp", *cfg)
+	ok("Database connected as: " + cfg.DBUser)
+	fmt.Println()
+	fmt.Println("Reminder: dune-admin needs sudoers grants to write UserGame.ini as " + cfg.AmpUser + ".")
+	fmt.Println("Example /etc/sudoers.d/dune-admin entry:")
+	fmt.Printf("  %s ALL=(%s) NOPASSWD: /usr/bin/tee %s/UserGame.ini, /usr/bin/tee %s/UserEngine.ini\n",
+		envOr("USER", "dune-admin"), cfg.AmpUser, cfg.ServerIniDir, cfg.ServerIniDir)
 	fmt.Println()
 
 	cfg.ScripCurrency = scripCurrencyID

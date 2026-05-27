@@ -3,6 +3,7 @@ import { Button, Checkbox, Chip, Spinner, toast } from '@heroui/react'
 import { api, getWsBase } from '../api/client'
 import type { LogPod, CheatEntry } from '../api/client'
 import { DataTable, Icon, SideNav, type Column } from '../dune-ui'
+import { useStatus } from '../hooks/useStatus'
 
 type ActiveView = 'pod' | 'cheats'
 type NavKey = 'cheats' | `pod:${string}`
@@ -16,6 +17,13 @@ const CHEAT_COLUMNS: Column<CheatKey>[] = [
 ]
 
 export default function LogsTab() {
+  // Control planes that surface log files (amp, docker, local) get
+  // file-oriented labels; kubectl keeps "Pods".
+  const control = useStatus()?.control
+  const isFileBased = control === 'amp' || control === 'docker' || control === 'local'
+  const sourceLabel = isFileBased ? 'Log Files' : 'Pods'
+  const itemLabel = isFileBased ? 'log file' : 'pod'
+
   const [pods, setPods] = useState<LogPod[]>([])
   const [podsLoading, setPodsLoading] = useState(false)
   const [selectedPod, setSelectedPod] = useState<LogPod | null>(null)
@@ -151,7 +159,7 @@ export default function LogsTab() {
         items={navItems}
         active={activeKey}
         onSelect={handleNavSelect}
-        title={`Pods (${pods.length})`}
+        title={`${sourceLabel} (${pods.length})`}
         titleAction={
           <Button size="sm" variant="ghost" isDisabled={podsLoading} onPress={loadPods}>
             {podsLoading ? <Spinner size="sm" color="current" /> : <Icon name="refresh-cw" />}
@@ -210,7 +218,7 @@ export default function LogsTab() {
                 color={connected ? 'success' : 'default'}
                 variant="soft"
               >
-                {connected ? `● Connected · ${selectedPod?.name}` : selectedPod ? '○ Disconnected' : '○ Select a pod'}
+                {connected ? `● Connected · ${selectedPod?.name}` : selectedPod ? '○ Disconnected' : `○ Select a ${itemLabel}`}
               </Chip>
               <div className="flex-1" />
               <Checkbox isSelected={autoScroll} onChange={setAutoScroll}>Auto-scroll</Checkbox>
@@ -244,7 +252,7 @@ export default function LogsTab() {
               {displayLines.length === 0
                 ? (selectedPod
                     ? (connected ? 'Waiting for log lines...' : 'Disconnected.')
-                    : 'Select a pod from the left panel to start streaming logs.')
+                    : `Select a ${itemLabel} from the left panel to start streaming logs.`)
                 : displayLines.join('\n')}
             </pre>
           </>

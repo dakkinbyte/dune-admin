@@ -64,6 +64,16 @@ func connectAll() error {
 	if err != nil {
 		return fmt.Errorf("executor: %w", err)
 	}
+	// AMP mode wraps localExecutor to elevate WriteFile through sudo.
+	if ctrl == "amp" {
+		if local, ok := exec.(*localExecutor); ok {
+			user := cfg.AmpUser
+			if user == "" {
+				user = "amp"
+			}
+			exec = &ampExecutor{localExecutor: local, ampUser: user}
+		}
+	}
 	globalExecutor = exec
 
 	if ctrl == "kubectl" {

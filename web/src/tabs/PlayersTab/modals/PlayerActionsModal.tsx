@@ -10,7 +10,7 @@ import allVehicles from '../../../data/vehicles.json'
 import { api } from '../../../api/client'
 import type {
   Player, JourneyNode, SpecTrack, KeystoneRow,
-  TeleportLocation, GameEvent, DungeonRecord,
+  TeleportLocation, GameEvent, DungeonRecord, ProgressionPreset,
 } from '../../../api/client'
 import {
   ACTION_SECTIONS, XP_TRACKS, FACTIONS,
@@ -85,6 +85,10 @@ export function PlayerActionsModal({ player, open, onClose }: Props) {
   const [selectedTrainer, setSelectedTrainer] = useState<TrainerKey>('BeneGesserit')
   const [selectedMQ, setSelectedMQ] = useState<string>('DA_MQ_ANewBeginning')
 
+  // Quick Presets (curated journey bundles — backed by /api/v1/progression/presets)
+  const [presets, setPresets] = useState<ProgressionPreset[]>([])
+  const [presetsLoaded, setPresetsLoaded] = useState(false)
+
   // Contracts
   const [contractCatalog, setContractCatalog] = useState<{id: string; alias: string; tag_count: number}[]>([])
   const [contractCatalogLoaded, setContractCatalogLoaded] = useState(false)
@@ -112,6 +116,14 @@ export function PlayerActionsModal({ player, open, onClose }: Props) {
   // Admin / Teleport
   const [partitions, setPartitions] = useState<TeleportLocation[]>([])
   const [selectedPartition, setSelectedPartition] = useState('')
+  // Teleport-to-player
+  const [allPlayers, setAllPlayers] = useState<Player[]>([])
+  const [selectedTeleportTarget, setSelectedTeleportTarget] = useState<number | null>(null)
+  const [targetSearch, setTargetSearch] = useState('')
+
+  // Whisper
+  const [whisperText, setWhisperText] = useState('')
+  const [whisperSenderName, setWhisperSenderName] = useState('GM')
 
   // Spawn vehicle
   const [spawnVehicleId, setSpawnVehicleId] = useState('')
@@ -138,6 +150,8 @@ export function PlayerActionsModal({ player, open, onClose }: Props) {
       setFactionId(player.faction_id > 0 ? player.faction_id : 1)
       api.players.partitions().then(setPartitions).catch(() => {})
       api.players.charXPCurrent(player.id).then(setCharXPCurrent).catch(() => {})
+      // Pull every player so the teleport-to-player selector can offer a target.
+      api.players.list().then(ps => setAllPlayers(ps.filter(p => p.id !== player.id))).catch(() => {})
     }
   }, [open, player.faction_id, player.id])
 
@@ -154,7 +168,12 @@ export function PlayerActionsModal({ player, open, onClose }: Props) {
         .then(c => { setContractCatalog(c); setContractCatalogLoaded(true); setContractCatalogError('') })
         .catch((e: unknown) => { setContractCatalogError(e instanceof Error ? e.message : String(e)); setContractCatalogLoaded(true) })
     }
-  }, [section, nodesLoaded, contractCatalogLoaded, open, player.account_id])
+    if (section === 'progression' && !presetsLoaded && open) {
+      api.progression.presets()
+        .then(p => { setPresets(p); setPresetsLoaded(true) })
+        .catch(() => setPresetsLoaded(true))
+    }
+  }, [section, nodesLoaded, contractCatalogLoaded, presetsLoaded, open, player.account_id])
 
   useEffect(() => {
     if (section === 'specs' && !specsLoaded && open) {
@@ -515,7 +534,37 @@ export function PlayerActionsModal({ player, open, onClose }: Props) {
                   })()
                   const selectedMQDef = MAIN_QUESTS.find(m => m.id === selectedMQ)
                   return (
-                  <div className="flex flex-col gap-3 flex-1 min-h-0 pr-1">
+                  <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-y-auto pr-1">
+                    {/* Quick Presets — curated journey-completion bundles */}
+                    <Panel>
+                      <SectionLabel>Quick Presets</SectionLabel>
+                      <div className="text-xs text-muted">Curated bundles that complete one or more root journey nodes and cascade to all children + tags.</div>
+                      {!presetsLoaded ? (
+                        <div className="text-xs text-muted py-2">Loading…</div>
+                      ) : presets.length === 0 ? (
+                        <div className="text-xs text-muted py-2">No presets available</div>
+                      ) : (
+                        <div className="flex flex-col">
+                          {presets.map(p => (
+                            <div key={p.id} className="flex items-center gap-3 py-2 border-b border-border/40 last:border-0">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-semibold">{p.name}</div>
+                                <div className="text-xs text-muted">{p.description}</div>
+                              </div>
+                              <Chip size="sm" variant="soft">{p.node_count} nodes</Chip>
+                              <Button size="sm" variant="secondary" isDisabled={busy}
+                                onPress={() => run(
+                                  () => api.progression.applyPreset(player.account_id, p.id),
+                                  `Applied preset '${p.name}' to ${player.name}`,
+                                ).then(() => setNodesLoaded(false))}>
+                                Apply
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </Panel>
+
                     {/* Progression Unlock */}
                     <Panel>
                       <SectionLabel>Progression Unlock</SectionLabel>
@@ -995,6 +1044,109 @@ export function PlayerActionsModal({ player, open, onClose }: Props) {
                         </Button>
                       </div>
                       <span className="text-xs text-muted">Live if online · written to DB if offline</span>
+                    </Panel>
+
+                    <Panel>
+                      <SectionLabel>Teleport to Player</SectionLabel>
+                      <div className="text-xs text-muted mb-2">
+                        Drop {player.name} exactly on another character's current position. Live (TeleportToExact via RMQ) when {player.name} is online; written to DB at the target's partition if offline.
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <input
+                          type="text"
+                          value={targetSearch}
+                          onChange={e => setTargetSearch(e.target.value)}
+                          placeholder="Search by name…"
+                          className="w-full bg-surface border border-border rounded px-3 py-1.5 text-sm text-foreground focus:outline-none focus:border-accent/60"
+                        />
+                        <div className="flex items-end gap-3">
+                          <Select
+                            aria-label="Target player"
+                            placeholder={allPlayers.length === 0 ? 'Loading players…' : 'Pick a target…'}
+                            selectedKey={selectedTeleportTarget != null ? String(selectedTeleportTarget) : null}
+                            onSelectionChange={k => setSelectedTeleportTarget(k ? Number(k) : null)}
+                            className="flex-1"
+                          >
+                            <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+                            <Select.Popover>
+                              <ListBox>
+                                {allPlayers
+                                  .filter(p => !targetSearch || p.name.toLowerCase().includes(targetSearch.toLowerCase()))
+                                  .slice(0, 100)
+                                  .map(p => (
+                                    <ListBox.Item key={p.id} id={String(p.id)} textValue={p.name}>
+                                      <div className="flex items-center justify-between gap-2 w-full">
+                                        <span>{p.name}</span>
+                                        <span className="text-xs text-muted">
+                                          {p.map || '—'} · {p.online_status}
+                                        </span>
+                                      </div>
+                                      <ListBox.ItemIndicator />
+                                    </ListBox.Item>
+                                  ))}
+                              </ListBox>
+                            </Select.Popover>
+                          </Select>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            isDisabled={busy || selectedTeleportTarget == null}
+                            onPress={() => {
+                              const target = allPlayers.find(p => p.id === selectedTeleportTarget)
+                              if (!target) return
+                              run(
+                                () => api.players.teleportToPlayer(player.fls_id, target.id),
+                                `Teleported ${player.name} to ${target.name}`,
+                              )
+                            }}
+                          >
+                            Move
+                          </Button>
+                        </div>
+                      </div>
+                    </Panel>
+
+                    <Panel>
+                      <SectionLabel>Whisper</SectionLabel>
+                      <div className="text-xs text-muted mb-2">
+                        Send a private chat message to {player.name}. <span className="text-warning">Experimental</span> — first external use of the courier publish path; if it doesn't show up in their whispers tab, the wire format may need tweaking.
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted shrink-0">From:</span>
+                          <input
+                            type="text"
+                            value={whisperSenderName}
+                            onChange={e => setWhisperSenderName(e.target.value)}
+                            placeholder="GM"
+                            maxLength={32}
+                            className="w-32 bg-surface border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-accent/60"
+                          />
+                          <span className="text-xs text-muted">(shown as the sender)</span>
+                        </div>
+                        <textarea
+                          value={whisperText}
+                          onChange={e => setWhisperText(e.target.value)}
+                          placeholder={`Message to ${player.name}…`}
+                          rows={2}
+                          maxLength={500}
+                          className="w-full bg-surface border border-border rounded px-2 py-1.5 text-sm text-foreground focus:outline-none focus:border-accent/60 resize-y"
+                        />
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-xs text-muted">{whisperText.length} / 500</span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            isDisabled={busy || !whisperText.trim()}
+                            onPress={() => run(
+                              () => api.chat.whisper(player.fls_id, player.name, whisperSenderName.trim() || 'GM', whisperText.trim()),
+                              `Whisper sent to ${player.name}`,
+                            ).then(() => setWhisperText(''))}
+                          >
+                            Send
+                          </Button>
+                        </div>
+                      </div>
                     </Panel>
 
                     <Panel>

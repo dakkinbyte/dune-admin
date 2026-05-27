@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"os"
 	"strings"
 	"time"
 )
@@ -28,11 +31,29 @@ func originAllowed(origin string) bool {
 	return false
 }
 
+// originAllowedForRequest applies the explicit allowlist AND a same-host
+// exception: a browser requesting from `http://172.16.12.59:9090/` against the
+// dune-admin server running on the same host should not be considered cross-
+// origin and never needs to be added to ALLOWED_ORIGINS. allowEmpty controls
+// the no-Origin-header case: true for WebSocket upgrades (non-browser clients
+// don't send Origin and shouldn't be blocked), false for CORS (don't echo back
+// an empty Access-Control-Allow-Origin header).
+func originAllowedForRequest(r *http.Request, allowEmpty bool) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return allowEmpty
+	}
+	if u, err := url.Parse(origin); err == nil && u.Host == r.Host {
+		return true
+	}
+	return originAllowed(origin)
+}
+
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 		w.Header().Set("Vary", "Origin")
-		if originAllowed(origin) {
+		if originAllowedForRequest(r, false) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
@@ -98,6 +119,8 @@ func startServer(addr string) {
 	mux.HandleFunc("POST /api/v1/players/set-faction-tier", handleSetFactionTier)
 	mux.HandleFunc("POST /api/v1/players/progression-unlock", handleProgressionUnlock)
 	mux.HandleFunc("POST /api/v1/players/progression-reverse", handleProgressionReverse)
+	mux.HandleFunc("GET /api/v1/progression/presets", handleListProgressionPresets)
+	mux.HandleFunc("POST /api/v1/players/progression/apply-preset", handleApplyProgressionPreset)
 	mux.HandleFunc("POST /api/v1/players/journey/complete", handleJourneyComplete)
 	mux.HandleFunc("POST /api/v1/players/journey/reset", handleJourneyReset)
 	mux.HandleFunc("POST /api/v1/players/journey/wipe", handleJourneyWipe)
@@ -123,6 +146,8 @@ func startServer(addr string) {
 	mux.HandleFunc("POST /api/v1/players/refuel-vehicle", handleRefuelVehicle)
 	mux.HandleFunc("GET /api/v1/players/partitions", handleGetPartitions)
 	mux.HandleFunc("POST /api/v1/players/teleport", handleTeleportPlayer)
+	mux.HandleFunc("GET /api/v1/players/{id}/position", handleGetPlayerPosition)
+	mux.HandleFunc("POST /api/v1/players/teleport-to-player", handleTeleportToPlayer)
 	mux.HandleFunc("GET /api/v1/players/{id}/events", handleGetPlayerEvents)
 	mux.HandleFunc("GET /api/v1/players/{id}/dungeons", handleGetPlayerDungeons)
 
@@ -153,6 +178,7 @@ func startServer(addr string) {
 	mux.HandleFunc("POST /api/v1/vehicles/spawn", handleRMQSpawnVehicle)
 	mux.HandleFunc("POST /api/v1/broadcast", handleRMQBroadcast)
 	mux.HandleFunc("POST /api/v1/broadcast/shutdown", handleRMQBroadcastShutdown)
+	mux.HandleFunc("POST /api/v1/chat/whisper", handleRMQWhisper)
 	mux.HandleFunc("GET /api/v1/players/{id}/player-ids", handlePlayerIDDebug)
 
 	// ── storage ───────────────────────────────────────────────────────────────
@@ -187,6 +213,35 @@ func startServer(addr string) {
 	mux.HandleFunc("GET /api/v1/market-bot/logs-ready", handleMarketBotLogsReady)
 	mux.HandleFunc("GET /api/v1/market-bot/logs", handleMarketBotLogs)
 
+	// ── director reverse proxy (universal, opt-in) ──────────────────────────
+	if loadedConfig.DirectorURL != "" {
+		if target, err := url.Parse(loadedConfig.DirectorURL); err == nil {
+			proxy := httputil.NewSingleHostReverseProxy(target)
+			mux.HandleFunc("/director/", func(w http.ResponseWriter, r *http.Request) {
+				r.URL.Path = strings.TrimPrefix(r.URL.Path, "/director")
+				if r.URL.Path == "" {
+					r.URL.Path = "/"
+				}
+				r.Host = target.Host
+				proxy.ServeHTTP(w, r)
+			})
+			log.Printf("Proxying /director/ → %s", loadedConfig.DirectorURL)
+		}
+	}
+
+	// ── SPA frontend (universal, opt-in) ────────────────────────────────────
+	candidates := []string{"./dist", "./web/dist"}
+	if loadedConfig.FrontendDir != "" {
+		candidates = append([]string{loadedConfig.FrontendDir}, candidates...)
+	}
+	for _, dir := range candidates {
+		if info, err := os.Stat(dir); err == nil && info.IsDir() {
+			log.Printf("Serving frontend from %s", dir)
+			mux.Handle("/", spaHandler(dir))
+			break
+		}
+	}
+
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           corsMiddleware(mux),
@@ -197,6 +252,20 @@ func startServer(addr string) {
 	}
 	log.Printf("dune-admin listening on %s", addr)
 	log.Fatal(srv.ListenAndServe())
+}
+
+// spaHandler serves static files from distDir, falling back to index.html
+// for any path that doesn't match a real file (client-side routing).
+func spaHandler(distDir string) http.Handler {
+	fileServer := http.FileServer(http.Dir(distDir))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p := distDir + "/" + strings.TrimLeft(r.URL.Path, "/")
+		if _, err := os.Stat(p); err == nil {
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+		http.ServeFile(w, r, distDir+"/index.html")
+	})
 }
 
 // ── JSON helpers ──────────────────────────────────────────────────────────────

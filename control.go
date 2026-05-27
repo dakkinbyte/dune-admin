@@ -90,7 +90,7 @@ type LogSource struct {
 // ── Factory ───────────────────────────────────────────────────────────────────
 
 // newControlPlane returns the appropriate ControlPlane based on the control
-// name ("kubectl", "docker", "local"). Unrecognised names fall back to local.
+// name ("kubectl", "docker", "local", "amp"). Unrecognised names fall back to local.
 func newControlPlane(name string, cfg appConfig) ControlPlane {
 	switch name {
 	case "kubectl":
@@ -100,6 +100,32 @@ func newControlPlane(name string, cfg appConfig) ControlPlane {
 			gameserver:  cfg.DockerGameserver,
 			brokerGame:  cfg.DockerBrokerGame,
 			brokerAdmin: cfg.DockerBrokerAdmin,
+		}
+	case "amp":
+		user := cfg.AmpUser
+		if user == "" {
+			user = "amp"
+		}
+		container := cfg.AmpContainer
+		if container == "" && cfg.AmpInstance != "" {
+			container = "AMP_" + cfg.AmpInstance
+		}
+		// Default to container mode (CubeCoders' standard template) unless the
+		// admin explicitly opts out.
+		useContainer := true
+		if cfg.AmpUseContainer != nil {
+			useContainer = *cfg.AmpUseContainer
+		}
+		return &ampControl{
+			instance:        cfg.AmpInstance,
+			container:       container,
+			ampUser:         user,
+			logPath:         cfg.AmpLogPath,
+			directorURL:     cfg.DirectorURL,
+			iniDir:          cfg.ServerIniDir,
+			useContainer:    useContainer,
+			rabbitmqctlPath: cfg.AmpRabbitmqctlPath,
+			dataRoot:        cfg.AmpDataRoot,
 		}
 	default:
 		return &localControl{

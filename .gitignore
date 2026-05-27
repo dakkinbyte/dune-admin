@@ -14,6 +14,14 @@ fetch-item-data.js
 # Compiled binaries
 dune-admin
 dune-admin-linux
+dune-admin.exe
+*.exe
+
+# Tools (downloaded, not part of the project)
+repak_win/
+repak_win.zip
+*.tar.gz
+*.tar.xz
 
 # macOS
 .DS_Store
@@ -24,4 +32,14 @@ blueprint.json
 # Local Go build cache (used when system cache is unavailable)
 .go-cache/
 .superpowers/
-docs/
+
+# docs/ — default-private (local notes, scratch).
+# Exception: community-facing ADRs and deployment docs are tracked.
+docs/*
+!docs/amp-direct-connect/
+
+# Local dev/testing artifacts
+local/
+
+# Reference material / ideas / scratch — not for sharing
+Samples-Ideas/

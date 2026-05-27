@@ -125,6 +125,40 @@ type appConfig struct {
 	MarketBotToken     string `yaml:"market_bot_token"`
 	MarketBotContainer string `yaml:"market_bot_container"`
 	MarketBotNamespace string `yaml:"market_bot_namespace"`
+
+	// AMP-specific — used when Control == "amp" (CubeCoders AMP w/ podman).
+	// AmpInstance is the ampinstmgr instance name (e.g. "MehDune01").
+	// AmpContainer is the podman container name (default "AMP_<instance>").
+	// AmpUser is the OS user that runs AMP (default "amp"); used both for
+	// sudo elevation of file writes and for podman exec invocations.
+	// AmpLogPath is the in-container log directory.
+	// DirectorURL is the optional Battlegroup Director URL — if set, the HTTP
+	// router proxies /director/ to it (works in any control mode).
+	AmpInstance string `yaml:"amp_instance"`
+	AmpContainer string `yaml:"amp_container"`
+	AmpUser      string `yaml:"amp_user"`
+	AmpLogPath   string `yaml:"amp_log_path"`
+	// AmpUseContainer toggles between the two AMP topologies. When true (default,
+	// matching CubeCoders' containerised template), commands are wrapped in
+	// `podman exec`. When false, AMP runs the game server natively on the host
+	// as the AMP user; the same operations run directly via sudo.
+	AmpUseContainer *bool `yaml:"amp_use_container"`
+	// AmpRabbitmqctlPath is the absolute path to rabbitmqctl. AMP bundles its
+	// own rabbitmq under <amp_data>/<game>/extracted/mq/opt/rabbitmq/sbin and
+	// it's not in $PATH inside the container. The setup wizard prefills the
+	// Dune Awakening default; override here for other AMP game modules.
+	AmpRabbitmqctlPath string `yaml:"amp_rabbitmqctl_path"`
+	// AmpDataRoot is the per-game data root inside the AMP container (or on
+	// the host in native mode). Defaults to /AMP/duneawakening — the
+	// CubeCoders Dune Awakening module convention. The rabbitmqctl wrapper
+	// derives loader, escript, broker-runtime, and erlang-cookie paths from
+	// this. Override for other AMP game modules whose layout differs.
+	AmpDataRoot string `yaml:"amp_data_root"`
+	DirectorURL        string `yaml:"director_url"`
+
+	// FrontendDir overrides the auto-detected SPA directory. When unset the
+	// server looks in ./dist then ./web/dist and serves the first match.
+	FrontendDir string `yaml:"frontend_dir"`
 }
 
 func configDir() string {

@@ -7,6 +7,14 @@ declare global {
 function getApiBase(): string {
   const stored = localStorage.getItem('dune_admin_backend')
   if (stored) return stored.replace(/\/$/, '') + '/api/v1'
+  // When the SPA is served from a Go-binary deploy (any host other than the
+  // Vite dev server's localhost), the backend is the same origin. Only the
+  // dev-time localhost case needs the :8080 default.
+  if (typeof window !== 'undefined' &&
+      window.location.hostname !== 'localhost' &&
+      window.location.hostname !== '127.0.0.1') {
+    return window.location.origin + '/api/v1'
+  }
   return 'http://localhost:8080/api/v1'
 }
 
@@ -229,9 +237,22 @@ export type BotConfig = {
   enabled: boolean
 }
 
+export type ProgressionPreset = {
+  id: string
+  name: string
+  description: string
+  node_count: number
+  nodes: string[]
+}
+
 export const api = {
   status: () => req<Status>('GET', '/status'),
   reconnect: () => req<Status>('POST', '/reconnect'),
+  progression: {
+    presets: () => req<ProgressionPreset[]>('GET', '/progression/presets'),
+    applyPreset: (account_id: number, preset_id: string) =>
+      req<MutateResult>('POST', '/players/progression/apply-preset', { account_id, preset_id }),
+  },
   config: {
     get: () => req<AppConfig>('GET', '/config'),
     save: (cfg: AppConfig) => req<Status>('POST', '/config', cfg),
@@ -367,6 +388,11 @@ export const api = {
     partitions: () => req<TeleportLocation[]>('GET', '/players/partitions'),
     teleport: (fls_id: string, partition_label: string) =>
       req<MutateResult>('POST', '/players/teleport', { fls_id, partition_label }),
+    position: (id: number) =>
+      req<{ partition_id: number; map: string; x: number; y: number; z: number }>('GET', `/players/${id}/position`),
+    teleportToPlayer: (source_fls_id: string, target_id: number) =>
+      req<MutateResult & { path: string; x: number; y: number; z: number }>(
+        'POST', '/players/teleport-to-player', { source_fls_id, target_id }),
     events: (id: number) => req<GameEvent[]>('GET', `/players/${id}/events`),
     dungeons: (id: number) => req<DungeonRecord[]>('GET', `/players/${id}/dungeons`),
     kick: (fls_id: string) =>
@@ -392,6 +418,22 @@ export const api = {
       req<MutateResult>('POST', '/broadcast', { texts, duration_sec }),
     shutdown: (shutdown_type: string, delay_minutes: number, cancel = false) =>
       req<MutateResult>('POST', '/broadcast/shutdown', { shutdown_type, delay_minutes, cancel }),
+  },
+
+  chat: {
+    // EXPERIMENTAL — first attempt at sending a chat whisper from outside the
+    // game per Adain's chat-and-courier.md. Broker should accept the publish;
+    // in-game delivery is unverified.
+    whisper: (
+      target_fls_id: string,
+      target_name: string,
+      sender_name: string,
+      message: string,
+      impersonated_fls_id?: string,
+    ) =>
+      req<MutateResult & { note?: string }>('POST', '/chat/whisper', {
+        target_fls_id, target_name, sender_name, message, impersonated_fls_id,
+      }),
   },
 
   contracts: {
