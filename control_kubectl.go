@@ -7,8 +7,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-
-	"golang.org/x/crypto/ssh"
 )
 
 // kubectlControl implements ControlPlane using kubectl commands.
@@ -277,7 +275,7 @@ func ensureBrokerViaExec(exec Executor, namespace, podPattern, label string) {
 		fmt.Printf("[capture] [%s] created user %s\n", label, capUser)
 	}
 	exec.Exec(fmt.Sprintf("%s rabbitmqctl set_permissions -p / %s '.*' '.*' '.*' 2>&1", base, capUser)) //nolint:errcheck
-	exec.Exec(fmt.Sprintf(                                                                               //nolint:errcheck
+	exec.Exec(fmt.Sprintf(                                                                              //nolint:errcheck
 		"%s rabbitmqctl eval 'application:set_env(rabbit, auth_backends, [{rabbit_auth_backend_cache, rabbit_auth_backend_http}, rabbit_auth_backend_internal]).' 2>&1",
 		base))
 	exec.Exec(fmt.Sprintf( //nolint:errcheck
@@ -361,13 +359,4 @@ func parseExchanges(raw string) []binding {
 		bindings = append(bindings, binding{exchange: name, key: "#"})
 	}
 	return bindings
-}
-
-// sshClientFromExecutor extracts the underlying *ssh.Client if exec is an
-// sshExecutor. Used by the legacy cmdConnect path during transition.
-func sshClientFromExecutor(exec Executor) *ssh.Client {
-	if s, ok := exec.(*sshExecutor); ok {
-		return s.client
-	}
-	return nil
 }

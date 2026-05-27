@@ -7,6 +7,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -258,13 +259,19 @@ func startServer(addr string) {
 // for any path that doesn't match a real file (client-side routing).
 func spaHandler(distDir string) http.Handler {
 	fileServer := http.FileServer(http.Dir(distDir))
+	cleanDist := filepath.Clean(distDir)
+	sep := string(filepath.Separator)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		p := distDir + "/" + strings.TrimLeft(r.URL.Path, "/")
-		if _, err := os.Stat(p); err == nil {
+		p := filepath.Join(cleanDist, filepath.FromSlash(r.URL.Path))
+		if p != cleanDist && !strings.HasPrefix(p, cleanDist+sep) {
+			http.NotFound(w, r)
+			return
+		}
+		if _, err := os.Stat(p); err == nil { // #nosec G703 -- path validated against cleanDist prefix above
 			fileServer.ServeHTTP(w, r)
 			return
 		}
-		http.ServeFile(w, r, distDir+"/index.html")
+		http.ServeFile(w, r, filepath.Join(cleanDist, "index.html"))
 	})
 }
 
@@ -272,13 +279,13 @@ func spaHandler(distDir string) http.Handler {
 
 func jsonOK(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(v)
+	_ = json.NewEncoder(w).Encode(v)
 }
 
 func jsonErr(w http.ResponseWriter, err error, code int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 }
 
 func decode(r *http.Request, v any) error {
