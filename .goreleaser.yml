@@ -8,7 +8,7 @@ before:
 
 builds:
   - id: dune-admin
-    main: ./
+    main: ./cmd/dune-admin
     binary: dune-admin
     env:
       - CGO_ENABLED=0
