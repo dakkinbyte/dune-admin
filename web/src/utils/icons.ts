@@ -1,7 +1,12 @@
 // VITE_ICON_BASE_URL: base URL for item icons served from R2 (e.g. https://icons.example.com).
 // When set, icons load from <base>/<template_id>.webp.
 // When unset, no icon URL is produced and components fall back to category placeholders.
-const ICON_BASE = (import.meta.env.VITE_CDN_BASE_URL as string | undefined)?.replace(/\/$/, "");
+const ICON_BASE = ((import.meta.env.VITE_CDN_BASE_URL as string) ?? "https://assets.dune.layout.tools")?.replace(
+  /\/$/,
+  "",
+);
+
+console.log("Icon base URL:", ICON_BASE);
 
 export function iconUrl(templateId: string, variant: "detail" | "thumb" = "detail"): string | null {
   if (!ICON_BASE) return null;
