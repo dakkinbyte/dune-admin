@@ -6,8 +6,6 @@ const ICON_BASE = ((import.meta.env.VITE_CDN_BASE_URL as string) ?? "https://ass
   "",
 );
 
-console.log("Icon base URL:", ICON_BASE);
-
 export function iconUrl(templateId: string, variant: "detail" | "thumb" = "detail"): string | null {
   if (!ICON_BASE) return null;
   return `${ICON_BASE}/${variant}/${templateId}.webp`;
