@@ -27,32 +27,32 @@ var BuildTime = "unknown"
 // ── config ────────────────────────────────────────────────────────────────────
 
 var (
-	captureMode     bool
-	setupMode       bool
-	sqlQuery        string
-	sshHost         string
-	sshUser         string
-	sshKeyPath      string
-	itemDataPath    string
-	scripCurrencyID int
-	dbHost          string
-	dbPort          int
-	dbUser          string
-	dbPass          string
-	dbName          string
-	dbSchema        string
-	listenAddr      string
-	controlPlane    string
-	controlNS       string
-	brokerGameAddr  string
-	brokerAdminAddr string
-	brokerTLS       bool
-	backupDir           string
-	serverIniDir        string
-	marketBotAddr       string
-	marketBotToken      string
-	marketBotContainer  string
-	marketBotNamespace  string
+	captureMode        bool
+	setupMode          bool
+	sqlQuery           string
+	sshHost            string
+	sshUser            string
+	sshKeyPath         string
+	itemDataPath       string
+	scripCurrencyID    int
+	dbHost             string
+	dbPort             int
+	dbUser             string
+	dbPass             string
+	dbName             string
+	dbSchema           string
+	listenAddr         string
+	controlPlane       string
+	controlNS          string
+	brokerGameAddr     string
+	brokerAdminAddr    string
+	brokerTLS          bool
+	backupDir          string
+	serverIniDir       string
+	marketBotAddr      string
+	marketBotToken     string
+	marketBotContainer string
+	marketBotNamespace string
 )
 
 // appConfig mirrors the fields written to ~/.dune-admin/config.yaml.
@@ -134,7 +134,7 @@ type appConfig struct {
 	// AmpLogPath is the in-container log directory.
 	// DirectorURL is the optional Battlegroup Director URL — if set, the HTTP
 	// router proxies /director/ to it (works in any control mode).
-	AmpInstance string `yaml:"amp_instance"`
+	AmpInstance  string `yaml:"amp_instance"`
 	AmpContainer string `yaml:"amp_container"`
 	AmpUser      string `yaml:"amp_user"`
 	AmpLogPath   string `yaml:"amp_log_path"`
@@ -154,7 +154,7 @@ type appConfig struct {
 	// derives loader, escript, broker-runtime, and erlang-cookie paths from
 	// this. Override for other AMP game modules whose layout differs.
 	AmpDataRoot string `yaml:"amp_data_root"`
-	DirectorURL        string `yaml:"director_url"`
+	DirectorURL string `yaml:"director_url"`
 
 	// FrontendDir overrides the auto-detected SPA directory. When unset the
 	// server looks in ./dist then ./web/dist and serves the first match.
@@ -175,7 +175,7 @@ func configPath() string {
 
 func setEnvIfMissing(key, val string) {
 	if os.Getenv(key) == "" && val != "" {
-		os.Setenv(key, val)
+		_ = os.Setenv(key, val)
 	}
 }
 
@@ -229,7 +229,7 @@ func loadDotEnv() {
 	if err != nil {
 		return
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -474,7 +474,7 @@ func main() {
 			globalDB.Close()
 		}
 		if globalSSH != nil {
-			globalSSH.Close()
+			_ = globalSSH.Close()
 		}
 	}()
 
