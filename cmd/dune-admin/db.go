@@ -3865,11 +3865,10 @@ func parseDurabilityText(value pgtype.Text) float64 {
 	return parsed
 }
 
-func repairTargetForItem(templateID string, maxDurability pgtype.Text) float64 {
-	// Target priority: catalog (vehicle modules stored as items) → stats.MaxDurability → 100.
-	if value, ok := itemMaxDurability(templateID); ok && value > 0 {
-		return value
-	}
+func repairTargetForItem(maxDurability pgtype.Text) float64 {
+	// The in-row MaxDurability is the source of truth. Default to 100 only for
+	// plain 0–100 gear that carries no MaxDurability. The PAK catalog is NOT
+	// consulted — it under-reports some scales (e.g. transport modules).
 	if maxDurability.Valid {
 		if value, err := strconv.ParseFloat(maxDurability.String, 64); err == nil && value > 0 {
 			return value
@@ -3880,12 +3879,19 @@ func repairTargetForItem(templateID string, maxDurability pgtype.Text) float64 {
 
 func buildRepairCandidate(
 	id int64,
-	templateID string,
 	maxDurability, currentDurability, decayedDurability pgtype.Text,
 ) (repairCandidate, bool) {
-	target := repairTargetForItem(templateID, maxDurability)
 	current := parseDurabilityText(currentDurability)
 	decayed := parseDurabilityText(decayedDurability)
+	// Never lower an existing value: a default-100 must not cap a higher-scale
+	// item whose MaxDurability is absent but whose stored values exceed 100.
+	target := repairTargetForItem(maxDurability)
+	if current > target {
+		target = current
+	}
+	if decayed > target {
+		target = decayed
+	}
 	if math.Abs(current-target) < 0.01 && math.Abs(decayed-target) < 0.01 {
 		return repairCandidate{}, false
 	}
@@ -3894,7 +3900,7 @@ func buildRepairCandidate(
 
 func loadPlayerGearRepairCandidates(ctx context.Context, playerID int64) ([]repairCandidate, int, error) {
 	rows, err := globalDB.Query(ctx, `
-		SELECT i.id, i.template_id,
+		SELECT i.id,
 		       (i.stats->'FItemStackAndDurabilityStats'->1->>'MaxDurability'),
 		       (i.stats->'FItemStackAndDurabilityStats'->1->>'CurrentDurability'),
 		       (i.stats->'FItemStackAndDurabilityStats'->1->>'DecayedMaxDurability')
@@ -3915,13 +3921,12 @@ func loadPlayerGearRepairCandidates(ctx context.Context, playerID int64) ([]repa
 		scanned++
 
 		var id int64
-		var templateID string
 		var maxDurability, currentDurability, decayedDurability pgtype.Text
-		if err := rows.Scan(&id, &templateID, &maxDurability, &currentDurability, &decayedDurability); err != nil {
+		if err := rows.Scan(&id, &maxDurability, &currentDurability, &decayedDurability); err != nil {
 			return nil, scanned, fmt.Errorf("scan item: %w", err)
 		}
 
-		candidate, needsRepair := buildRepairCandidate(id, templateID, maxDurability, currentDurability, decayedDurability)
+		candidate, needsRepair := buildRepairCandidate(id, maxDurability, currentDurability, decayedDurability)
 		if needsRepair {
 			toRepair = append(toRepair, candidate)
 		}
@@ -4015,13 +4020,18 @@ func validateRepairVehicleInput(playerID int64) error {
 }
 
 type vehicleModule struct {
-	id         int64
-	templateID string
+	id                int64
+	maxDurability     pgtype.Text
+	currentDurability pgtype.Text
+	decayedDurability pgtype.Text
 }
 
 func loadVehicleModules(ctx context.Context, vehicleID int64) ([]vehicleModule, error) {
 	rows, err := globalDB.Query(ctx, `
-			SELECT id, template_id
+			SELECT id,
+			       (stats->'FVehicleModuleDurabilityStats'->1->>'MaxDurability'),
+			       (stats->'FVehicleModuleDurabilityStats'->1->>'CurrentDurability'),
+			       (stats->'FVehicleModuleDurabilityStats'->1->>'DecayedMaxDurability')
 			FROM dune.vehicle_modules
 			WHERE vehicle_id = $1::bigint`, vehicleID)
 	if err != nil {
@@ -4032,7 +4042,7 @@ func loadVehicleModules(ctx context.Context, vehicleID int64) ([]vehicleModule, 
 	var modules []vehicleModule
 	for rows.Next() {
 		var module vehicleModule
-		if err := rows.Scan(&module.id, &module.templateID); err != nil {
+		if err := rows.Scan(&module.id, &module.maxDurability, &module.currentDurability, &module.decayedDurability); err != nil {
 			return nil, fmt.Errorf("scan module: %w", err)
 		}
 		modules = append(modules, module)
@@ -4050,12 +4060,32 @@ type vehicleRepairSummary struct {
 	err      error
 }
 
-func vehicleRepairTarget(templateID string) (float64, bool) {
-	target, ok := itemMaxDurability(templateID)
-	if !ok || target <= 0 {
+// vehicleModuleRepairTarget derives the repair target from the module's own
+// in-row MaxDurability — the authoritative 100% ceiling. ok=false means the
+// module has no usable in-row MaxDurability and must be skipped: the PAK catalog
+// is NOT a fallback (it under-reports transport-ornithopter modules by ~half).
+// The target never lowers an existing higher value.
+func vehicleModuleRepairTarget(module vehicleModule) (float64, bool) {
+	maxDur := parseDurabilityText(module.maxDurability)
+	if !module.maxDurability.Valid || maxDur <= 0 {
 		return 0, false
 	}
+	target := maxDur
+	if current := parseDurabilityText(module.currentDurability); current > target {
+		target = current
+	}
+	if decayed := parseDurabilityText(module.decayedDurability); decayed > target {
+		target = decayed
+	}
 	return target, true
+}
+
+// vehicleModuleAtTarget reports whether the module already sits at the target
+// on both the current and decayed ceilings, so no write is needed.
+func vehicleModuleAtTarget(module vehicleModule, target float64) bool {
+	current := parseDurabilityText(module.currentDurability)
+	decayed := parseDurabilityText(module.decayedDurability)
+	return math.Abs(current-target) < 0.01 && math.Abs(decayed-target) < 0.01
 }
 
 func runVehicleModuleRepairs(
@@ -4064,10 +4094,13 @@ func runVehicleModuleRepairs(
 ) vehicleRepairSummary {
 	summary := vehicleRepairSummary{total: len(modules)}
 	for _, module := range modules {
-		target, ok := vehicleRepairTarget(module.templateID)
+		target, ok := vehicleModuleRepairTarget(module)
 		if !ok {
 			summary.skipped++
 			continue
+		}
+		if vehicleModuleAtTarget(module, target) {
+			continue // already at full — no write needed
 		}
 		if err := update(module, target); err != nil {
 			summary.err = fmt.Errorf("repair module %d: %w", module.id, err)
