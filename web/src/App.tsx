@@ -45,12 +45,12 @@ export default function App() {
 }
 
 function parseVer(v: string): [number, number, number] {
-  const [a, b, c] = v.replace(/^v/, "").split(".").map(Number);
+  // Strip leading "v" and any pre-release suffix (-dev, -rc1, etc.) before parsing.
+  const [a, b, c] = v.replace(/^v/, "").replace(/-.*$/, "").split(".").map(Number);
   return [a || 0, b || 0, c || 0];
 }
 
 function isNewer(latest: string, current: string): boolean {
-  if (current === "dev") return false;
   const [la, lb, lc] = parseVer(latest);
   const [ca, cb, cc] = parseVer(current);
   if (la !== ca) return la > ca;

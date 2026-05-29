@@ -18,15 +18,37 @@ import (
 	"dune-admin/internal/marketbot"
 )
 
-// AppVersion is the conduit release version shown to users.
+// AppVersion is the release version shown to users.
 // Populated at build time via -ldflags "-X main.AppVersion=$(VERSION)".
-// Defaults to "dev" so unreleased builds don't masquerade as a real
-// release and don't trigger the update notifier.
+// Falls back to "<VERSION file>-dev" for source builds without ldflags.
 var AppVersion = "dev"
 
 // GitCommit and BuildTime are stamped at build time.
 var GitCommit = "unknown"
 var BuildTime = "unknown"
+
+func init() {
+	AppVersion = resolveAppVersion(AppVersion, ".")
+}
+
+// resolveAppVersion returns ldflagsVersion when it was set by the build pipeline.
+// For plain `go build` / `go run` invocations that leave the default "dev", it
+// reads the VERSION file from workDir and returns "<version>-dev" so operators
+// can still tell which codebase they're running and update notifications work.
+func resolveAppVersion(ldflagsVersion, workDir string) string {
+	if ldflagsVersion != "dev" {
+		return ldflagsVersion
+	}
+	data, err := os.ReadFile(filepath.Join(workDir, "VERSION"))
+	if err != nil {
+		return "dev"
+	}
+	v := strings.TrimSpace(string(data))
+	if v == "" {
+		return "dev"
+	}
+	return v + "-dev"
+}
 
 // ── config ────────────────────────────────────────────────────────────────────
 
