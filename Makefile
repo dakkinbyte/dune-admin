@@ -1,4 +1,4 @@
-.PHONY: build web go linux dev dev-server dev-backend dev-web setup deploy-web \
+.PHONY: build web go go-embed linux dev dev-server dev-backend dev-web setup deploy-web \
         render-k8s render-k8s-stdout k8s-dry-run \
         vulncheck gosec pnpm-audit \
         test test-race vet fmt fmt-check \
@@ -28,10 +28,10 @@ GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_TIME ?= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 LDFLAGS    := -ldflags "-s -w -X main.AppVersion=$(VERSION) -X main.GitCommit=$(GIT_COMMIT) -X main.BuildTime=$(BUILD_TIME)"
 
-# Build frontend + backend binary.
-build: web go
+# Build frontend + backend binary with embedded SPA.
+build: web go-embed
 
-# Build backend binary only.
+# Build backend binary only (no embedded frontend).
 go:
 ifeq ($(OS),Windows_NT)
 	@if not exist bin mkdir bin
@@ -42,6 +42,12 @@ else
 	$(GO) build -trimpath $(LDFLAGS) -o $(BIN) $(CMD)
 	install -m 0755 $(BIN) ./$(LOCAL_BIN)
 endif
+
+# Build backend binary with embedded frontend (requires make web first).
+go-embed:
+	@mkdir -p bin
+	$(GO) build -trimpath $(LDFLAGS) -tags embed -o $(BIN) $(CMD)
+	install -m 0755 $(BIN) ./dune-admin
 
 # Install the binary system-wide.
 install: go
@@ -95,6 +101,8 @@ setup:
 
 web:
 	cd web && pnpm install --frozen-lockfile && pnpm build
+	rm -rf cmd/dune-admin/dist
+	cp -r web/dist cmd/dune-admin/dist
 
 deploy-web:
 	cd web && pnpm install --frozen-lockfile && pnpm build && wrangler pages deploy dist --project-name dune-admin
