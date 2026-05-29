@@ -45,13 +45,15 @@ func defaultConfig() configValues {
 		GradeMultipliers: [6]float64{1.0, 1.0, 1.25, 1.5, 1.75, 2.0},
 		RarityMultipliers: map[string]float64{
 			"common":  1.0,
-			"unique":  3.0,
-			"memento": 5.0,
+			"rare":    5.0,
+			"unique":  5.0,
+			"memento": 2.0,
 		},
 		VendorMultipliers: map[string]float64{
-			"common":  3.0,
+			"common":  1.0,
+			"rare":    5.0,
 			"unique":  5.0,
-			"memento": 5.0,
+			"memento": 2.0,
 		},
 		DisabledItems: nil,
 	}
@@ -266,6 +268,25 @@ func copyFloatMap(m map[string]float64) map[string]float64 {
 	return out
 }
 
+// mergeMultiplierDefaults fills any key absent from loaded with the corresponding
+// value from defaults. Present keys are left untouched so operator overrides survive.
+// A nil loaded map is replaced with a full copy of defaults.
+func mergeMultiplierDefaults(loaded, defaults map[string]float64) map[string]float64 {
+	if loaded == nil {
+		out := make(map[string]float64, len(defaults))
+		for k, v := range defaults {
+			out[k] = v
+		}
+		return out
+	}
+	for k, v := range defaults {
+		if _, exists := loaded[k]; !exists {
+			loaded[k] = v
+		}
+	}
+	return loaded
+}
+
 // LoadState reads a persisted configValues from path. A missing file returns
 // the zero configValues with a nil error so callers can treat it as "no state,
 // use defaults". Other I/O or decode errors are returned verbatim.
@@ -301,6 +322,11 @@ func LoadState(path string) (configValues, error) {
 			out.ListInterval = d
 		}
 	}
+	// Inject any default keys absent from the persisted maps so newly-added
+	// rarity tiers (e.g. "rare") surface in the UI without manual state migration.
+	def := defaultConfig()
+	out.RarityMultipliers = mergeMultiplierDefaults(out.RarityMultipliers, def.RarityMultipliers)
+	out.VendorMultipliers = mergeMultiplierDefaults(out.VendorMultipliers, def.VendorMultipliers)
 	return out, nil
 }
 

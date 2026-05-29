@@ -92,7 +92,7 @@ func cmdFetchMarketItems() Msg {
 			Category:     cat,
 			Tier:         rule.Tier,
 			Rarity:       rule.Rarity,
-			LowestPrice:  lowestPrice * 10,
+			LowestPrice:  lowestPrice,
 			TotalStock:   totalStock,
 			BotStock:     botStock,
 			ListingCount: listingCount,
@@ -153,7 +153,6 @@ func cmdFetchMarketListings(templateID string) Msg {
 		} else {
 			l.OwnerType = "player"
 		}
-		l.Price *= 10
 		listings = append(listings, l)
 	}
 	if rows.Err() != nil {
@@ -199,7 +198,6 @@ func cmdFetchMarketSales() Msg {
 		} else {
 			s.SellerType = "player"
 		}
-		s.Price *= 10
 		sales = append(sales, s)
 	}
 	if rows.Err() != nil {

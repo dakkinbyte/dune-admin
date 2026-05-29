@@ -151,7 +151,7 @@ const BotConfigEditor = forwardRef<ConfigEditorHandle, Props>(function BotConfig
 
       <Panel>
         <SectionLabel>Rarity Multipliers</SectionLabel>
-        <p className="text-xs text-muted -mt-1">Extra multiplier on top of the base price for non-common items. Stacks with grade multipliers.</p>
+        <p className="text-xs text-muted -mt-1">Applies to items with no NPC vendor price and to crafted Unique/Memento gear. Keyed by rarity; Common (1.0) is the baseline. Grade multipliers stack on top.</p>
         <div className="flex flex-wrap gap-3 mt-1">
           {Object.entries(draft.rarity_multipliers ?? {}).map(([rarity, mult]) => (
             <Field key={rarity} label={capitalize(rarity)} hint={`×${(mult as number).toFixed(2)}`}>
@@ -168,7 +168,7 @@ const BotConfigEditor = forwardRef<ConfigEditorHandle, Props>(function BotConfig
       {draft.vendor_multipliers && Object.keys(draft.vendor_multipliers ?? {}).length > 0 && (
         <Panel>
           <SectionLabel>Vendor Multipliers</SectionLabel>
-          <p className="text-xs text-muted -mt-1">Multiplier for vendor-priced items (fixed NPC purchase cost). Separate from rarity multipliers.</p>
+          <p className="text-xs text-muted -mt-1">Applies to items that have an NPC vendor price (most items). Listing price = vendor price × this multiplier, keyed by rarity. Only one of Vendor or Rarity applies to a given item.</p>
           <div className="flex flex-wrap gap-3 mt-1">
             {Object.entries(draft.vendor_multipliers ?? {}).map(([rarity, mult]) => (
               <Field key={rarity} label={capitalize(rarity)} hint={`×${(mult as number).toFixed(2)}`}>

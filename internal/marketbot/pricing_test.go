@@ -5,6 +5,70 @@ import (
 	"testing"
 )
 
+func TestNormalizeRarity(t *testing.T) {
+	if got := normalizeRarity(""); got != "common" {
+		t.Errorf("normalizeRarity(\"\") = %q, want \"common\"", got)
+	}
+	for _, r := range []string{"rare", "Unique", "memento", "Common", "RARE"} {
+		if got := normalizeRarity(r); got != r {
+			t.Errorf("normalizeRarity(%q) = %q, want %q", r, got, r)
+		}
+	}
+}
+
+func TestComputePriceVendorRarityOrdering(t *testing.T) {
+	// Vendor path: item.BasePrice >= 10 → vendor_price * vendorMult(rarity).
+	// Confirms ordering and that rare sits between common and unique.
+	snap := defaultConfig()
+	cases := []struct {
+		rarity string
+		want   int64
+	}{
+		{"common", 1000},  // 1000 * 1.0
+		{"memento", 2000}, // 1000 * 2.0
+		{"rare", 5000},    // 1000 * 5.0
+		{"Unique", 5000},  // 1000 * 5.0
+	}
+	for _, tc := range cases {
+		item := CatalogItem{Rarity: tc.rarity, BasePrice: 1000, StackMax: 500}
+		if got := computePrice(item, snap); got != tc.want {
+			t.Errorf("vendor path rarity=%q: got %d want %d", tc.rarity, got, tc.want)
+		}
+	}
+}
+
+func TestComputePriceFallbackRarityOrdering(t *testing.T) {
+	// Fallback path: BasePrice < 10, StackMax=1, Tier=1 → equipmentPrice(1)=2000 * rarityMult.
+	snap := defaultConfig()
+	cases := []struct {
+		rarity string
+		want   int64
+	}{
+		{"common", 2000},  // 2000 * 1.0
+		{"memento", 4000}, // 2000 * 2.0
+		{"rare", 10000},   // 2000 * 5.0
+		{"Unique", 10000}, // 2000 * 5.0
+	}
+	for _, tc := range cases {
+		item := CatalogItem{Rarity: tc.rarity, BasePrice: 0, StackMax: 1, Tier: 1}
+		if got := computePrice(item, snap); got != tc.want {
+			t.Errorf("fallback path rarity=%q: got %d want %d", tc.rarity, got, tc.want)
+		}
+	}
+}
+
+func TestComputePriceEmptyRarityMatchesCommon(t *testing.T) {
+	// Items normalized to "common" at catalog load produce the same price as
+	// an item explicitly carrying rarity "common" (both mult = 1.0 on vendor path).
+	snap := defaultConfig()
+	empty := CatalogItem{Rarity: "", BasePrice: 1000, StackMax: 500}
+	common := CatalogItem{Rarity: "common", BasePrice: 1000, StackMax: 500}
+	if computePrice(empty, snap) != computePrice(common, snap) {
+		t.Errorf("empty rarity price %d != common price %d",
+			computePrice(empty, snap), computePrice(common, snap))
+	}
+}
+
 func TestUniqueSchematicsMask(t *testing.T) {
 	cases := []struct {
 		category string

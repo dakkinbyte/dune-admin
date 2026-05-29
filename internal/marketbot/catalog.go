@@ -49,6 +49,15 @@ type itemDataFile struct {
 	Items map[string]itemDataEntry `json:"items"`
 }
 
+// normalizeRarity maps a blank rarity string (JSON null → Go "") to "common"
+// so config multiplier lookups always have a meaningful key to match against.
+func normalizeRarity(r string) string {
+	if r == "" {
+		return "common"
+	}
+	return r
+}
+
 func loadCatalog(itemDataPath string) ([]CatalogItem, error) {
 	if itemDataPath == "" {
 		itemDataPath = "item-data.json"
@@ -88,7 +97,7 @@ func loadCatalog(itemDataPath string) ([]CatalogItem, error) {
 			StackMax:             d.StackMax,
 			Volume:               d.Volume,
 			Tier:                 d.Tier,
-			Rarity:               d.Rarity,
+			Rarity:               normalizeRarity(d.Rarity),
 			BasePrice:            d.BasePrice,
 			Category:             d.Category,
 			IsSchematic:          d.IsSchematic,

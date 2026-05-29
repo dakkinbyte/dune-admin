@@ -27,6 +27,7 @@ data:
     listen_addr: :8080
     market_bot_enabled: true
     market_bot_cache_db: /data/market-bot-cache.db
+    market_bot_state: /data/market-bot-state.json
     market_bot_item_data: /app/item-data.json
     market_bot_buy_interval: 5m
     market_bot_list_interval: 30m

@@ -205,6 +205,104 @@ func TestLoadStateMissingFile(t *testing.T) {
 	}
 }
 
+func TestDefaultConfigHasRareTier(t *testing.T) {
+	cfg := defaultConfig()
+
+	if v, ok := cfg.RarityMultipliers["rare"]; !ok || v != 5.0 {
+		t.Errorf("RarityMultipliers[rare] want 5.0, got %v (ok=%v)", v, ok)
+	}
+	if v, ok := cfg.RarityMultipliers["common"]; !ok || v != 1.0 {
+		t.Errorf("RarityMultipliers[common] want 1.0, got %v (ok=%v)", v, ok)
+	}
+	if v, ok := cfg.RarityMultipliers["memento"]; !ok || v != 2.0 {
+		t.Errorf("RarityMultipliers[memento] want 2.0, got %v (ok=%v)", v, ok)
+	}
+	if v, ok := cfg.VendorMultipliers["rare"]; !ok || v != 5.0 {
+		t.Errorf("VendorMultipliers[rare] want 5.0, got %v (ok=%v)", v, ok)
+	}
+	if v, ok := cfg.VendorMultipliers["common"]; !ok || v != 1.0 {
+		t.Errorf("VendorMultipliers[common] want 1.0, got %v (ok=%v)", v, ok)
+	}
+	if v, ok := cfg.VendorMultipliers["memento"]; !ok || v != 2.0 {
+		t.Errorf("VendorMultipliers[memento] want 2.0, got %v (ok=%v)", v, ok)
+	}
+}
+
+func TestLoadStateMergesAbsentDefaultKeys(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "state.json")
+
+	// Save a config that is missing "rare" in both maps (simulates pre-rare state file).
+	partial := defaultConfig()
+	delete(partial.RarityMultipliers, "rare")
+	delete(partial.VendorMultipliers, "rare")
+	if err := SaveState(path, partial); err != nil {
+		t.Fatalf("SaveState: %v", err)
+	}
+
+	got, err := LoadState(path)
+	if err != nil {
+		t.Fatalf("LoadState: %v", err)
+	}
+	if v, ok := got.RarityMultipliers["rare"]; !ok || v != 5.0 {
+		t.Errorf("RarityMultipliers[rare] want 5.0 after merge, got %v (ok=%v)", v, ok)
+	}
+	if v, ok := got.VendorMultipliers["rare"]; !ok || v != 5.0 {
+		t.Errorf("VendorMultipliers[rare] want 5.0 after merge, got %v (ok=%v)", v, ok)
+	}
+}
+
+func TestLoadStatePreservesCustomKeys(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "state.json")
+
+	custom := defaultConfig()
+	custom.VendorMultipliers["common"] = 3.0 // operator overrode the default 1.0
+	if err := SaveState(path, custom); err != nil {
+		t.Fatalf("SaveState: %v", err)
+	}
+
+	got, err := LoadState(path)
+	if err != nil {
+		t.Fatalf("LoadState: %v", err)
+	}
+	// Present key must be preserved, not overwritten by the default.
+	if got.VendorMultipliers["common"] != 3.0 {
+		t.Errorf("VendorMultipliers[common] want 3.0 (preserved), got %v", got.VendorMultipliers["common"])
+	}
+	// Other keys still get their defaults.
+	if got.VendorMultipliers["rare"] != 5.0 {
+		t.Errorf("VendorMultipliers[rare] want 5.0 (default), got %v", got.VendorMultipliers["rare"])
+	}
+}
+
+func TestLoadStateEmptyMapsGetDefaults(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "state.json")
+
+	// Write a state file that has empty multiplier maps.
+	content := `{"buy_interval":"5m0s","list_interval":"30m0s","buy_threshold":1.05,"max_buys":50,"listings_per_grade":5,"enabled":true,"grade_multipliers":[1,1,1.25,1.5,1.75,2],"rarity_multipliers":{},"vendor_multipliers":{},"disabled_items":null}`
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	got, err := LoadState(path)
+	if err != nil {
+		t.Fatalf("LoadState: %v", err)
+	}
+	def := defaultConfig()
+	for k, want := range def.RarityMultipliers {
+		if got.RarityMultipliers[k] != want {
+			t.Errorf("RarityMultipliers[%q] want %v got %v", k, want, got.RarityMultipliers[k])
+		}
+	}
+	for k, want := range def.VendorMultipliers {
+		if got.VendorMultipliers[k] != want {
+			t.Errorf("VendorMultipliers[%q] want %v got %v", k, want, got.VendorMultipliers[k])
+		}
+	}
+}
+
 func TestSaveStateAtomicWrite(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "market-bot-state.json")
