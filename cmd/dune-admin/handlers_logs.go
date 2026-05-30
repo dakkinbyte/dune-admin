@@ -28,6 +28,12 @@ func isValidK8sName(name string) bool {
 	return len(name) > 0 && len(name) <= 253 && k8sNameRe.MatchString(name)
 }
 
+// @Summary List available log sources
+// @Tags logs
+// @Produce json
+// @Success 200 {array} logPod
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/logs/pods [get]
 func handleLogPods(w http.ResponseWriter, r *http.Request) {
 	if globalControl == nil {
 		jsonErr(w, fmt.Errorf("not connected"), 503)
@@ -49,6 +55,13 @@ func handleLogPods(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, pods)
 }
 
+// @Summary Stream log via WebSocket
+// @Tags logs
+// @Produce text/plain
+// @Param ns query string true "Namespace or log source"
+// @Param pod query string true "Pod or log file name"
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/logs/stream [get]
 func handleLogStream(w http.ResponseWriter, r *http.Request) {
 	ns := r.URL.Query().Get("ns")
 	pod := r.URL.Query().Get("pod")
@@ -93,6 +106,12 @@ func splitLines(s string) []string {
 	return strings.Split(strings.TrimSpace(s), "\n")
 }
 
+// @Summary Fetch the cheat detection log
+// @Tags logs
+// @Produce json
+// @Success 200 {array} cheatEntry
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/logs/cheats [get]
 func handleGetCheatLog(w http.ResponseWriter, r *http.Request) {
 	msg, ok := cmdFetchCheatLog()().(msgCheatLog)
 	if !ok {

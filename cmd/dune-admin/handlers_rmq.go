@@ -14,6 +14,15 @@ import (
 // result. The HTTP response indicates whether the command was sent, not whether
 // the game server executed it successfully.
 
+// @Summary Send kick command via RabbitMQ
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "Player FLS ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/kick [post]
 // POST /api/v1/players/kick
 func handleRMQKickPlayer(w http.ResponseWriter, r *http.Request) {
 	var req struct {
@@ -34,6 +43,15 @@ func handleRMQKickPlayer(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": fmt.Sprintf("kick command sent for %s", req.FlsID)})
 }
 
+// @Summary Send fill-water command via RabbitMQ
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "Player FLS ID and optional water amount"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/fill-water [post]
 // POST /api/v1/players/fill-water
 func handleRMQFillWater(w http.ResponseWriter, r *http.Request) {
 	var req struct {
@@ -58,6 +76,15 @@ func handleRMQFillWater(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": fmt.Sprintf("fill water command sent for %s", req.FlsID)})
 }
 
+// @Summary Send set-skill-points command via RabbitMQ
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "Player FLS ID and skill points value"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/set-skill-points [post]
 // POST /api/v1/players/set-skill-points
 func handleRMQSetSkillPoints(w http.ResponseWriter, r *http.Request) {
 	var req struct {
@@ -79,6 +106,15 @@ func handleRMQSetSkillPoints(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": fmt.Sprintf("set skill points %d sent for %s", req.SkillPoints, req.FlsID)})
 }
 
+// @Summary Send server-wide broadcast message via RabbitMQ
+// @Tags broadcast
+// @Accept json
+// @Produce json
+// @Param body body object true "Localized texts and optional duration in seconds"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/broadcast [post]
 // POST /api/v1/broadcast
 func handleRMQBroadcast(w http.ResponseWriter, r *http.Request) {
 	var req struct {
@@ -103,6 +139,15 @@ func handleRMQBroadcast(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": "broadcast sent"})
 }
 
+// @Summary Send shutdown broadcast command via RabbitMQ
+// @Tags broadcast
+// @Accept json
+// @Produce json
+// @Param body body object true "Shutdown type, delay, frequency, duration, and cancel flag"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/broadcast/shutdown [post]
 // POST /api/v1/broadcast/shutdown
 func handleRMQBroadcastShutdown(w http.ResponseWriter, r *http.Request) {
 	var req struct {
@@ -131,6 +176,15 @@ func handleRMQBroadcastShutdown(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": action})
 }
 
+// @Summary Send cheat script command via RabbitMQ
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "Player FLS ID and script name"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/cheat-script [post]
 // POST /api/v1/players/cheat-script
 func handleRMQCheatScript(w http.ResponseWriter, r *http.Request) {
 	var req struct {
@@ -152,6 +206,16 @@ func handleRMQCheatScript(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": fmt.Sprintf("cheat script %q sent for %s", req.ScriptName, req.FlsID)})
 }
 
+// @Summary Send give-item command via RabbitMQ to an online player
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "Actor ID, item template, quantity, and durability"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/give-item-live [post]
 // POST /api/v1/players/give-item-live
 // Give item to an ONLINE player via RMQ. Pre-checks weight/slot limits via DB.
 // Accepts actor_id (player pawn ID), resolves to FLS ID automatically.
@@ -201,6 +265,15 @@ func handleRMQGiveItem(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary Send clean-inventory command via RabbitMQ
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "Player FLS ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/clean-inventory [post]
 // POST /api/v1/players/clean-inventory
 func handleRMQCleanInventory(w http.ResponseWriter, r *http.Request) {
 	var req struct {
@@ -221,6 +294,15 @@ func handleRMQCleanInventory(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": fmt.Sprintf("clean inventory command sent for %s", req.FlsID)})
 }
 
+// @Summary Send reset-progression command via RabbitMQ
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "Player FLS ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/reset-progression [post]
 // POST /api/v1/players/reset-progression
 func handleRMQResetProgression(w http.ResponseWriter, r *http.Request) {
 	var req struct {
@@ -241,6 +323,15 @@ func handleRMQResetProgression(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": fmt.Sprintf("reset progression command sent for %s", req.FlsID)})
 }
 
+// @Summary Send set-skill-module command via RabbitMQ
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "Player FLS ID, module name, and level"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/set-skill-module [post]
 // POST /api/v1/players/set-skill-module
 func handleRMQSetSkillModule(w http.ResponseWriter, r *http.Request) {
 	var req struct {
@@ -263,6 +354,15 @@ func handleRMQSetSkillModule(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": fmt.Sprintf("set module %s level %d sent for %s", req.Module, req.Level, req.FlsID)})
 }
 
+// @Summary Send vehicle spawn command via RabbitMQ
+// @Tags vehicles
+// @Accept json
+// @Produce json
+// @Param body body object true "FLS ID, class name, coordinates, rotation, template, persistence, and faction"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/vehicles/spawn [post]
 // POST /api/v1/vehicles/spawn
 func handleRMQSpawnVehicle(w http.ResponseWriter, r *http.Request) {
 	var req struct {
@@ -291,6 +391,15 @@ func handleRMQSpawnVehicle(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": fmt.Sprintf("spawn %s command sent for %s", req.ClassName, req.FlsID)})
 }
 
+// @Summary Send whisper message to a player via RabbitMQ (experimental)
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "Target FLS ID, target name, sender name, message, and optional impersonated FLS ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/chat/whisper [post]
 // GET /api/v1/players/{id}/player-ids
 // POST /api/v1/chat/whisper
 //
@@ -328,6 +437,14 @@ func handleRMQWhisper(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary Resolve actor ID to both ID forms and render a sample RMQ envelope
+// @Tags players
+// @Produce json
+// @Param id path int true "Actor (pawn) ID"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /api/v1/players/{id}/player-ids [get]
 // Returns both ID forms for an actor so you can verify which PlayerId the
 // game server would receive. Also renders a sample AddItemToInventory envelope
 // (without sending it) so the exact message format can be confirmed.

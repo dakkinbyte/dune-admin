@@ -118,6 +118,13 @@ func makeUpdateCheckHandler(fetcher func(string) ([]byte, error)) http.HandlerFu
 }
 
 // handleUpdateCheck is the production handler wired into the HTTP mux in server.go.
+//
+// @Summary Check for a newer release on GitHub
+// @Tags update
+// @Produce json
+// @Success 200 {object} updateCheckResponse
+// @Failure 502 {object} map[string]string
+// @Router /api/v1/update/check [get]
 func handleUpdateCheck(w http.ResponseWriter, r *http.Request) {
 	makeUpdateCheckHandler(updateFetcher)(w, r)
 }
@@ -348,6 +355,15 @@ func scheduleRestart() {
 	}
 }
 
+// @Summary Download and apply the latest release, then restart
+// @Tags update
+// @Accept json
+// @Produce json
+// @Param body body updateApplyRequest false "Set force=true to reinstall even when up to date"
+// @Success 200 {object} updateApplyResponse
+// @Failure 500 {object} map[string]string
+// @Failure 502 {object} map[string]string
+// @Router /api/v1/update/apply [post]
 func handleUpdateApply(w http.ResponseWriter, r *http.Request) {
 	exe, err := os.Executable()
 	if err != nil {

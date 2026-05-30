@@ -11,6 +11,12 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// @Summary List all building blueprints
+// @Tags blueprints
+// @Produce json
+// @Success 200 {array} map[string]interface{}
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/blueprints [get]
 func handleListBlueprints(w http.ResponseWriter, r *http.Request) {
 	msg, ok := cmdListBlueprints().(msgBlueprintList)
 	if !ok {
@@ -28,6 +34,14 @@ func handleListBlueprints(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, rows)
 }
 
+// @Summary Export a blueprint as a downloadable JSON file
+// @Tags blueprints
+// @Produce application/octet-stream
+// @Param id path int true "Blueprint ID"
+// @Success 200 {file} string "Blueprint JSON file"
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/blueprints/{id}/export [get]
 func handleExportBlueprint(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -72,6 +86,16 @@ func sanitizeFilename(s string) string {
 	return strings.TrimSpace(b.String())
 }
 
+// @Summary Import a blueprint JSON file into a player's inventory
+// @Tags blueprints
+// @Accept multipart/form-data
+// @Produce json
+// @Param blueprint formData file true "Blueprint JSON file"
+// @Param player_id formData int true "Player pawn ID to receive the blueprint"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/blueprints/import [post]
 func handleImportBlueprint(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		jsonErr(w, err, 400)

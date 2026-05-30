@@ -71,6 +71,11 @@ func (r *remoteBotClient) wsURL(path string) string {
 
 // ── status ────────────────────────────────────────────────────────────────────
 
+// @Summary Get market bot running status and mode
+// @Tags market-bot
+// @Produce json
+// @Success 200 {object} map[string]any
+// @Router /api/v1/market-bot/status [get]
 func handleMarketBotStatus(w http.ResponseWriter, r *http.Request) {
 	if embeddedBot != nil {
 		snap := embeddedBot.StatusSnapshot()
@@ -128,6 +133,22 @@ func handleMarketBotStatus(w http.ResponseWriter, r *http.Request) {
 
 // ── config ────────────────────────────────────────────────────────────────────
 
+// @Summary Get market bot configuration
+// @Tags market-bot
+// @Produce json
+// @Success 200 {object} map[string]any
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/market-bot/config [get]
+
+// @Summary Update market bot configuration
+// @Tags market-bot
+// @Accept json
+// @Produce json
+// @Param body body object true "Configuration patch"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/market-bot/config [put]
 func handleMarketBotConfig(w http.ResponseWriter, r *http.Request) {
 	if embeddedBot != nil {
 		handleEmbeddedBotConfig(w, r)
@@ -185,6 +206,15 @@ var botCmdAllowlist = map[string]bool{
 	"start": true, "stop": true, "restart": true,
 }
 
+// @Summary Execute a lifecycle command on the market bot (start/stop/restart)
+// @Tags market-bot
+// @Accept json
+// @Produce json
+// @Param body body object true "Command: start, stop, or restart"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/market-bot/exec [post]
 func handleMarketBotExec(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Cmd string `json:"cmd"`
@@ -227,6 +257,12 @@ func handleMarketBotExec(w http.ResponseWriter, r *http.Request) {
 
 // ── cleanup ───────────────────────────────────────────────────────────────────
 
+// @Summary Trigger market bot listing cleanup
+// @Tags market-bot
+// @Produce json
+// @Success 200 {object} map[string]int64
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/market-bot/cleanup [post]
 func handleMarketBotCleanup(w http.ResponseWriter, r *http.Request) {
 	if embeddedBot != nil {
 		orders, items, err := embeddedBot.CleanupListings(r.Context())
@@ -249,6 +285,11 @@ func handleMarketBotCleanup(w http.ResponseWriter, r *http.Request) {
 
 // ── log streaming ─────────────────────────────────────────────────────────────
 
+// @Summary Check whether market bot log streaming is available
+// @Tags market-bot
+// @Produce json
+// @Success 200 {object} map[string]any
+// @Router /api/v1/market-bot/logs-ready [get]
 func handleMarketBotLogsReady(w http.ResponseWriter, _ *http.Request) {
 	if embeddedBot != nil {
 		jsonOK(w, map[string]any{"ready": true, "mode": "embedded"})
@@ -261,6 +302,12 @@ func handleMarketBotLogsReady(w http.ResponseWriter, _ *http.Request) {
 	jsonOK(w, map[string]any{"ready": false, "mode": "none", "reason": "market bot not configured"})
 }
 
+// @Summary Stream market bot log output via WebSocket
+// @Tags market-bot
+// @Produce text/plain
+// @Success 101 {string} string "Switching Protocols"
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/market-bot/logs [get]
 func handleMarketBotLogs(w http.ResponseWriter, r *http.Request) {
 	if embeddedBot != nil {
 		streamEmbeddedBotLogs(w, r)

@@ -318,18 +318,28 @@ func (c *ampControl) EvalOnGameBroker(_ context.Context, exec Executor, expr str
 
 // ── INI discovery ─────────────────────────────────────────────────────────────
 
-func (c *ampControl) DiscoverIniDir(_ context.Context, _ Executor) (string, error) {
+func (c *ampControl) DiscoverIniDir(_ context.Context, exec Executor) (string, error) {
 	if c.iniDir != "" {
 		return c.iniDir, nil
 	}
-	if c.instance != "" {
-		// Conventional AMP path. The setup wizard prefills this so users rarely
-		// hit the fallback.
-		return filepath.ToSlash(fmt.Sprintf(
-			"/home/%s/.ampdata/instances/%s/duneawakening/server/state",
-			c.ampUser, c.instance)), nil
+	if c.instance == "" {
+		return "", fmt.Errorf("amp control requires server_ini_dir or amp_instance to derive an INI directory")
 	}
-	return "", fmt.Errorf("amp control requires server_ini_dir or amp_instance to derive an INI directory")
+	base := filepath.ToSlash(fmt.Sprintf(
+		"/home/%s/.ampdata/instances/%s/duneawakening/server/state",
+		c.ampUser, c.instance))
+
+	// install.sh places UserGame.ini under ue5-saved/UserSettings/ inside the
+	// state directory (UE5's canonical Saved path). Prefer it over the bare
+	// state/ root so reads and writes target the file the game server actually uses.
+	ue5Dir := base + "/ue5-saved/UserSettings"
+	out, _ := exec.Exec(fmt.Sprintf(
+		"test -f %s/UserGame.ini && echo yes || echo no",
+		shellQuote(ue5Dir)))
+	if strings.TrimSpace(out) == "yes" {
+		return ue5Dir, nil
+	}
+	return base, nil
 }
 
 // ReadDefaultINI returns the contents of DefaultGame.ini / DefaultEngine.ini.

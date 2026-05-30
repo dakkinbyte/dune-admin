@@ -27,6 +27,12 @@ var bgCmdAllowlist = map[string]bool{
 	// restore handled separately via handleBGRestore
 }
 
+// @Summary Get battlegroup and server status from the control plane
+// @Tags battlegroup
+// @Produce json
+// @Success 200 {object} map[string]any
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/battlegroup/status [get]
 func handleBGStatus(w http.ResponseWriter, r *http.Request) {
 	if globalControl == nil {
 		jsonErr(w, fmt.Errorf("not connected"), 503)
@@ -52,6 +58,15 @@ func safeIdx(s []string, i int) string {
 	return ""
 }
 
+// @Summary Execute a battlegroup lifecycle command via the control plane
+// @Tags battlegroup
+// @Accept json
+// @Produce json
+// @Param body body object true "Command: start, stop, restart, update, or backup"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/battlegroup/exec [post]
 func handleBGExec(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Cmd string `json:"cmd"`
@@ -76,6 +91,12 @@ func handleBGExec(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"output": out})
 }
 
+// @Summary List battlegroup pods/processes and their namespace
+// @Tags battlegroup
+// @Produce json
+// @Success 200 {object} map[string]any
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/battlegroup/pods [get]
 func handleBGPods(w http.ResponseWriter, r *http.Request) {
 	if globalControl == nil {
 		jsonErr(w, fmt.Errorf("not connected"), 503)
@@ -294,6 +315,12 @@ func writeBackupFile(dir, name string, src io.Reader) error {
 	return globalExecutor.WriteFile(destPath, src)
 }
 
+// @Summary List available database backup files in the backup directory
+// @Tags battlegroup
+// @Produce json
+// @Success 200 {object} []backupFile
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/battlegroup/backup-files [get]
 func handleBGBackupFiles(w http.ResponseWriter, r *http.Request) {
 	if globalExecutor == nil {
 		jsonErr(w, fmt.Errorf("not connected"), 503)
@@ -338,6 +365,14 @@ func handleBGBackupFiles(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, files)
 }
 
+// @Summary Download a backup file (and its YAML metadata) as a zip archive
+// @Tags battlegroup
+// @Produce application/zip
+// @Param file query string true "Backup filename (must end in .backup)"
+// @Success 200 {file} binary
+// @Failure 400 {object} map[string]string
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/battlegroup/backup-files/download [get]
 func handleBGBackupDownload(w http.ResponseWriter, r *http.Request) {
 	if globalExecutor == nil {
 		jsonErr(w, fmt.Errorf("not connected"), 503)
@@ -377,6 +412,15 @@ func handleBGBackupDownload(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// @Summary Restore the database from a named backup file via the control plane
+// @Tags battlegroup
+// @Accept json
+// @Produce json
+// @Param body body object true "Backup filename (must end in .backup)"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/battlegroup/restore [post]
 func handleBGRestore(w http.ResponseWriter, r *http.Request) {
 	if globalControl == nil || globalExecutor == nil {
 		jsonErr(w, fmt.Errorf("not connected"), 503)
@@ -460,6 +504,15 @@ func isDirectBackupUpload(filename string) bool {
 	return strings.HasSuffix(filename, ".backup") && !strings.ContainsAny(filename, "/\\")
 }
 
+// @Summary Upload a backup file (.backup or .zip) to the backup directory
+// @Tags battlegroup
+// @Accept multipart/form-data
+// @Produce json
+// @Param backup formData file true "Backup file (.backup or .zip)"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/battlegroup/backup-files/upload [post]
 func handleBGBackupUpload(w http.ResponseWriter, r *http.Request) {
 	if globalExecutor == nil {
 		jsonErr(w, fmt.Errorf("not connected"), 503)

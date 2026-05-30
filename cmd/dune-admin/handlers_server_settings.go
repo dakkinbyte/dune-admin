@@ -755,6 +755,12 @@ func writeINIContent(path, body string) error {
 	return globalExecutor.WriteFile(path, strings.NewReader(body))
 }
 
+// @Summary Get server INI settings and raw sections
+// @Tags server-settings
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/server-settings [get]
 func handleGetServerSettings(w http.ResponseWriter, r *http.Request) {
 	if globalExecutor == nil {
 		jsonErr(w, fmt.Errorf("not connected"), 503)
@@ -1269,6 +1275,15 @@ func buildUpdatedINIContent(path string, updates map[string]map[string]string) (
 	return applyDuneAdminUpdates(readINIContent(path), updates)
 }
 
+// @Summary Apply one or more server setting changes
+// @Tags server-settings
+// @Accept json
+// @Produce json
+// @Param body body object true "List of setting updates"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/server-settings [put]
 func handleUpdateServerSettings(w http.ResponseWriter, r *http.Request) {
 	if globalExecutor == nil {
 		jsonErr(w, fmt.Errorf("not connected"), 503)
@@ -1336,6 +1351,16 @@ func handleUpdateServerSettings(w http.ResponseWriter, r *http.Request) {
 // handleUpdateRawSection replaces a single INI section in the appropriate user
 // INI file. Sections declared in DefaultEngine.ini are written to UserEngine.ini;
 // all others are written to UserGame.ini.
+//
+// @Summary Replace a raw INI section (array lines included)
+// @Tags server-settings
+// @Accept json
+// @Produce json
+// @Param body body object true "Section name and raw INI lines"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/server-settings/raw [put]
 func handleUpdateRawSection(w http.ResponseWriter, r *http.Request) {
 	if globalExecutor == nil {
 		jsonErr(w, fmt.Errorf("not connected"), 503)

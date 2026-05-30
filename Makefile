@@ -2,7 +2,7 @@
         render-k8s render-k8s-stdout k8s-dry-run \
         vulncheck gosec pnpm-audit \
         test test-race vet fmt fmt-check \
-        tools verify \
+        tools docs verify \
         version version-patch version-minor version-major
 
 # ── Build ─────────────────────────────────────────────────────────────────────
@@ -217,6 +217,11 @@ verify:
 	@$(MAKE) lint
 	@$(MAKE) gocognit
 	@echo "All verification checks passed!"
+
+# ── Docs ──────────────────────────────────────────────────────────────────────
+
+docs:
+	$(GO) tool github.com/swaggo/swag/cmd/swag init -g cmd/dune-admin/main.go -o docs
 
 # ── Tools ─────────────────────────────────────────────────────────────────────
 

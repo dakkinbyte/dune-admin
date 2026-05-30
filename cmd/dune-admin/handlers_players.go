@@ -10,6 +10,12 @@ import (
 	"strings"
 )
 
+// @Summary List all players
+// @Tags players
+// @Produce json
+// @Success 200 {array} playerInfo
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players [get]
 func handleGetPlayers(w http.ResponseWriter, r *http.Request) {
 	msg, ok := cmdFetchPlayers().(msgPlayers)
 	if !ok {
@@ -27,6 +33,12 @@ func handleGetPlayers(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, rows)
 }
 
+// @Summary Get online state for all players
+// @Tags players
+// @Produce json
+// @Success 200 {array} object
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/online [get]
 func handleGetOnlineState(w http.ResponseWriter, r *http.Request) {
 	msg, ok := cmdFetchOnlineState().(msgOnlineState)
 	if !ok {
@@ -52,6 +64,12 @@ func handleGetOnlineState(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, rows)
 }
 
+// @Summary List currency balances for all players
+// @Tags players
+// @Produce json
+// @Success 200 {array} currencyRow
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/currency [get]
 func handleGetCurrency(w http.ResponseWriter, r *http.Request) {
 	msg, ok := cmdFetchCurrency().(msgCurrency)
 	if !ok {
@@ -69,6 +87,12 @@ func handleGetCurrency(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, rows)
 }
 
+// @Summary List faction reputation for all players
+// @Tags players
+// @Produce json
+// @Success 200 {array} factionRep
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/factions [get]
 func handleGetFactions(w http.ResponseWriter, r *http.Request) {
 	msg, ok := cmdFetchFactions().(msgFactions)
 	if !ok {
@@ -86,6 +110,12 @@ func handleGetFactions(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, rows)
 }
 
+// @Summary List specialization tracks for all players
+// @Tags players
+// @Produce json
+// @Success 200 {array} specTrack
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/specs [get]
 func handleGetSpecs(w http.ResponseWriter, r *http.Request) {
 	msg, ok := cmdFetchSpecs().(msgSpecs)
 	if !ok {
@@ -103,6 +133,11 @@ func handleGetSpecs(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, rows)
 }
 
+// @Summary List all known item templates
+// @Tags players
+// @Produce json
+// @Success 200 {array} object
+// @Router /api/v1/players/templates [get]
 func handleGetTemplates(w http.ResponseWriter, r *http.Request) {
 	type templateOut struct {
 		ID   string `json:"id"`
@@ -117,6 +152,14 @@ func handleGetTemplates(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, rows)
 }
 
+// @Summary Get inventory for a player
+// @Tags players
+// @Produce json
+// @Param id path int true "Player ID"
+// @Success 200 {array} itemInfo
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/{id}/inventory [get]
 func handleGetInventory(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -140,6 +183,14 @@ func handleGetInventory(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, rows)
 }
 
+// @Summary Get journey node state for an account
+// @Tags players
+// @Produce json
+// @Param id path int true "Account ID"
+// @Success 200 {array} object
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/{id}/journey [get]
 func handleGetJourney(w http.ResponseWriter, r *http.Request) {
 	accountIDStr := r.PathValue("id")
 	accountID, err := strconv.ParseInt(accountIDStr, 10, 64)
@@ -175,6 +226,16 @@ func handleGetJourney(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(out)
 }
 
+// @Summary Give a single item to a player
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "player_id, template, qty, quality"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/give-item [post]
 func handleGiveItem(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		PlayerID int64  `json:"player_id"`
@@ -307,6 +368,15 @@ func processGiveItems(
 	return given, skipped
 }
 
+// @Summary Give multiple items to a player in a single request
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body giveItemsRequest true "player_id and items list"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/give-items [post]
 func handleGiveItems(w http.ResponseWriter, r *http.Request) {
 	var req giveItemsRequest
 	if err := decode(r, &req); err != nil {
@@ -327,6 +397,15 @@ func handleGiveItems(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]any{"given": given, "skipped": skipped})
 }
 
+// @Summary Grant an item to a player via FLS/PlayFab live path
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "controller_id, template, amount"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/grant-live [post]
 func handleGrantLive(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ControllerID int64  `json:"controller_id"`
@@ -356,6 +435,15 @@ func handleGrantLive(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Give currency to a player
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "player_id, amount"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/give-currency [post]
 func handleGiveCurrency(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		PlayerID int64 `json:"player_id"`
@@ -377,6 +465,15 @@ func handleGiveCurrency(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Adjust faction reputation for a player
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "actor_id, faction_id, delta"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/give-faction-rep [post]
 func handleGiveFactionRep(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ActorID   int64 `json:"actor_id"`
@@ -399,6 +496,15 @@ func handleGiveFactionRep(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Adjust Landsraad scrip for a player
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "actor_id, delta"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/give-scrip [post]
 func handleGiveScrip(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ActorID int64 `json:"actor_id"`
@@ -420,6 +526,15 @@ func handleGiveScrip(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Award XP on a specialization track for a player
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "player_id, track_type, delta"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/award-xp [post]
 func handleAwardXP(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		PlayerID  int64  `json:"player_id"`
@@ -446,6 +561,15 @@ func handleAwardXP(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Award character XP to a player (live RMQ or DB fallback)
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "fls_id (optional), player_id, amount"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/award-char-xp [post]
 func handleAwardCharXP(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		FlsID    string `json:"fls_id"`    // optional; triggers live online check
@@ -484,6 +608,15 @@ func handleAwardCharXP(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]any{"ok": msg.ok, "path": "db"})
 }
 
+// @Summary Award intel points to a player
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "player_id, amount"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/award-intel [post]
 func handleAwardIntel(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		PlayerID int64 `json:"player_id"`
@@ -505,6 +638,15 @@ func handleAwardIntel(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Rename a player's character
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "account_id, name"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/rename [post]
 func handleRenameCharacter(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		AccountID int64  `json:"account_id"`
@@ -526,6 +668,14 @@ func handleRenameCharacter(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Get tags assigned to a player account
+// @Tags players
+// @Produce json
+// @Param id path int true "Account ID"
+// @Success 200 {array} string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/{id}/tags [get]
 func handleGetPlayerTags(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -549,6 +699,15 @@ func handleGetPlayerTags(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, tags)
 }
 
+// @Summary Add or remove tags on a player account
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "account_id, add ([]string), remove ([]string)"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/update-tags [post]
 func handleUpdatePlayerTags(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		AccountID int64    `json:"account_id"`
@@ -571,6 +730,15 @@ func handleUpdatePlayerTags(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Dismiss the returning-player award for an account
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "account_id"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/dismiss-returning-player-award [post]
 func handleDismissReturningPlayerAward(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		AccountID int64 `json:"account_id"`
@@ -591,6 +759,15 @@ func handleDismissReturningPlayerAward(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Grant the returning-player award to an account
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "account_id"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/returning-player-award [post]
 func handleGrantReturningPlayerAward(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		AccountID int64 `json:"account_id"`
@@ -611,6 +788,15 @@ func handleGrantReturningPlayerAward(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Export a character's data as a JSON attachment
+// @Tags players
+// @Produce application/octet-stream
+// @Param id path int true "Account ID"
+// @Success 200 {string} string "character-{id}.json attachment"
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/{id}/export [get]
 func handleCharacterExport(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	accountID, err := strconv.ParseInt(idStr, 10, 64)
@@ -635,6 +821,15 @@ func handleCharacterExport(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprint(w, result)
 }
 
+// @Summary Delete a player account and all associated data
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "account_id, reason"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/delete-account [post]
 func handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		AccountID int64  `json:"account_id"`
@@ -656,6 +851,14 @@ func handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Delete a specific inventory item by item ID
+// @Tags players
+// @Produce json
+// @Param id path int true "Item ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/item/{id} [delete]
 func handleDeleteItem(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -675,6 +878,15 @@ func handleDeleteItem(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Reset a specialization track for a player
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "player_id, track_type"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/reset-spec [post]
 func handleResetSpec(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		PlayerID  int64  `json:"player_id"`
@@ -696,6 +908,15 @@ func handleResetSpec(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Set a player's tier within a faction
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "actor_id, faction_id, tier"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/set-faction-tier [post]
 func handleSetFactionTier(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ActorID   int64 `json:"actor_id"`
@@ -718,6 +939,15 @@ func handleSetFactionTier(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Unlock a progression preset for a player
+// @Tags progression
+// @Accept json
+// @Produce json
+// @Param body body object true "player_id, faction, preset"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/progression-unlock [post]
 func handleProgressionUnlock(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		PlayerID int64  `json:"player_id"`
@@ -741,6 +971,15 @@ func handleProgressionUnlock(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Reverse a previously unlocked progression preset for a player
+// @Tags progression
+// @Accept json
+// @Produce json
+// @Param body body object true "player_id, faction, preset"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/progression-reverse [post]
 func handleProgressionReverse(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		PlayerID int64  `json:"player_id"`
@@ -764,6 +1003,15 @@ func handleProgressionReverse(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Mark a journey node as complete for an account
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "account_id, node_id"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/journey/complete [post]
 func handleJourneyComplete(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		AccountID int64  `json:"account_id"`
@@ -786,6 +1034,15 @@ func handleJourneyComplete(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Complete a single contract for an account
+// @Tags contracts
+// @Accept json
+// @Produce json
+// @Param body body object true "account_id, contract_id"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/contract/complete [post]
 func handleCompleteContract(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		AccountID  int64  `json:"account_id"`
@@ -808,6 +1065,15 @@ func handleCompleteContract(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Reset job skills for an account
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "account_id, job"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/reset-job-skills [post]
 func handleResetJobSkills(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		AccountID int64  `json:"account_id"`
@@ -829,6 +1095,15 @@ func handleResetJobSkills(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Set the starter class (job) for an account
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "account_id, job"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/set-starter-class [post]
 func handleSetStarterClass(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		AccountID int64  `json:"account_id"`
@@ -850,6 +1125,15 @@ func handleSetStarterClass(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Grant job skills for a specific job to an account
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "account_id, job"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/grant-job-skills [post]
 func handleGrantJobSkills(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		AccountID int64  `json:"account_id"`
@@ -871,6 +1155,15 @@ func handleGrantJobSkills(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Complete multiple contracts for an account
+// @Tags contracts
+// @Accept json
+// @Produce json
+// @Param body body object true "account_id, contract_ids ([]string)"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/contracts/complete [post]
 func handleCompleteContracts(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		AccountID   int64    `json:"account_id"`
@@ -893,6 +1186,15 @@ func handleCompleteContracts(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Reverse (undo) multiple completed contracts for an account
+// @Tags contracts
+// @Accept json
+// @Produce json
+// @Param body body object true "account_id, contract_ids ([]string)"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/contracts/reverse [post]
 func handleReverseContracts(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		AccountID   int64    `json:"account_id"`
@@ -917,6 +1219,11 @@ func handleReverseContracts(w http.ResponseWriter, r *http.Request) {
 
 // handleListContracts returns the catalog of known contracts (id → tag count)
 // so the frontend can render a picker without shipping the full tag dump.
+// @Summary List the catalog of known contracts
+// @Tags contracts
+// @Produce json
+// @Success 200 {array} object
+// @Router /api/v1/contracts [get]
 func handleListContracts(w http.ResponseWriter, r *http.Request) {
 	type row struct {
 		ID       string `json:"id"`
@@ -936,6 +1243,15 @@ func handleListContracts(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, out)
 }
 
+// @Summary Reset (incomplete) a journey node for an account
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "account_id, node_id"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/journey/reset [post]
 func handleJourneyReset(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		AccountID int64  `json:"account_id"`
@@ -958,6 +1274,15 @@ func handleJourneyReset(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Wipe all journey nodes for an account
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "account_id"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/journey/wipe [post]
 func handleJourneyWipe(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		AccountID int64 `json:"account_id"`
@@ -979,6 +1304,15 @@ func handleJourneyWipe(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Delete all tutorial records for a player
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "player_id"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/delete-tutorials [post]
 func handleDeleteTutorials(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		PlayerID int64 `json:"player_id"`
@@ -1000,6 +1334,15 @@ func handleDeleteTutorials(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Wipe the codex for an account
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "account_id"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/wipe-codex [post]
 func handleWipeCodex(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		AccountID int64 `json:"account_id"`
@@ -1020,6 +1363,14 @@ func handleWipeCodex(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Get character XP and level for a player
+// @Tags players
+// @Produce json
+// @Param id path int true "Player ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/{id}/char-xp [get]
 func handleGetCharXP(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -1039,6 +1390,15 @@ func handleGetCharXP(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]any{"xp": msg.xp, "level": msg.level})
 }
 
+// @Summary Grant all keystones to a player
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "player_id"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/grant-all-keystones [post]
 func handleGrantAllKeystones(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		PlayerID int64 `json:"player_id"`
@@ -1059,6 +1419,15 @@ func handleGrantAllKeystones(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Reset all keystones for a player
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "player_id"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/reset-all-keystones [post]
 func handleResetAllKeystones(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		PlayerID int64 `json:"player_id"`
@@ -1079,6 +1448,14 @@ func handleResetAllKeystones(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Get keystones owned by a player
+// @Tags players
+// @Produce json
+// @Param id path int true "Player ID"
+// @Success 200 {array} object
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/{id}/keystones [get]
 func handleGetPlayerKeystones(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -1120,6 +1497,14 @@ func handleGetPlayerKeystones(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, result)
 }
 
+// @Summary Get specialization tracks for a specific player
+// @Tags players
+// @Produce json
+// @Param id path int true "Player ID"
+// @Success 200 {array} specTrack
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/{id}/specs [get]
 func handleGetPlayerSpecs(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -1143,6 +1528,15 @@ func handleGetPlayerSpecs(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, rows)
 }
 
+// @Summary Grant max level on a specialization track for a player
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "player_id, track_type"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/grant-max-spec [post]
 func handleGrantMaxSpec(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		PlayerID  int64  `json:"player_id"`
@@ -1164,6 +1558,14 @@ func handleGrantMaxSpec(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Get vehicles owned by a player
+// @Tags players
+// @Produce json
+// @Param id path int true "Player ID"
+// @Success 200 {array} vehicleRow
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/{id}/vehicles [get]
 func handleGetPlayerVehicles(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -1187,6 +1589,15 @@ func handleGetPlayerVehicles(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, rows)
 }
 
+// @Summary Repair a single inventory item to full durability
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "id (item ID)"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/repair-item [post]
 func handleRepairItem(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ID int64 `json:"id"`
@@ -1207,6 +1618,15 @@ func handleRepairItem(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary Repair all equipped gear for a player
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "player_id"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/repair-gear [post]
 func handleRepairPlayerGear(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		PlayerID int64 `json:"player_id"`
@@ -1227,6 +1647,15 @@ func handleRepairPlayerGear(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]any{"repaired": msg.repaired, "scanned": msg.scanned})
 }
 
+// @Summary Repair a player's vehicle to full durability
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "player_id, vehicle_id"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/repair-vehicle [post]
 func handleRepairVehicle(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		PlayerID  int64 `json:"player_id"`
@@ -1248,6 +1677,15 @@ func handleRepairVehicle(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]any{"repaired": msg.repaired, "skipped": msg.skipped, "total": msg.total})
 }
 
+// @Summary Refuel a player's vehicle to full fuel
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "player_id, vehicle_id"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/refuel-vehicle [post]
 func handleRefuelVehicle(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		PlayerID  int64 `json:"player_id"`
@@ -1269,6 +1707,12 @@ func handleRefuelVehicle(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": msg.ok})
 }
 
+// @Summary List available teleport partition locations
+// @Tags players
+// @Produce json
+// @Success 200 {array} teleportLocation
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/partitions [get]
 func handleGetPartitions(w http.ResponseWriter, r *http.Request) {
 	msg, ok := cmdListPartitions()().(msgPartitions)
 	if !ok {
@@ -1286,6 +1730,16 @@ func handleGetPartitions(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, rows)
 }
 
+// @Summary Teleport a player to a named partition location
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "fls_id, partition_label"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/teleport [post]
 func handleTeleportPlayer(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		FLSID    string `json:"fls_id"`
@@ -1345,6 +1799,14 @@ func handleTeleportPlayer(w http.ResponseWriter, r *http.Request) {
 // handleGetPlayerPosition returns the current world coordinates of a player's
 // character (dune.actors.id). Used by the "teleport to player" UI to look up
 // the target's position before publishing the teleport command.
+// @Summary Get world position of a player's character
+// @Tags players
+// @Produce json
+// @Param id path int true "Player ID (actor ID)"
+// @Success 200 {object} object
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/{id}/position [get]
 func handleGetPlayerPosition(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -1367,6 +1829,16 @@ func handleGetPlayerPosition(w http.ResponseWriter, r *http.Request) {
 // handleTeleportToPlayer moves a source player to a target player's exact
 // position. Online sources use TeleportToExact via RMQ; offline sources fall
 // through to the DB write at the target's partition_id.
+// @Summary Teleport a player to another player's current position
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param body body object true "source_fls_id, target_id (actor ID)"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/teleport-to-player [post]
 func handleTeleportToPlayer(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		SourceFLSID string `json:"source_fls_id"`
@@ -1423,6 +1895,14 @@ func handleTeleportToPlayer(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary Get event log entries for a player
+// @Tags players
+// @Produce json
+// @Param id path int true "Player ID"
+// @Success 200 {array} gameEvent
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/{id}/events [get]
 func handleGetPlayerEvents(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -1446,6 +1926,14 @@ func handleGetPlayerEvents(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, rows)
 }
 
+// @Summary Get dungeon run records for a player
+// @Tags players
+// @Produce json
+// @Param id path int true "Player ID"
+// @Success 200 {array} dungeonRecord
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/players/{id}/dungeons [get]
 func handleGetPlayerDungeons(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)

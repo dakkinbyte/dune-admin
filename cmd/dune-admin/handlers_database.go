@@ -21,6 +21,12 @@ func isReadOnlySQL(sql string) bool {
 	return sqlReadOnlyRe.MatchString(s)
 }
 
+// @Summary List all tables in the dune schema
+// @Tags database
+// @Produce json
+// @Success 200 {array} map[string]interface{}
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/database/tables [get]
 func handleDBTables(w http.ResponseWriter, r *http.Request) {
 	msg, ok := cmdFetchTables().(msgTables)
 	if !ok {
@@ -42,6 +48,14 @@ func handleDBTables(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, rows)
 }
 
+// @Summary Describe columns of a table
+// @Tags database
+// @Produce json
+// @Param table query string true "Table name"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/database/describe [get]
 func handleDBDescribe(w http.ResponseWriter, r *http.Request) {
 	table := r.URL.Query().Get("table")
 	if table == "" {
@@ -69,6 +83,15 @@ func handleDBDescribe(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]any{"table": msg.table, "columns": cols})
 }
 
+// @Summary Return sample rows from a table
+// @Tags database
+// @Produce json
+// @Param table query string true "Table name"
+// @Param limit query int false "Number of rows to return (default 20, max 500)"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/database/sample [get]
 func handleDBSample(w http.ResponseWriter, r *http.Request) {
 	table := r.URL.Query().Get("table")
 	if table == "" {
@@ -96,6 +119,14 @@ func handleDBSample(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary Search for a term across all table columns
+// @Tags database
+// @Produce json
+// @Param term query string true "Search term"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/database/search [get]
 func handleDBSearch(w http.ResponseWriter, r *http.Request) {
 	term := r.URL.Query().Get("term")
 	if term == "" {
@@ -117,6 +148,15 @@ func handleDBSearch(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary Execute a read-only SQL query (SELECT/EXPLAIN/SHOW only)
+// @Tags database
+// @Accept json
+// @Produce json
+// @Param body body object true "SQL query" SchemaExample({"sql": "SELECT 1"})
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/database/sql [post]
 func handleDBSQL(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	var req struct {

@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net"
+	"strings"
 	"testing"
 )
 
@@ -12,6 +14,24 @@ type fakeAMPExecutor struct {
 	err error
 	cmd string
 }
+
+// fnExecutor routes each Exec call through a provided function, allowing
+// tests to return different output for different commands.
+type fnExecutor struct {
+	fn func(cmd string) (string, error)
+}
+
+func (f *fnExecutor) Exec(cmd string) (string, error) { return f.fn(cmd) }
+func (f *fnExecutor) Stream(string) (<-chan string, func(), error) {
+	return nil, func() {}, nil
+}
+func (f *fnExecutor) PipeToWriter(string, io.Writer) error { return nil }
+func (f *fnExecutor) WriteFile(string, io.Reader) error    { return nil }
+func (f *fnExecutor) Dial(string, string) (net.Conn, error) {
+	return nil, nil
+}
+func (f *fnExecutor) Close()       {}
+func (f *fnExecutor) Type() string { return "local" }
 
 func (f *fakeAMPExecutor) Exec(cmd string) (string, error) {
 	f.cmd = cmd
@@ -81,5 +101,69 @@ func TestListGameProcesses_EmptyOnExecErrorWithoutOutput(t *testing.T) {
 	}
 	if len(procs) != 0 {
 		t.Fatalf("expected empty process list, got %+v", procs)
+	}
+}
+
+// TestAmpDiscoverIniDir_PrefersUE5SavedPath verifies that when
+// ue5-saved/UserSettings/UserGame.ini exists (install.sh layout),
+// DiscoverIniDir returns that sub-directory rather than the base state dir.
+func TestAmpDiscoverIniDir_PrefersUE5SavedPath(t *testing.T) {
+	t.Parallel()
+
+	exec := &fnExecutor{fn: func(cmd string) (string, error) {
+		if strings.Contains(cmd, "ue5-saved/UserSettings") {
+			return "yes\n", nil
+		}
+		return "no\n", nil
+	}}
+	ctrl := &ampControl{instance: "TestInst", ampUser: "amp"}
+
+	dir, err := ctrl.DiscoverIniDir(context.Background(), exec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := "/home/amp/.ampdata/instances/TestInst/duneawakening/server/state/ue5-saved/UserSettings"
+	if dir != want {
+		t.Errorf("got %q, want %q", dir, want)
+	}
+}
+
+// TestAmpDiscoverIniDir_FallsBackToState verifies that when ue5-saved/UserSettings
+// does not have a UserGame.ini, DiscoverIniDir returns the base state directory.
+func TestAmpDiscoverIniDir_FallsBackToState(t *testing.T) {
+	t.Parallel()
+
+	exec := &fnExecutor{fn: func(cmd string) (string, error) {
+		return "no\n", nil
+	}}
+	ctrl := &ampControl{instance: "TestInst", ampUser: "amp"}
+
+	dir, err := ctrl.DiscoverIniDir(context.Background(), exec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := "/home/amp/.ampdata/instances/TestInst/duneawakening/server/state"
+	if dir != want {
+		t.Errorf("got %q, want %q", dir, want)
+	}
+}
+
+// TestAmpDiscoverIniDir_ExplicitConfigSkipsProbe verifies that when server_ini_dir
+// is explicitly configured, DiscoverIniDir returns it without probing.
+func TestAmpDiscoverIniDir_ExplicitConfigSkipsProbe(t *testing.T) {
+	t.Parallel()
+
+	exec := &fnExecutor{fn: func(cmd string) (string, error) {
+		t.Error("executor must not be called when iniDir is explicitly configured")
+		return "", nil
+	}}
+	ctrl := &ampControl{iniDir: "/custom/ini/dir"}
+
+	dir, err := ctrl.DiscoverIniDir(context.Background(), exec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if dir != "/custom/ini/dir" {
+		t.Errorf("got %q, want %q", dir, "/custom/ini/dir")
 	}
 }

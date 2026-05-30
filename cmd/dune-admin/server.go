@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
 var allowedOrigins []string
@@ -225,6 +227,9 @@ func startServer(addr string) {
 	mux.HandleFunc("GET /api/v1/market-bot/logs-ready", handleMarketBotLogsReady)
 	mux.HandleFunc("GET /api/v1/market-bot/logs", handleMarketBotLogs)
 
+	// ── swagger UI ────────────────────────────────────────────────────────────
+	mux.Handle("/swagger/", httpSwagger.WrapHandler)
+
 	// ── director reverse proxy (universal, opt-in) ──────────────────────────
 	if loadedConfig.DirectorURL != "" {
 		if target, err := url.Parse(loadedConfig.DirectorURL); err == nil {
@@ -344,6 +349,12 @@ func decode(r *http.Request, v any) error {
 }
 
 // handleStatus returns connection state and provider info.
+//
+// @Summary Return connection state and build info
+// @Tags status
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Router /api/v1/status [get]
 func handleStatus(w http.ResponseWriter, r *http.Request) {
 	executorType := "none"
 	controlName := "none"
@@ -369,6 +380,13 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleReconnect tears down and re-establishes all connections.
+//
+// @Summary Tear down and re-establish all backend connections
+// @Tags status
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/reconnect [post]
 func handleReconnect(w http.ResponseWriter, r *http.Request) {
 	if globalDB != nil {
 		globalDB.Close()

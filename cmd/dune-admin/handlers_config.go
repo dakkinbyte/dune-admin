@@ -12,6 +12,12 @@ import (
 const masked = "••••••••"
 
 // handleGetConfig returns the current config with all secret fields masked.
+//
+// @Summary Get current runtime configuration (secrets masked)
+// @Tags config
+// @Produce json
+// @Success 200 {object} appConfig
+// @Router /api/v1/config [get]
 func handleGetConfig(w http.ResponseWriter, r *http.Request) {
 	data, err := os.ReadFile(configPath())
 	if err != nil {
@@ -124,6 +130,15 @@ func resetRuntimeConnections() {
 	globalControl = nil
 }
 
+// @Summary Save configuration and reconnect
+// @Tags config
+// @Accept json
+// @Produce json
+// @Param config body appConfig true "Updated configuration"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/config [post]
 func handleSaveConfig(w http.ResponseWriter, r *http.Request) {
 	var cfg appConfig
 	if err := decode(r, &cfg); err != nil {

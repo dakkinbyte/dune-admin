@@ -7,6 +7,12 @@ import (
 	"strconv"
 )
 
+// @Summary List all storage containers
+// @Tags storage
+// @Produce json
+// @Success 200 {array} map[string]interface{}
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/storage [get]
 func handleListStorage(w http.ResponseWriter, r *http.Request) {
 	msg, ok := cmdListStorageContainers().(msgStorageContainers)
 	if !ok {
@@ -24,6 +30,14 @@ func handleListStorage(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, rows)
 }
 
+// @Summary Get items inside a storage container
+// @Tags storage
+// @Produce json
+// @Param id path int true "Container ID"
+// @Success 200 {array} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/storage/{id}/items [get]
 func handleGetStorageItems(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -47,6 +61,16 @@ func handleGetStorageItems(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, rows)
 }
 
+// @Summary Give a single item to a storage container
+// @Tags storage
+// @Accept json
+// @Produce json
+// @Param id path int true "Container ID"
+// @Param body body object true "Item to give" SchemaExample({"template": "ItemTemplate_C", "qty": 1, "quality": 0})
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/storage/{id}/give-item [post]
 func handleGiveItemToStorage(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -79,6 +103,16 @@ func handleGiveItemToStorage(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]any{"ok": msg.ok, "path": "db"})
 }
 
+// @Summary Give multiple items to a storage container
+// @Tags storage
+// @Accept json
+// @Produce json
+// @Param id path int true "Container ID"
+// @Param body body object true "Items to give" SchemaExample({"items": [{"template": "ItemTemplate_C", "qty": 1, "quality": 0}]})
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/storage/{id}/give-items [post]
 func handleGiveItemsToStorage(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -123,6 +157,14 @@ func handleGiveItemsToStorage(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]any{"given": given, "skipped": skipped})
 }
 
+// @Summary Debug ownership chain for a storage container
+// @Tags storage
+// @Produce json
+// @Param id path int true "Container ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/storage/{id}/owner-debug [get]
 func handleStorageOwnerDebug(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)

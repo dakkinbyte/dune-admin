@@ -105,6 +105,16 @@ func publishNotification(routingKey string, keywords []string, content string) e
 //	  "keywords":    ["PlayerOnlineState"],  // optional, default ["AdminMessage"]
 //	  "content":     "Hello World!"
 //	}
+
+// @Summary Publish an in-game notification via mq-game RabbitMQ exchange
+// @Tags notifications
+// @Accept json
+// @Produce json
+// @Param body body object true "Routing key, keywords, and notification content"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/notify [post]
 func handleNotify(w http.ResponseWriter, r *http.Request) {
 	if globalExecutor == nil {
 		jsonErr(w, fmt.Errorf("not connected"), http.StatusServiceUnavailable)

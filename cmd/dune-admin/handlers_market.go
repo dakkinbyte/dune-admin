@@ -89,6 +89,19 @@ func marketItemsPagination(r *http.Request, total int) (start, end, page, limit 
 
 // handleMarketItems returns all active exchange listings aggregated by template ID.
 // Query params: search, category, tier, rarity, owner (bot|player|all), page, limit.
+// @Summary List market items aggregated by template ID
+// @Tags market
+// @Produce json
+// @Param search query string false "Filter by display name or template ID"
+// @Param category query string false "Filter by category prefix"
+// @Param tier query int false "Filter by item tier"
+// @Param rarity query string false "Filter by rarity"
+// @Param owner query string false "Filter by owner type (bot|player|all)"
+// @Param page query int false "Page number (0-based)"
+// @Param limit query int false "Page size (default 100, max 500)"
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/market/items [get]
 func handleMarketItems(w http.ResponseWriter, r *http.Request) {
 	msg, ok := cmdFetchMarketItems().(msgMarketItems)
 	if !ok {
@@ -119,6 +132,12 @@ func handleMarketItems(w http.ResponseWriter, r *http.Request) {
 
 // handleMarketListings returns all active individual listings, optionally for one template.
 // Query param: template_id, owner (bot|player|all), sort (price|quality).
+// @Summary List individual active market listings
+// @Tags market
+// @Produce json
+// @Success 200 {array} map[string]interface{}
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/market/listings [get]
 func handleMarketListings(w http.ResponseWriter, r *http.Request) {
 	templateID := r.URL.Query().Get("template_id")
 	msg, ok := cmdFetchMarketListings(templateID).(msgMarketListings)
@@ -150,6 +169,12 @@ func handleMarketListings(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleMarketSales returns recent fulfilled sales (players buying from the bot).
+// @Summary List recent fulfilled market sales
+// @Tags market
+// @Produce json
+// @Success 200 {array} map[string]interface{}
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/market/sales [get]
 func handleMarketSales(w http.ResponseWriter, r *http.Request) {
 	msg, ok := cmdFetchMarketSales().(msgMarketSales)
 	if !ok {
@@ -168,6 +193,12 @@ func handleMarketSales(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleMarketStats returns aggregate market statistics (admin-only by convention).
+// @Summary Return aggregate market statistics
+// @Tags market
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/market/stats [get]
 func handleMarketStats(w http.ResponseWriter, r *http.Request) {
 	msg, ok := cmdFetchMarketStats().(msgMarketStats)
 	if !ok {
@@ -183,6 +214,11 @@ func handleMarketStats(w http.ResponseWriter, r *http.Request) {
 
 // handleMarketCategories returns the category tree derived from item-data.json.
 // Schematic items are reclassified under "schematics/" to surface as their own group.
+// @Summary List distinct item categories from the item catalog
+// @Tags market
+// @Produce json
+// @Success 200 {array} string
+// @Router /api/v1/market/categories [get]
 func handleMarketCategories(w http.ResponseWriter, r *http.Request) {
 	seen := map[string]bool{}
 	var categories []string
@@ -201,6 +237,11 @@ func handleMarketCategories(w http.ResponseWriter, r *http.Request) {
 
 // handleMarketCatalog returns a flat list of all known items (template_id + display_name)
 // for use in autocomplete UIs such as the disabled-items manager.
+// @Summary List all known item templates with display names
+// @Tags market
+// @Produce json
+// @Success 200 {array} map[string]interface{}
+// @Router /api/v1/market/catalog [get]
 func handleMarketCatalog(w http.ResponseWriter, r *http.Request) {
 	type entry struct {
 		TemplateID  string `json:"template_id"`

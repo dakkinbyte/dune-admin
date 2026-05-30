@@ -1,3 +1,9 @@
+// @title dune-admin API
+// @version 1.0
+// @description Admin panel API for a Dune Awakening private server.
+// @host localhost:8080
+// @BasePath /
+
 package main
 
 import (
@@ -14,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	_ "dune-admin/docs"
 	"gopkg.in/yaml.v3"
 
 	"dune-admin/internal/marketbot"

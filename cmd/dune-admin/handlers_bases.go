@@ -62,6 +62,12 @@ func parseVec4(s string) (x, y, z, w float64, err error) {
 	return
 }
 
+// @Summary List all player bases
+// @Tags bases
+// @Produce json
+// @Success 200 {array} map[string]interface{}
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/bases [get]
 func handleListBases(w http.ResponseWriter, _ *http.Request) {
 	msg, ok := cmdListBases().(msgBaseList)
 	if !ok {
@@ -266,6 +272,16 @@ func writeExportBaseResponse(
 	})
 }
 
+// @Summary Export a base as a downloadable blueprint JSON file
+// @Tags bases
+// @Produce application/octet-stream
+// @Param id path int true "Base (building) ID"
+// @Success 200 {file} string "Base blueprint JSON file"
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/bases/{id}/export [get]
 func handleExportBase(w http.ResponseWriter, r *http.Request) {
 	id, err := parseBasePathID(r.PathValue("id"))
 	if err != nil {
