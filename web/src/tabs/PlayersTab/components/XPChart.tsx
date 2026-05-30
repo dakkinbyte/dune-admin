@@ -73,8 +73,8 @@ export function XPChart({ data }: Props) {
               width={44}
             />
             <Tooltip
-              formatter={(val: number, name: string) => [fmtXP(val), name]}
-              labelFormatter={fmtTime}
+              formatter={(val, name) => [fmtXP(val as number), String(name)]}
+              labelFormatter={(d) => fmtTime(String(d))}
               contentStyle={{
                 background: 'var(--surface)',
                 border: '1px solid var(--border)',

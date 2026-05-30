@@ -58,8 +58,8 @@ export function SessionChart({ data }: Props) {
               width={36}
             />
             <Tooltip
-              formatter={(val: number) => [`${val}m`, 'Playtime']}
-              labelFormatter={fmtDate}
+              formatter={(val) => [`${val as number}m`, 'Playtime']}
+              labelFormatter={(d) => fmtDate(String(d))}
               contentStyle={{
                 background: 'var(--surface)',
                 border: '1px solid var(--border)',

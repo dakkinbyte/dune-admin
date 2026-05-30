@@ -47,8 +47,8 @@ export function SolarisChart({ data }: Props) {
               width={48}
             />
             <Tooltip
-              formatter={(val: number) => [fmtBalance(val), 'Balance']}
-              labelFormatter={fmtTime}
+              formatter={(val) => [fmtBalance(val as number), 'Balance']}
+              labelFormatter={(d) => fmtTime(String(d))}
               contentStyle={{
                 background: 'var(--surface)',
                 border: '1px solid var(--border)',
