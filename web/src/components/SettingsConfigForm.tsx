@@ -29,6 +29,12 @@ const EMPTY: AppConfig = {
   listen_addr: '', scrip_currency: 0,
 }
 
+// Pointer-backed boolean fields in the Go config: null means "use server
+// default" (effectively true). If the API returns null for these, coerce to
+// true so the checkbox reflects the real server default rather than silently
+// inheriting EMPTY's false and overwriting the default-on value on save.
+const pointerBoolFields = new Set<keyof AppConfig>(['amp_use_container', 'market_bot_enabled'])
+
 function mergeConfig(fetched: Record<string, unknown>): AppConfig {
   const result: AppConfig = { ...EMPTY }
   for (const key of Object.keys(fetched) as (keyof AppConfig)[]) {
@@ -36,6 +42,13 @@ function mergeConfig(fetched: Record<string, unknown>): AppConfig {
     if (v !== null && v !== undefined) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ;(result as any)[key] = v
+    }
+    else if (v === null && pointerBoolFields.has(key)) {
+      // Null pointer-backed bool: the server field is unset (default-on).
+      // Keep the EMPTY default only if it matches server intent (true = default).
+      // Override EMPTY's false with true so the checkbox reflects the real default.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(result as any)[key] = true
     }
   }
   return result
