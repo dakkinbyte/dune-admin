@@ -8,6 +8,7 @@ import BotActions from './BotActions'
 import BotLogViewer from './BotLogViewer'
 import BotConfigEditor, { type ConfigEditorHandle } from './BotConfigEditor'
 import DisabledItemsManager from './DisabledItemsManager'
+import BotServerConfig from './BotServerConfig'
 
 type Props = {
   open: boolean
@@ -92,6 +93,10 @@ export default function BotControlPanel({ open, onClose }: Props) {
                       Disabled Items
                       <Tabs.Indicator />
                     </Tabs.Tab>
+                    <Tabs.Tab id="server">
+                      Server
+                      <Tabs.Indicator />
+                    </Tabs.Tab>
                     <Tabs.Tab id="logs">
                       Logs
                       <Tabs.Indicator />
@@ -125,6 +130,10 @@ export default function BotControlPanel({ open, onClose }: Props) {
                       : (
                           <p className="text-xs text-muted">Config unavailable.</p>
                         )}
+                </Tabs.Panel>
+
+                <Tabs.Panel id="server" className="pt-4 overflow-y-auto flex-1 pr-1">
+                  <BotServerConfig />
                 </Tabs.Panel>
 
                 <Tabs.Panel id="logs" className="pt-4 flex-1 min-h-0 flex flex-col overflow-hidden">
