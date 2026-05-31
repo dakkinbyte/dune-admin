@@ -20,7 +20,6 @@ const EMPTY: AppConfig = {
   amp_instance: '', amp_container: '', amp_user: '', amp_log_path: '',
   amp_use_container: false, amp_data_root: '',
   director_url: '',
-  market_bot_enabled: false,
   market_bot_cache_db: '', market_bot_item_data: '', market_bot_state: '',
   market_bot_buy_interval: '', market_bot_list_interval: '',
   market_bot_buy_threshold: 0, market_bot_max_buys: 0,
@@ -32,7 +31,7 @@ const EMPTY: AppConfig = {
 // default" (effectively true). If the API returns null for these, coerce to
 // true so the checkbox reflects the real server default rather than silently
 // inheriting EMPTY's false and overwriting the default-on value on save.
-const pointerBoolFields = new Set<keyof AppConfig>(['amp_use_container', 'market_bot_enabled'])
+const pointerBoolFields = new Set<keyof AppConfig>(['amp_use_container'])
 
 function mergeConfig(fetched: Record<string, unknown>): AppConfig {
   const result: AppConfig = { ...EMPTY }
@@ -397,14 +396,17 @@ export default function SettingsConfigForm({ saveRef, onSavingChange }: Props) {
         <Tabs.Panel id="marketbot" className="pt-4 overflow-y-auto flex-1 pr-1 flex flex-col gap-4">
           <Panel>
             <SectionLabel>Mode</SectionLabel>
-            <div className="mt-1">
-              <CB
-                label="Enable embedded bot"
-                checked={cfg.market_bot_enabled}
-                onChange={setBool('market_bot_enabled')}
-                hint="Runs in-process alongside dune-admin. Toggling off stops it immediately on save."
-              />
-            </div>
+            <p className="text-xs text-muted mt-1 mb-3">
+              {'Set '}
+              <code className="font-mono bg-surface-secondary px-1 rounded">
+                market_bot_enabled: true
+              </code>
+              {' in '}
+              <code className="font-mono bg-surface-secondary px-1 rounded">
+                ~/.dune-admin/config.yaml
+              </code>
+              {' to run the embedded bot. Runtime pause/resume is in the Bot Control panel on the Market tab.'}
+            </p>
             <G2>
               <F label="Remote URL" hint="forward to standalone bot instead">
                 <TI value={cfg.market_bot_remote_url} onChange={set('market_bot_remote_url')} placeholder="http://host:9191" />
