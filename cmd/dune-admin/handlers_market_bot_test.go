@@ -351,6 +351,9 @@ func TestHandleMarketBotStatus_ConfiguredButDisabled(t *testing.T) {
 	w := httptest.NewRecorder()
 	handleMarketBotStatus(w, req)
 
+	if w.Code != http.StatusOK {
+		t.Errorf("want 200 got %d: %s", w.Code, w.Body.String())
+	}
 	var body map[string]any
 	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
 		t.Fatalf("decode: %v", err)
@@ -380,6 +383,9 @@ func TestHandleMarketBotStatus_NeitherConfiguredNorEnabled(t *testing.T) {
 	w := httptest.NewRecorder()
 	handleMarketBotStatus(w, req)
 
+	if w.Code != http.StatusOK {
+		t.Errorf("want 200 got %d: %s", w.Code, w.Body.String())
+	}
 	var body map[string]any
 	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
 		t.Fatalf("decode: %v", err)

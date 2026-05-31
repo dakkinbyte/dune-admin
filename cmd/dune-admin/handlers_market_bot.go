@@ -125,12 +125,16 @@ func handleMarketBotStatus(w http.ResponseWriter, r *http.Request) {
 		jsonOK(w, out)
 		return
 	}
+	errMsg := "market bot not configured; set market_bot_enabled: true or market_bot_remote_url"
+	if embeddedBotConfigured {
+		errMsg = "market bot configured but not running; check server logs"
+	}
 	jsonOK(w, map[string]any{
 		"running":    false,
 		"enabled":    false,
 		"mode":       "none",
 		"configured": embeddedBotConfigured,
-		"error":      "market bot not configured; set market_bot_enabled: true or market_bot_remote_url",
+		"error":      errMsg,
 	})
 }
 
