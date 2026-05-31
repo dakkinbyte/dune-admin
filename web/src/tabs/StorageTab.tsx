@@ -413,18 +413,20 @@ function AddItemsModal({ container, open, onClose, onSuccess, onRefresh }: {
                           </div>
                         </TextField>
                         <NumberInput
-                          label={t('storage.addModal.qtyLabel')}
+                          prefix={t('storage.addModal.qtyLabel')}
+                          ariaLabel={t('storage.addModal.qtyLabel')}
                           min={1}
                           value={qty}
                           onChange={setQty}
-                          className="w-32 shrink-0"
+                          className="w-36 shrink-0"
                         />
                         <NumberInput
-                          label={t('storage.addModal.qualityLabel')}
+                          prefix={t('storage.addModal.qualityLabel')}
+                          ariaLabel={t('storage.addModal.qualityLabel')}
                           min={0}
                           value={quality}
                           onChange={setQuality}
-                          className="w-40 shrink-0"
+                          className="w-36 shrink-0"
                         />
                         <Button size="sm" onPress={addToStaged} isDisabled={!selected} className="shrink-0">
                           <Icon name="plus" />

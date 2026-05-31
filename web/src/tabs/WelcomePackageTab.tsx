@@ -365,18 +365,20 @@ export default function WelcomePackageTab() {
                     )}
                   </div>
                   <NumberInput
+                    prefix="Qty"
                     ariaLabel="Qty"
                     min={1}
                     value={addQty}
                     onChange={setAddQty}
-                    className="w-32 shrink-0"
+                    className="w-36 shrink-0"
                   />
                   <NumberInput
+                    prefix="Quality"
                     ariaLabel="Quality"
                     min={0}
                     value={addQuality}
                     onChange={setAddQuality}
-                    className="w-32 shrink-0"
+                    className="w-36 shrink-0"
                   />
                   <Button size="sm" onPress={addItem} isDisabled={!addSelected} className="shrink-0">
                     <Icon name="plus" />
