@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Button, ListBox, Select, Spinner, toast } from '@heroui/react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Button, ListBox, SearchField, Select, Spinner, toast } from '@heroui/react'
 import { api } from '../api/client'
 import type { WelcomePackage, WelcomePackageConfig, WelcomePackageItem, WelcomeGrantRecord } from '../api/client'
 import { DataTable, Icon, NumberInput, PageHeader, Panel, SectionLabel, type Column } from '../dune-ui'
@@ -36,6 +36,12 @@ export default function WelcomePackageTab() {
   const [selected, setSelected] = useState('') // version currently being edited
   const [newName, setNewName] = useState('')
 
+  const [templates, setTemplates] = useState<{ id: string, name: string }[]>([])
+  const [addQuery, setAddQuery] = useState('')
+  const [addSelected, setAddSelected] = useState('')
+  const [addQty, setAddQty] = useState(1)
+  const [addQuality, setAddQuality] = useState(0)
+
   const applyConfig = (c: WelcomePackageConfig) => {
     setEnabled(c.enabled)
     setScanSecs(c.scan_interval_secs)
@@ -61,13 +67,37 @@ export default function WelcomePackageTab() {
     load()
   }, [load])
 
+  useEffect(() => {
+    api.players.templates().then(setTemplates).catch(() => {})
+  }, [])
+
   const selectedPkg = packages.find((p) => p.version === selected)
   const items = selectedPkg?.items ?? []
 
   const setItems = (next: WelcomePackageItem[]) => {
     setPackages((ps) => ps.map((p) => (p.version === selected ? { ...p, items: next } : p)))
   }
-  const addItem = () => setItems([...items, { template: '', qty: 1, quality: 0 }])
+  const addFiltered = useMemo(() => {
+    if (!addQuery) return []
+    const q = addQuery.toLowerCase()
+    return templates
+      .filter((t) => t.id.toLowerCase().includes(q) || t.name.toLowerCase().includes(q))
+      .slice(0, 100)
+  }, [templates, addQuery])
+
+  const pickTemplate = (tpl: { id: string, name: string }) => {
+    setAddSelected(tpl.id)
+    setAddQuery(tpl.name ? `${tpl.id}  —  ${tpl.name}` : tpl.id)
+  }
+
+  const addItem = () => {
+    if (!addSelected) return
+    setItems([...items, { template: addSelected, qty: addQty, quality: addQuality }])
+    setAddQuery('')
+    setAddSelected('')
+    setAddQty(1)
+    setAddQuality(0)
+  }
   const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i))
   const setItem = (i: number, patch: Partial<WelcomePackageItem>) =>
     setItems(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)))
@@ -280,51 +310,101 @@ export default function WelcomePackageTab() {
               <p className="text-xs text-muted mt-3">No package selected. Add a version to start.</p>
             )
           : (
-              <div className="mt-3">
-                <div className="flex items-center justify-between max-w-2xl">
-                  <span className="text-xs text-muted">
-                    Items in
-                    {' '}
-                    <span className="text-foreground">{selected}</span>
-                    {' '}
-                    (
-                    {items.length}
-                    )
-                  </span>
-                  <Button size="sm" variant="outline" onPress={addItem}>
+              <div className="mt-3 max-w-2xl">
+                <div className="text-xs text-muted mb-2">
+                  Items in
+                  {' '}
+                  <span className="text-foreground">{selected}</span>
+                  {' '}
+                  (
+                  {items.length}
+                  )
+                </div>
+
+                {/* Add row */}
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="relative flex-1">
+                    <SearchField
+                      value={addQuery}
+                      onChange={(v) => {
+                        setAddQuery(v)
+                        setAddSelected('')
+                      }}
+                      className="w-full"
+                    >
+                      <SearchField.Group>
+                        <SearchField.SearchIcon />
+                        <SearchField.Input placeholder="Search item templates…" />
+                        <SearchField.ClearButton />
+                      </SearchField.Group>
+                    </SearchField>
+                    {addFiltered.length > 0 && (
+                      <div className="absolute z-50 w-full mt-1 rounded-[var(--radius)] border border-border bg-surface overflow-y-auto max-h-52">
+                        {addFiltered.map((tpl) => (
+                          <div
+                            key={tpl.id}
+                            className="px-3 py-1.5 text-xs cursor-pointer hover:bg-surface-hover"
+                            onClick={() => pickTemplate(tpl)}
+                          >
+                            <span className="font-mono">{tpl.id}</span>
+                            {tpl.name
+                              ? (
+                                  <span className="text-muted">
+                                    {' — '}
+                                    {tpl.name}
+                                  </span>
+                                )
+                              : null}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <NumberInput
+                    ariaLabel="Qty"
+                    min={1}
+                    value={addQty}
+                    onChange={setAddQty}
+                    className="w-24 shrink-0"
+                  />
+                  <NumberInput
+                    ariaLabel="Quality"
+                    min={0}
+                    value={addQuality}
+                    onChange={setAddQuality}
+                    className="w-24 shrink-0"
+                  />
+                  <Button size="sm" onPress={addItem} isDisabled={!addSelected} className="shrink-0">
                     <Icon name="plus" />
                     {' '}
-                    Add item
+                    Add
                   </Button>
                 </div>
 
-                <div className="flex flex-col gap-2 mt-2 max-w-2xl">
+                {/* Item list */}
+                <div className="flex flex-col gap-2">
                   {items.length === 0 && (
                     <p className="text-xs text-muted">No items in this version yet.</p>
                   )}
                   {items.map((it, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <input
-                        className="bg-surface border border-border rounded px-2 py-1.5 text-sm text-foreground flex-1"
-                        placeholder="Item template (e.g. AluminiumBar)"
-                        value={it.template}
-                        onChange={(e) => setItem(i, { template: e.target.value })}
-                      />
-                      <input
-                        className="bg-surface border border-border rounded px-2 py-1.5 text-sm text-foreground w-20"
-                        type="number"
+                    <div
+                      key={i}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius)] text-xs bg-surface border border-border"
+                    >
+                      <span className="flex-1 min-w-0 truncate font-mono text-foreground">{it.template}</span>
+                      <NumberInput
+                        ariaLabel="Qty"
                         min={1}
-                        title="Quantity"
                         value={it.qty}
-                        onChange={(e) => setItem(i, { qty: Number(e.target.value) })}
+                        onChange={(v) => setItem(i, { qty: v })}
+                        className="w-24 shrink-0"
                       />
-                      <input
-                        className="bg-surface border border-border rounded px-2 py-1.5 text-sm text-foreground w-20"
-                        type="number"
+                      <NumberInput
+                        ariaLabel="Quality"
                         min={0}
-                        title="Quality (0 = base, live RMQ grant)"
                         value={it.quality}
-                        onChange={(e) => setItem(i, { quality: Number(e.target.value) })}
+                        onChange={(v) => setItem(i, { quality: v })}
+                        className="w-24 shrink-0"
                       />
                       <Button size="sm" variant="ghost" onPress={() => removeItem(i)} aria-label="Remove item">
                         <Icon name="trash-2" />
