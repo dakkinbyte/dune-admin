@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Button, Spinner, toast } from '@heroui/react'
+import { Button, ListBox, Select, Spinner, toast } from '@heroui/react'
 import { api } from '../api/client'
 import type { WelcomePackage, WelcomePackageConfig, WelcomePackageItem, WelcomeGrantRecord } from '../api/client'
-import { DataTable, Icon, PageHeader, Panel, SectionLabel, type Column } from '../dune-ui'
-
-const INPUT_CLS = 'bg-surface border border-border rounded px-2 py-1.5 text-sm text-foreground'
+import { DataTable, Icon, NumberInput, PageHeader, Panel, SectionLabel, type Column } from '../dune-ui'
 
 type GrantKey = 'character' | 'fls' | 'version' | 'status' | 'attempts' | 'updated' | 'error' | 'actions'
 
@@ -181,27 +179,40 @@ export default function WelcomePackageTab() {
         <div className="flex flex-wrap items-end gap-4 mt-3">
           <div className="flex flex-col gap-1">
             <label className="text-xs text-muted">Active version</label>
-            <select
-              className={`${INPUT_CLS} w-48`}
-              value={activeVersion}
-              onChange={(e) => setActiveVersion(e.target.value)}
+            <Select
+              aria-label="Active version"
+              selectedKey={activeVersion || null}
+              onSelectionChange={(k) => setActiveVersion(k ? String(k) : '')}
+              className="w-48"
             >
-              <option value="">— none —</option>
-              {packages.map((p) => (
-                <option key={p.version} value={p.version}>{p.version}</option>
-              ))}
-            </select>
+              <Select.Trigger>
+                <Select.Value>{!activeVersion ? '— none —' : activeVersion}</Select.Value>
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBox.Item key="_none" id="" textValue="— none —">
+                    — none —
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  {packages.map((p) => (
+                    <ListBox.Item key={p.version} id={p.version} textValue={p.version}>
+                      {p.version}
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                  ))}
+                </ListBox>
+              </Select.Popover>
+            </Select>
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-muted">Scan interval (sec)</label>
-            <input
-              className={`${INPUT_CLS} w-28`}
-              type="number"
-              min={5}
-              value={scanSecs}
-              onChange={(e) => setScanSecs(Number(e.target.value))}
-            />
-          </div>
+          <NumberInput
+            label="Scan interval (sec)"
+            min={5}
+            showButtons={false}
+            value={scanSecs}
+            onChange={setScanSecs}
+            className="w-28"
+          />
         </div>
       </Panel>
 
@@ -211,19 +222,32 @@ export default function WelcomePackageTab() {
         <div className="flex flex-col gap-3 mt-1">
           <div className="flex items-end gap-3">
             <Field label="Editing version">
-              <select
-                className={`${INPUT_CLS} w-44`}
-                value={selected}
-                onChange={(e) => setSelected(e.target.value)}
+              <Select
+                aria-label="Editing version"
+                selectedKey={selected || null}
+                onSelectionChange={(k) => setSelected(k ? String(k) : '')}
+                className="w-44"
               >
-                <option value="">— select —</option>
-                {packages.map((p) => (
-                  <option key={p.version} value={p.version}>
-                    {p.version}
-                    {p.version === activeVersion ? ' (active)' : ''}
-                  </option>
-                ))}
-              </select>
+                <Select.Trigger>
+                  <Select.Value>{!selected ? '— select —' : selected + (selected === activeVersion ? ' (active)' : '')}</Select.Value>
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    <ListBox.Item key="_none" id="" textValue="— select —">
+                      — select —
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                    {packages.map((p) => (
+                      <ListBox.Item key={p.version} id={p.version} textValue={p.version}>
+                        {p.version}
+                        {p.version === activeVersion ? ' (active)' : ''}
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                    ))}
+                  </ListBox>
+                </Select.Popover>
+              </Select>
             </Field>
             {selected && (
               <Button size="sm" variant="ghost" onPress={() => deleteVersion(selected)}>
@@ -237,7 +261,7 @@ export default function WelcomePackageTab() {
           <div className="flex items-end gap-2">
             <Field label="New version name">
               <input
-                className={`${INPUT_CLS} w-40`}
+                className="bg-surface border border-border rounded px-2 py-1.5 text-sm text-foreground w-40"
                 placeholder="e.g. v2 or season2"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
@@ -281,13 +305,13 @@ export default function WelcomePackageTab() {
                   {items.map((it, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <input
-                        className={`${INPUT_CLS} flex-1`}
+                        className="bg-surface border border-border rounded px-2 py-1.5 text-sm text-foreground flex-1"
                         placeholder="Item template (e.g. AluminiumBar)"
                         value={it.template}
                         onChange={(e) => setItem(i, { template: e.target.value })}
                       />
                       <input
-                        className={`${INPUT_CLS} w-20`}
+                        className="bg-surface border border-border rounded px-2 py-1.5 text-sm text-foreground w-20"
                         type="number"
                         min={1}
                         title="Quantity"
@@ -295,7 +319,7 @@ export default function WelcomePackageTab() {
                         onChange={(e) => setItem(i, { qty: Number(e.target.value) })}
                       />
                       <input
-                        className={`${INPUT_CLS} w-20`}
+                        className="bg-surface border border-border rounded px-2 py-1.5 text-sm text-foreground w-20"
                         type="number"
                         min={0}
                         title="Quality (0 = base, live RMQ grant)"
