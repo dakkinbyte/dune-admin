@@ -20,6 +20,7 @@ const EMPTY: AppConfig = {
   amp_instance: '', amp_container: '', amp_user: '', amp_log_path: '',
   amp_use_container: false, amp_data_root: '',
   director_url: '',
+  market_bot_enabled: false,
   market_bot_cache_db: '', market_bot_item_data: '', market_bot_state: '',
   market_bot_buy_interval: '', market_bot_list_interval: '',
   market_bot_buy_threshold: 0, market_bot_max_buys: 0,
@@ -31,7 +32,7 @@ const EMPTY: AppConfig = {
 // default" (effectively true). If the API returns null for these, coerce to
 // true so the checkbox reflects the real server default rather than silently
 // inheriting EMPTY's false and overwriting the default-on value on save.
-const pointerBoolFields = new Set<keyof AppConfig>(['amp_use_container'])
+const pointerBoolFields = new Set<keyof AppConfig>(['amp_use_container', 'market_bot_enabled'])
 
 function mergeConfig(fetched: Record<string, unknown>): AppConfig {
   const result: AppConfig = { ...EMPTY }

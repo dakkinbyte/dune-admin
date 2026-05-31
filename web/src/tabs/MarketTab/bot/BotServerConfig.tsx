@@ -27,6 +27,9 @@ export default function BotServerConfig() {
   const set = (key: StringAppConfigKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setCfg((prev) => prev ? { ...prev, [key]: e.target.value } : prev)
 
+  const setBool = (key: keyof AppConfig) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setCfg((prev) => prev ? { ...prev, [key]: e.target.checked } : prev)
+
   const save = async () => {
     if (!cfg) return
     setSaving(true)
@@ -55,7 +58,17 @@ export default function BotServerConfig() {
     <div className="flex flex-col gap-4">
       <Panel>
         <SectionLabel>Embedded Bot</SectionLabel>
-        <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label className="mt-2 flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={cfg.market_bot_enabled}
+            onChange={setBool('market_bot_enabled')}
+            className="accent-accent w-4 h-4"
+          />
+          <span className="text-sm text-foreground">Enable embedded bot</span>
+          <span className="text-xs text-muted">(restart required)</span>
+        </label>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-muted">Cache DB</span>
             <input className={inputCls} value={cfg.market_bot_cache_db} onChange={set('market_bot_cache_db')} placeholder="~/.dune-admin/market-bot-cache.db" />

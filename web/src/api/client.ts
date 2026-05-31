@@ -165,6 +165,7 @@ export type AppConfig = {
   amp_data_root: string
   director_url: string
   // Market bot (startup config — tuning is managed in the Bot Control panel)
+  market_bot_enabled: boolean
   market_bot_cache_db: string
   market_bot_item_data: string
   market_bot_state: string
