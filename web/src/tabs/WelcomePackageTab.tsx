@@ -245,7 +245,7 @@ export default function WelcomePackageTab() {
             step={5}
             value={scanSecs}
             onChange={setScanSecs}
-            className="w-36"
+            className="w-44"
           />
         </div>
       </Panel>
@@ -370,7 +370,7 @@ export default function WelcomePackageTab() {
                     min={1}
                     value={addQty}
                     onChange={setAddQty}
-                    className="w-36 shrink-0"
+                    className="w-44 shrink-0"
                   />
                   <NumberInput
                     prefix="Quality"
@@ -378,7 +378,7 @@ export default function WelcomePackageTab() {
                     min={0}
                     value={addQuality}
                     onChange={setAddQuality}
-                    className="w-36 shrink-0"
+                    className="w-44 shrink-0"
                   />
                   <Button size="sm" onPress={addItem} isDisabled={!addSelected} className="shrink-0">
                     <Icon name="plus" />
@@ -404,7 +404,7 @@ export default function WelcomePackageTab() {
                         min={1}
                         value={it.qty}
                         onChange={(v) => setItem(i, { qty: v })}
-                        className="w-36 shrink-0"
+                        className="w-44 shrink-0"
                       />
                       <NumberInput
                         ariaLabel="Quality"
@@ -412,7 +412,7 @@ export default function WelcomePackageTab() {
                         min={0}
                         value={it.quality}
                         onChange={(v) => setItem(i, { quality: v })}
-                        className="w-36 shrink-0"
+                        className="w-44 shrink-0"
                       />
                       <Button size="sm" variant="danger-soft" onPress={() => removeItem(i)} aria-label={t('welcome.removeItem')}>
                         <Icon name="x" />
