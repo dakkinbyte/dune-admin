@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Button, ListBox, SearchField, Select, Spinner, toast } from '@heroui/react'
 import { api } from '../api/client'
 import type { ServerSetting, ServerSettingUpdate, RawSection } from '../api/client'
-import { PageHeader, Panel, SectionLabel, Icon } from '../dune-ui'
+import { NumberInput, PageHeader, Panel, SectionLabel, Icon } from '../dune-ui'
 
 const CATEGORY_ORDER = [
   'Survival', 'Progression', 'Harvesting', 'Building', 'Inventory',
@@ -199,12 +199,13 @@ function SettingRow({
                 />
               )
             : (
-                <input
-                  type="number"
-                  step={item.type === 'float' ? '0.01' : '1'}
-                  value={display}
-                  onChange={(e) => onChange(e.target.value)}
-                  className="w-28 bg-surface border border-border rounded px-2 py-1 text-xs font-mono text-foreground focus:outline-none focus:border-accent/60 text-right"
+                <NumberInput
+                  ariaLabel={item.key}
+                  step={item.type === 'float' ? 0.01 : 1}
+                  value={Number(display) || 0}
+                  onChange={(v) => onChange(String(v))}
+                  showButtons={false}
+                  className="w-28"
                 />
               )}
         {(item.source === 'userGame' || item.source === 'userEngine') && (
