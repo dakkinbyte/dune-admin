@@ -267,7 +267,8 @@ func UniqueSchematicsMask(category string) (mask int32, depth int16, ok bool) {
 }
 
 // CategoryMask computes category_mask and category_depth from an item's category path.
-// Uses confirmed codes from player orders; falls back to alphabetical for unknowns.
+// Uses confirmed codes from player orders; returns mask=0 for unknown segments so
+// callers can skip the listing rather than inserting a conflicting guessed mask.
 func CategoryMask(category string, idx [4][]string) (mask int32, depth int16) {
 	if category == "" {
 		return 0, 0
@@ -307,14 +308,8 @@ func CategoryMask(category string, idx [4][]string) (mask int32, depth int16) {
 				code, found = c, true
 			}
 		}
-		if !found {
-			for j, s := range idx[i] {
-				if s == seg {
-					code = byte(j + 1)
-					break
-				}
-			}
-		}
+		// Unknown segment: code stays 0 — callers skip the listing rather than
+		// inserting a guessed mask that conflicts with player-order masks.
 		// Bit layout: depth1→bits24-31, depth2→bits16-23, depth3→bits8-15 (confirmed)
 		mask |= int32(code) << uint((4-i)*8)
 	}

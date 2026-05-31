@@ -210,6 +210,175 @@ func TestLearnGameEpoch_BothTiersMissDoesNotUpdate(t *testing.T) {
 	}
 }
 
+// TestCategoryFor_* exercises categoryFor in isolation (no DB required).
+// These tests verify the three-tier precedence:
+//  1. Live player-derived cache (authoritative — matched mask prevents snapshot conflicts)
+//  2. UniqueSchematicsMask (for schematics with a known unique section)
+//  3. CategoryMask (known segment codes only; returns ok=false when mask=0)
+//
+// They also verify the ok=false skip signal prevents (0,0) pollution.
+
+func newTestExchangeWithCategories(t *testing.T, cats map[string]categoryEntry) *Exchange {
+	t.Helper()
+	e := &Exchange{
+		categories: cats,
+	}
+	// Build a minimal segment index so CategoryMask can resolve known categories.
+	catalog := make([]CatalogItem, 0)
+	for tmpl := range cats {
+		catalog = append(catalog, CatalogItem{TemplateID: tmpl})
+	}
+	e.segIdx = buildSegmentIndex(catalog)
+	return e
+}
+
+func TestCategoryFor_LiveCacheTakesPrecedenceOverComputedMask(t *testing.T) {
+	t.Parallel()
+
+	// Cache says this template uses mask 0x05010000 (misc/refinedresources).
+	// The CatalogItem has a different category that would compute a different mask.
+	// categoryFor must return the cached values, not the computed ones.
+	e := newTestExchangeWithCategories(t, map[string]categoryEntry{
+		"item.resource.spice": {mask: 0x05010000, depth: 2},
+	})
+
+	item := CatalogItem{
+		TemplateID: "item.resource.spice",
+		Category:   "items/weapons/pistol", // would compute 0x01020000 if used
+	}
+	mask, depth, ok := e.categoryFor(item)
+	if !ok {
+		t.Fatal("categoryFor returned ok=false for a cached template")
+	}
+	if mask != 0x05010000 {
+		t.Errorf("mask = 0x%08X, want 0x05010000 (live cache must win)", uint32(mask))
+	}
+	if depth != 2 {
+		t.Errorf("depth = %d, want 2", depth)
+	}
+}
+
+func TestCategoryFor_LiveCacheZeroMaskFallsThrough(t *testing.T) {
+	t.Parallel()
+
+	// A cache entry with mask=0 must not be used — fall through to computed path.
+	e := newTestExchangeWithCategories(t, map[string]categoryEntry{
+		"item.weapon.pistol": {mask: 0, depth: 0},
+	})
+	// Build a proper segment index for a known category.
+	catalog := []CatalogItem{{Category: "items/weapons/pistol"}}
+	e.segIdx = buildSegmentIndex(catalog)
+
+	item := CatalogItem{
+		TemplateID: "item.weapon.pistol",
+		Category:   "items/weapons/pistol",
+	}
+	mask, _, ok := e.categoryFor(item)
+	if !ok {
+		t.Fatal("categoryFor returned ok=false for a known category even though cache mask=0")
+	}
+	if mask == 0 {
+		t.Error("expected a non-zero mask from CategoryMask fallback")
+	}
+}
+
+func TestCategoryFor_SchematicUsesUniqueSchematics(t *testing.T) {
+	t.Parallel()
+
+	e := &Exchange{
+		categories: map[string]categoryEntry{},
+	}
+	e.segIdx = buildSegmentIndex(nil)
+
+	// A schematic with a known UNIQUE SCHEMATICS section (e.g. weapons/pistol).
+	item := CatalogItem{
+		TemplateID:  "bp.weapon.pistol",
+		Category:    "items/weapons/pistol",
+		IsSchematic: true,
+	}
+	_, _, ok := UniqueSchematicsMask(item.Category)
+	if !ok {
+		t.Skip("test requires items/weapons/pistol to have a unique-schematics section")
+	}
+
+	mask, depth, ok := e.categoryFor(item)
+	if !ok {
+		t.Fatal("categoryFor returned ok=false for schematic with unique-schematics section")
+	}
+	if mask == 0 {
+		t.Error("expected non-zero unique-schematics mask")
+	}
+	if depth == 0 {
+		t.Error("expected non-zero depth for unique-schematics")
+	}
+}
+
+func TestCategoryFor_EmptyCategoryNotInCacheReturnsNotOK(t *testing.T) {
+	t.Parallel()
+
+	// No cache entry, no category — must return ok=false, never (0,0) with ok=true.
+	e := &Exchange{
+		categories: map[string]categoryEntry{},
+	}
+	e.segIdx = buildSegmentIndex(nil)
+
+	item := CatalogItem{
+		TemplateID: "item.unknown.thing",
+		Category:   "",
+	}
+	mask, depth, ok := e.categoryFor(item)
+	if ok {
+		t.Errorf("expected ok=false for item with no category and no cache entry, got mask=0x%08X depth=%d", uint32(mask), depth)
+	}
+	if mask != 0 || depth != 0 {
+		t.Errorf("expected (0,0) sentinel with ok=false, got (0x%08X, %d)", uint32(mask), depth)
+	}
+}
+
+func TestCategoryFor_KnownCategoryNoCacheReturnsMask(t *testing.T) {
+	t.Parallel()
+
+	// No cache entry, but a fully known category — CategoryMask succeeds.
+	catalog := []CatalogItem{{Category: "items/misc/refinedresources"}}
+	e := &Exchange{
+		categories: map[string]categoryEntry{},
+		segIdx:     buildSegmentIndex(catalog),
+	}
+
+	item := CatalogItem{
+		TemplateID: "item.misc.spice",
+		Category:   "items/misc/refinedresources",
+	}
+	mask, _, ok := e.categoryFor(item)
+	if !ok {
+		t.Fatal("categoryFor returned ok=false for a fully known category")
+	}
+	if mask == 0 {
+		t.Errorf("CategoryMask should return non-zero for items/misc/refinedresources")
+	}
+}
+
+func TestCategoryFor_UnknownCategorySegmentReturnsNotOK(t *testing.T) {
+	t.Parallel()
+
+	// A category whose segments are not in knownCodes and not in the segment index.
+	// CategoryMask must return 0 (after fix #3 removes the alphabetical fallback),
+	// and categoryFor must propagate ok=false.
+	e := &Exchange{
+		categories: map[string]categoryEntry{},
+		segIdx:     buildSegmentIndex(nil),
+	}
+
+	item := CatalogItem{
+		TemplateID: "item.future.thing",
+		Category:   "items/totallynewtype/unknownsub",
+	}
+	_, _, ok := e.categoryFor(item)
+	if ok {
+		t.Error("categoryFor should return ok=false for a category with unknown segments (no alphabetical fallback)")
+	}
+}
+
 func TestDetectExchangeID(t *testing.T) {
 	errNoRows := pgx.ErrNoRows
 

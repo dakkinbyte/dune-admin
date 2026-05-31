@@ -344,10 +344,6 @@ func (e *Exchange) Init(ctx context.Context, catalog []CatalogItem) error {
 
 	e.learnGameEpoch(ctx)
 	e.refreshCategoryCache(ctx)
-
-	if err := e.poisonCategoryHash(ctx); err != nil {
-		log.Printf("warn: category hash poison: %v", err)
-	}
 	return nil
 }
 
@@ -399,13 +395,6 @@ func (e *Exchange) initBotUser(ctx context.Context) error {
 		log.Printf("bot balance OK: %d (floor %d)", currentBalance, seedFloor)
 	}
 	return nil
-}
-
-func (e *Exchange) poisonCategoryHash(ctx context.Context) error {
-	_, err := e.db.Exec(ctx,
-		`INSERT INTO dune.dune_exchange_categories_hash (id, hash) VALUES (1, 0)
-		 ON CONFLICT (id) DO UPDATE SET hash = 0`)
-	return err
 }
 
 func (e *Exchange) refreshCategoryCache(ctx context.Context) {
@@ -473,23 +462,34 @@ func (e *Exchange) refreshCategoryCache(ctx context.Context) {
 	}
 }
 
-func (e *Exchange) categoryFor(item CatalogItem) (mask int32, depth int16) {
+// categoryFor returns the category_mask and category_depth for a listing.
+// It returns ok=false when no trustworthy mask can be determined; callers must
+// skip the listing rather than inserting a zero or guessed mask that would
+// conflict with player-order masks in the category-snapshot query.
+//
+// Precedence:
+//  1. Live player-derived cache (authoritative — prevents snapshot conflicts).
+//  2. UniqueSchematicsMask for schematics with a known unique section.
+//  3. CategoryMask with confirmed codes only (mask=0 → ok=false, skip).
+func (e *Exchange) categoryFor(item CatalogItem) (mask int32, depth int16, ok bool) {
+	// 1. Authoritative: reuse the mask real player orders already use for this
+	// template so the snapshot never sees conflicting (template, mask) pairs.
+	if c, found := e.categories[strings.ToLower(item.TemplateID)]; found && c.mask != 0 {
+		return c.mask, c.depth, true
+	}
+	// 2. Schematics may route into a UNIQUE SCHEMATICS subcategory.
 	if item.IsSchematic && item.Category != "" {
-		if m, d, ok := UniqueSchematicsMask(item.Category); ok {
-			return m, d
+		if m, d, us := UniqueSchematicsMask(item.Category); us {
+			return m, d, true
 		}
-		// Schematic whose category has no unique-schematics section — fall through.
-		return CategoryMask(item.Category, e.segIdx)
 	}
-	// Catalog items always use a freshly computed mask so stale cache values
-	// can never poison category filters.
+	// 3. Known category codes only — returns mask=0 for any unknown segment.
 	if item.Category != "" {
-		return CategoryMask(item.Category, e.segIdx)
+		if m, d := CategoryMask(item.Category, e.segIdx); m != 0 {
+			return m, d, true
+		}
 	}
-	if c, ok := e.categories[strings.ToLower(item.TemplateID)]; ok {
-		return c.mask, c.depth
-	}
-	return 0, 0
+	return 0, 0, false
 }
 
 func (e *Exchange) buyPlayerListings(ctx context.Context, orderExpiry int64, snap configValues) {
@@ -662,7 +662,10 @@ func (e *Exchange) createListingsBatch(ctx context.Context, listings []pendingLi
 		}
 		ok := true
 		for _, pl := range batch {
-			catMask, catDepth := e.categoryFor(pl.item)
+			catMask, catDepth, catOK := e.categoryFor(pl.item)
+			if !catOK {
+				continue // no trustworthy mask — skip rather than pollute the category snapshot
+			}
 			qualityLevel := pl.grade
 			listPrice := gradeFloor(pl.item, pl.grade, snap)
 			if pl.item.MaterialCost <= 0 {

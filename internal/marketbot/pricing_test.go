@@ -199,3 +199,23 @@ func TestCategoryMask(t *testing.T) {
 		}
 	}
 }
+
+// TestCategoryMask_UnknownSegmentReturnsZero verifies that CategoryMask returns
+// mask=0 for a category whose segments are absent from knownCodes, depth3Parent,
+// and the segment index. This ensures the alphabetical fallback (code = byte(j+1))
+// has been removed: unknown segments must produce mask=0 so callers can skip the
+// listing rather than inserting a guessed / conflicting mask into the DB.
+func TestCategoryMask_UnknownSegmentReturnsZero(t *testing.T) {
+	t.Parallel()
+
+	// A category path with segments that are not in any knownCodes lookup table
+	// and not present in the segment index (empty catalog).
+	unknownCategory := "items/totallynewtype/unknownsub"
+	idx := buildSegmentIndex(nil) // empty — nothing to index
+
+	mask, _ := CategoryMask(unknownCategory, idx)
+	if mask != 0 {
+		t.Errorf("CategoryMask(%q) = 0x%08X, want 0 — unknown segments must not produce alphabetical guesses",
+			unknownCategory, uint32(mask))
+	}
+}
