@@ -6,6 +6,10 @@ import { Panel, SectionLabel } from '../../../dune-ui'
 
 const inputCls = 'bg-surface border border-border rounded px-2 py-1.5 text-sm text-foreground w-full font-mono placeholder:text-muted/50 focus:outline-none focus:border-accent/60'
 
+// Restrict the set() helper to string-typed fields so it can't accidentally coerce
+// numeric/boolean AppConfig keys to strings (which the backend would reject or misparse).
+type StringAppConfigKey = { [K in keyof AppConfig]: AppConfig[K] extends string ? K : never }[keyof AppConfig]
+
 export default function BotServerConfig() {
   const [cfg, setCfg] = useState<AppConfig | null>(null)
   const [loading, setLoading] = useState(false)
@@ -20,13 +24,15 @@ export default function BotServerConfig() {
       .finally(() => setLoading(false))
   }, [])
 
-  const set = (key: keyof AppConfig) => (e: React.ChangeEvent<HTMLInputElement>) =>
+  const set = (key: StringAppConfigKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setCfg((prev) => prev ? { ...prev, [key]: e.target.value } : prev)
 
   const save = async () => {
     if (!cfg) return
     setSaving(true)
     try {
+      // Sends the full AppConfig. The backend treats MASKED sentinel values as
+      // "unchanged" for credential fields so they are never overwritten on save.
       await api.config.save(cfg)
       toast.success('Server config saved — restart required to apply changes')
     }
