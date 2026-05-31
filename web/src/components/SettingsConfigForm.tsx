@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Button, Select, ListBox, Spinner, Tabs, toast } from '@heroui/react'
 import { api, MASKED } from '../api/client'
 import type { AppConfig } from '../api/client'
-import { Panel, SectionLabel } from '../dune-ui'
+import { NumberInput, Panel, SectionLabel } from '../dune-ui'
 
 // ── defaults (all empty — never show fake values) ─────────────────────────────
 
@@ -237,7 +237,13 @@ export default function SettingsConfigForm({ saveRef, onSavingChange }: Props) {
                 <TI value={cfg.db_host} onChange={set('db_host')} placeholder="127.0.0.1" />
               </F>
               <F label={t('settings.db.port')}>
-                <TI value={cfg.db_port || ''} onChange={set('db_port')} type="number" placeholder="15432" />
+                <NumberInput
+                  ariaLabel={t('settings.db.port')}
+                  value={Number(cfg.db_port) || 0}
+                  onChange={(v) => set('db_port')(String(v))}
+                  showButtons={false}
+                  className="w-full"
+                />
               </F>
               <F label={t('settings.db.user')}>
                 <TI value={cfg.db_user} onChange={set('db_user')} placeholder="dune" />
@@ -400,7 +406,13 @@ export default function SettingsConfigForm({ saveRef, onSavingChange }: Props) {
                 <TI value={cfg.listen_addr} onChange={set('listen_addr')} placeholder=":8080" />
               </F>
               <F label={t('settings.adv.scripCurrency')}>
-                <TI value={cfg.scrip_currency || ''} onChange={set('scrip_currency')} type="number" placeholder="1" />
+                <NumberInput
+                  ariaLabel={t('settings.adv.scripCurrency')}
+                  value={Number(cfg.scrip_currency) || 0}
+                  onChange={(v) => set('scrip_currency')(String(v))}
+                  showButtons={false}
+                  className="w-full"
+                />
               </F>
               <F label={t('settings.adv.directorUrl')} hint={t('settings.adv.directorUrlHint')}>
                 <TI value={cfg.director_url} onChange={set('director_url')} placeholder="http://127.0.0.1:11717" />
