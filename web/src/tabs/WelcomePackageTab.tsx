@@ -238,7 +238,7 @@ export default function WelcomePackageTab() {
           <NumberInput
             label="Scan interval (sec)"
             min={5}
-            showButtons={false}
+            step={5}
             value={scanSecs}
             onChange={setScanSecs}
             className="w-28"
