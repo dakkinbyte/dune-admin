@@ -32,7 +32,7 @@ export default function MarketGrid({ items, onSelect }: Props) {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto pr-1">
       <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3 pb-3">
         {items.map((item) => {
           const key = `${item.template_id}:${item.quality}`

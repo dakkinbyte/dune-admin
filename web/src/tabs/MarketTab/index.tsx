@@ -131,9 +131,9 @@ export default function MarketTab() {
                 )}
         </div>
 
-        <ItemDetail item={selected} onClose={() => setSelected(null)} />
       </div>
 
+      <ItemDetail item={selected} onClose={() => setSelected(null)} />
       <BotControlPanel open={botOpen} onClose={() => setBotOpen(false)} />
     </div>
   )
