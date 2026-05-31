@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  Button, Chip, Input, InputGroup, Modal, SearchField, Spinner, TextField, toast,
+  Button, Chip, Modal, SearchField, Spinner, TextField, toast,
 } from '@heroui/react'
 import { api } from '../api/client'
 import type { InventoryItem } from '../api/client'
-import { DataTable, Icon, PageHeader, SideNav, type Column } from '../dune-ui'
+import { DataTable, Icon, NumberInput, PageHeader, SideNav, type Column } from '../dune-ui'
 
 type ItemKey = 'id' | 'template' | 'stack_size' | 'quality' | 'durability' | 'actions'
 
@@ -412,30 +412,20 @@ function AddItemsModal({ container, open, onClose, onSuccess, onRefresh }: {
                             )}
                           </div>
                         </TextField>
-                        <TextField className="w-32 shrink-0" aria-label="Quantity">
-                          <InputGroup>
-                            <InputGroup.Prefix>{t('storage.addModal.qtyLabel')}</InputGroup.Prefix>
-                            <InputGroup.Input
-                              className="pl-2"
-                              type="number"
-                              min={1}
-                              value={qty}
-                              onChange={(e) => setQty(Math.max(1, parseInt(e.target.value) || 1))}
-                            />
-                          </InputGroup>
-                        </TextField>
-                        <TextField className="w-40 shrink-0" aria-label="Quality">
-                          <InputGroup>
-                            <InputGroup.Prefix>{t('storage.addModal.qualityLabel')}</InputGroup.Prefix>
-                            <InputGroup.Input
-                              className="pl-2"
-                              type="number"
-                              min={0}
-                              value={quality}
-                              onChange={(e) => setQuality(Math.max(0, parseInt(e.target.value) || 0))}
-                            />
-                          </InputGroup>
-                        </TextField>
+                        <NumberInput
+                          ariaLabel={t('storage.addModal.qtyLabel')}
+                          min={1}
+                          value={qty}
+                          onChange={setQty}
+                          className="w-32 shrink-0"
+                        />
+                        <NumberInput
+                          ariaLabel={t('storage.addModal.qualityLabel')}
+                          min={0}
+                          value={quality}
+                          onChange={setQuality}
+                          className="w-40 shrink-0"
+                        />
                         <Button size="sm" onPress={addToStaged} isDisabled={!selected} className="shrink-0">
                           <Icon name="plus" />
                           {' '}
@@ -458,21 +448,19 @@ function AddItemsModal({ container, open, onClose, onSuccess, onRefresh }: {
                                 className="flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius)] text-xs bg-surface border border-border"
                               >
                                 <span className="flex-1 font-mono">{item.template}</span>
-                                <Input
-                                  type="number"
+                                <NumberInput
+                                  ariaLabel={`Qty for ${item.template}`}
                                   min={1}
                                   value={item.qty}
-                                  onChange={(e) => updateStaged(idx, 'qty', Math.max(1, parseInt(e.target.value) || 1))}
-                                  aria-label={`Qty for ${item.template}`}
-                                  className="w-20 text-center"
+                                  onChange={(v) => updateStaged(idx, 'qty', v)}
+                                  className="w-24"
                                 />
-                                <Input
-                                  type="number"
+                                <NumberInput
+                                  ariaLabel={`Quality for ${item.template}`}
                                   min={0}
                                   value={item.quality}
-                                  onChange={(e) => updateStaged(idx, 'quality', Math.max(0, parseInt(e.target.value) || 0))}
-                                  aria-label={`Quality for ${item.template}`}
-                                  className="w-20 text-center"
+                                  onChange={(v) => updateStaged(idx, 'quality', v)}
+                                  className="w-24"
                                 />
                                 <Button
                                   size="sm"

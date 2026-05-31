@@ -13,7 +13,7 @@ import {
   toast,
 } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
-import { ConfirmDialog, DataTable, Panel, SectionLabel } from '../../../dune-ui'
+import { ConfirmDialog, DataTable, NumberInput, Panel, SectionLabel } from '../../../dune-ui'
 import allGameplayTags from '../../../data/gameplayTags.json'
 import allSkillModules from '../../../data/skillModules.json'
 import allVehicles from '../../../data/vehicles.json'
@@ -376,13 +376,12 @@ export function PlayerActionsModal({ player, open, onClose }: Props) {
   }, [nodes, nodeSearch])
 
   const numInput = (val: number, set: (v: number) => void, min = 1, max = 9999999) => (
-    <Input
-      type="number"
+    <NumberInput
+      ariaLabel="number"
       min={min}
       max={max}
       value={val}
-      onChange={(e) => set(Math.max(min, Math.min(max, parseInt(e.target.value) || min)))}
-      aria-label="number"
+      onChange={(v) => set(Math.max(min, Math.min(max, v)))}
       className="w-28"
     />
   )

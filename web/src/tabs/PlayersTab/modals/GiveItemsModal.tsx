@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
 import {
-  Button, Header, Input, InputGroup, ListBox, Modal,
+  Button, Header, ListBox, Modal,
   SearchField, Select, Separator, Spinner, TextField, toast,
 } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../../api/client'
 import type { Player } from '../../../api/client'
-import { Icon } from '../../../dune-ui'
+import { Icon, NumberInput } from '../../../dune-ui'
 import type { PacksData } from '../types'
 
 interface Props {
@@ -217,30 +217,20 @@ export function GiveItemsModal({ player, open, onClose }: Props) {
                             )}
                           </div>
                         </TextField>
-                        <TextField className="w-32 shrink-0" aria-label={t('players.give.qty')}>
-                          <InputGroup>
-                            <InputGroup.Prefix>{t('players.give.qty')}</InputGroup.Prefix>
-                            <InputGroup.Input
-                              className="pl-2"
-                              type="number"
-                              min={1}
-                              value={qty}
-                              onChange={(e) => setQty(Math.max(1, parseInt(e.target.value) || 1))}
-                            />
-                          </InputGroup>
-                        </TextField>
-                        <TextField className="w-40 shrink-0" aria-label={t('players.give.quality')}>
-                          <InputGroup>
-                            <InputGroup.Prefix>{t('players.give.quality')}</InputGroup.Prefix>
-                            <InputGroup.Input
-                              className="pl-2"
-                              type="number"
-                              min={0}
-                              value={quality}
-                              onChange={(e) => setQuality(Math.max(0, parseInt(e.target.value) || 0))}
-                            />
-                          </InputGroup>
-                        </TextField>
+                        <NumberInput
+                          ariaLabel={t('players.give.qty')}
+                          min={1}
+                          value={qty}
+                          onChange={setQty}
+                          className="w-32 shrink-0"
+                        />
+                        <NumberInput
+                          ariaLabel={t('players.give.quality')}
+                          min={0}
+                          value={quality}
+                          onChange={setQuality}
+                          className="w-40 shrink-0"
+                        />
                         <Button size="sm" onPress={addToStaged} isDisabled={!selected} className="shrink-0">
                           <Icon name="plus" />
                           {' '}
@@ -263,21 +253,19 @@ export function GiveItemsModal({ player, open, onClose }: Props) {
                                 className="flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius)] text-xs bg-surface border border-border"
                               >
                                 <span className="flex-1 font-mono">{item.template}</span>
-                                <Input
-                                  type="number"
+                                <NumberInput
+                                  ariaLabel={`${t('players.give.qty')} for ${item.template}`}
                                   min={1}
                                   value={item.qty}
-                                  onChange={(e) => updateStaged(idx, 'qty', Math.max(1, parseInt(e.target.value) || 1))}
-                                  aria-label={`${t('players.give.qty')} for ${item.template}`}
-                                  className="w-20 text-center"
+                                  onChange={(v) => updateStaged(idx, 'qty', v)}
+                                  className="w-24"
                                 />
-                                <Input
-                                  type="number"
+                                <NumberInput
+                                  ariaLabel={`${t('players.give.quality')} for ${item.template}`}
                                   min={0}
                                   value={item.quality}
-                                  onChange={(e) => updateStaged(idx, 'quality', Math.max(0, parseInt(e.target.value) || 0))}
-                                  aria-label={`${t('players.give.quality')} for ${item.template}`}
-                                  className="w-20 text-center"
+                                  onChange={(v) => updateStaged(idx, 'quality', v)}
+                                  className="w-24"
                                 />
                                 <Button
                                   size="sm"
