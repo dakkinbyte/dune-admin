@@ -49,37 +49,49 @@ export default function BotActions({ status, onRefresh }: Props) {
   }
 
   const running = status?.running ?? false
+  const dormant = status?.mode === 'none'
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          isDisabled={running || busy !== null}
-          onPress={() => run('start')}
-        >
-          {busy === 'start' ? <Spinner size="sm" color="current" /> : <Icon name="play" />}
-          Resume
-        </Button>
-        <Button
-          size="sm"
-          variant="danger-soft"
-          isDisabled={!running || busy !== null}
-          onPress={() => run('stop')}
-        >
-          {busy === 'stop' ? <Spinner size="sm" color="current" /> : <Icon name="square" />}
-          Pause
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          isDisabled={busy !== null}
-          onPress={() => run('restart')}
-        >
-          {busy === 'restart' ? <Spinner size="sm" color="current" /> : <Icon name="refresh-cw" />}
-          Reinitialize
-        </Button>
+      <div className="flex items-center gap-2 flex-wrap">
+        {dormant
+          ? (
+              <span className="text-xs text-muted">
+                Bot disabled — enable in Settings → Market Bot to use lifecycle controls.
+              </span>
+            )
+          : (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  isDisabled={running || busy !== null}
+                  onPress={() => run('start')}
+                >
+                  {busy === 'start' ? <Spinner size="sm" color="current" /> : <Icon name="play" />}
+                  Resume
+                </Button>
+                <Button
+                  size="sm"
+                  variant="danger-soft"
+                  isDisabled={!running || busy !== null}
+                  onPress={() => run('stop')}
+                >
+                  {busy === 'stop' ? <Spinner size="sm" color="current" /> : <Icon name="square" />}
+                  Pause
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  isDisabled={busy !== null}
+                  onPress={() => run('restart')}
+                >
+                  {busy === 'restart' ? <Spinner size="sm" color="current" /> : <Icon name="refresh-cw" />}
+                  Reinitialize
+                </Button>
+              </>
+            )}
+
         <Button
           size="sm"
           variant="danger-soft"
