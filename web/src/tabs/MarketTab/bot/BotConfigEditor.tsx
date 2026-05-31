@@ -3,7 +3,7 @@ import { toast } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../../api/client'
 import type { BotConfig } from '../../../api/client'
-import { Panel, SectionLabel } from '../../../dune-ui'
+import { NumberInput, Panel, SectionLabel } from '../../../dune-ui'
 
 export type ConfigEditorHandle = {
   save: () => Promise<void>
@@ -103,31 +103,33 @@ const BotConfigEditor = forwardRef<ConfigEditorHandle, Props>(function BotConfig
         <p className="text-xs text-muted -mt-1">{t('market.bot.configEditor.limitsDesc')}</p>
         <div className="grid grid-cols-3 gap-3 mt-1">
           <Field label={t('market.bot.configEditor.maxBuysPerTick')}>
-            <input
-              className="bg-surface border border-border rounded px-2 py-1.5 text-sm text-foreground w-full"
-              type="number"
+            <NumberInput
+              ariaLabel={t('market.bot.configEditor.maxBuysPerTick')}
               value={draft.max_buys}
-              onChange={(e) => set('max_buys', Number(e.target.value))}
+              onChange={(v) => set('max_buys', v)}
+              showButtons={false}
+              className="w-full"
             />
           </Field>
           <Field label={t('market.bot.configEditor.listingsPerGrade')} hint={t('market.bot.configEditor.listingsPerGradeHint')}>
-            <input
-              className="bg-surface border border-border rounded px-2 py-1.5 text-sm text-foreground w-full"
-              type="number"
+            <NumberInput
+              ariaLabel={t('market.bot.configEditor.listingsPerGrade')}
               value={draft.listings_per_grade}
-              onChange={(e) => set('listings_per_grade', Number(e.target.value))}
+              onChange={(v) => set('listings_per_grade', v)}
+              showButtons={false}
+              className="w-full"
             />
           </Field>
           <Field label={t('market.bot.configEditor.buyThreshold')} hint={t('market.bot.configEditor.buyThresholdHint', { pct: buyPct })}>
             <div className="flex items-center gap-2">
-              <input
-                className="bg-surface border border-border rounded px-2 py-1.5 text-sm text-foreground w-20"
-                type="number"
+              <NumberInput
+                ariaLabel={t('market.bot.configEditor.buyThreshold')}
                 min={1}
                 max={200}
-                step={1}
                 value={buyPct}
-                onChange={(e) => setBuyPct(Number(e.target.value))}
+                onChange={setBuyPct}
+                showButtons={false}
+                className="w-20"
               />
               <span className="text-sm text-muted">%</span>
             </div>
@@ -159,13 +161,14 @@ const BotConfigEditor = forwardRef<ConfigEditorHandle, Props>(function BotConfig
         <div className="flex flex-wrap gap-3 mt-1">
           {(draft.grade_multipliers ?? []).map((mult, i) => (
             <Field key={i} label={GRADE_LABELS[i] ?? `Grade ${i}`} hint={`×${mult.toFixed(2)}`}>
-              <input
-                className="bg-surface border border-border rounded px-2 py-1.5 text-sm text-foreground w-24"
-                type="number"
-                step="0.05"
-                min="0.01"
+              <NumberInput
+                ariaLabel={GRADE_LABELS[i] ?? `Grade ${i}`}
+                step={0.05}
+                min={0.01}
                 value={mult}
-                onChange={(e) => setGrade(i, Number(e.target.value))}
+                onChange={(v) => setGrade(i, v)}
+                showButtons={false}
+                className="w-24"
               />
             </Field>
           ))}
@@ -178,13 +181,14 @@ const BotConfigEditor = forwardRef<ConfigEditorHandle, Props>(function BotConfig
         <div className="flex flex-wrap gap-3 mt-1">
           {Object.entries(draft.rarity_multipliers ?? {}).map(([rarity, mult]) => (
             <Field key={rarity} label={capitalize(rarity)} hint={`×${(mult as number).toFixed(2)}`}>
-              <input
-                className="bg-surface border border-border rounded px-2 py-1.5 text-sm text-foreground w-24"
-                type="number"
-                step="0.1"
-                min="0.01"
-                value={mult}
-                onChange={(e) => setRarity(rarity, Number(e.target.value))}
+              <NumberInput
+                ariaLabel={capitalize(rarity)}
+                step={0.1}
+                min={0.01}
+                value={mult as number}
+                onChange={(v) => setRarity(rarity, v)}
+                showButtons={false}
+                className="w-24"
               />
             </Field>
           ))}
@@ -198,13 +202,14 @@ const BotConfigEditor = forwardRef<ConfigEditorHandle, Props>(function BotConfig
           <div className="flex flex-wrap gap-3 mt-1">
             {Object.entries(draft.vendor_multipliers ?? {}).map(([rarity, mult]) => (
               <Field key={rarity} label={capitalize(rarity)} hint={`×${(mult as number).toFixed(2)}`}>
-                <input
-                  className="bg-surface border border-border rounded px-2 py-1.5 text-sm text-foreground w-24"
-                  type="number"
-                  step="0.1"
-                  min="0.01"
-                  value={mult}
-                  onChange={(e) => setVendor(rarity, Number(e.target.value))}
+                <NumberInput
+                  ariaLabel={capitalize(rarity)}
+                  step={0.1}
+                  min={0.01}
+                  value={mult as number}
+                  onChange={(v) => setVendor(rarity, v)}
+                  showButtons={false}
+                  className="w-24"
                 />
               </Field>
             ))}
