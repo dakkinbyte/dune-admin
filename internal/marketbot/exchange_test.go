@@ -439,48 +439,65 @@ func TestCategoryFor_UnknownCategorySegmentReturnsNotOK(t *testing.T) {
 
 func TestDetectExchangeID(t *testing.T) {
 	errNoRows := pgx.ErrNoRows
+	panicFn := func() (int64, error) { panic("should not be called") }
 
 	tests := []struct {
-		name       string
-		fromOrders func() (int64, error)
-		fromTable  func() (int64, error)
-		autoCreate func() (int64, error)
-		wantID     int64
-		wantErr    bool
+		name            string
+		fromAccessPoint func() (int64, error)
+		fromOrders      func() (int64, error)
+		fromTable       func() (int64, error)
+		autoCreate      func() (int64, error)
+		wantID          int64
+		wantErr         bool
 	}{
 		{
-			name:       "found in player orders",
-			fromOrders: func() (int64, error) { return 7, nil },
-			fromTable:  func() (int64, error) { panic("should not be called") },
-			autoCreate: func() (int64, error) { panic("should not be called") },
-			wantID:     7,
+			// Authoritative: the access point is what the game actually uses,
+			// so it wins even when player orders point elsewhere (the bug:
+			// stale orders on the phantom Global exchange).
+			name:            "found via access point (authoritative)",
+			fromAccessPoint: func() (int64, error) { return 2, nil },
+			fromOrders:      panicFn,
+			fromTable:       panicFn,
+			autoCreate:      panicFn,
+			wantID:          2,
 		},
 		{
-			name:       "found in dune_exchanges table",
-			fromOrders: func() (int64, error) { return 0, errNoRows },
-			fromTable:  func() (int64, error) { return 3, nil },
-			autoCreate: func() (int64, error) { panic("should not be called") },
-			wantID:     3,
+			name:            "falls back to player orders when no access point",
+			fromAccessPoint: func() (int64, error) { return 0, errNoRows },
+			fromOrders:      func() (int64, error) { return 7, nil },
+			fromTable:       panicFn,
+			autoCreate:      panicFn,
+			wantID:          7,
 		},
 		{
-			name:       "auto-creates via upsert when table empty",
-			fromOrders: func() (int64, error) { return 0, errNoRows },
-			fromTable:  func() (int64, error) { return 0, errNoRows },
-			autoCreate: func() (int64, error) { return 1, nil },
-			wantID:     1,
+			name:            "falls back to dune_exchanges table",
+			fromAccessPoint: func() (int64, error) { return 0, errNoRows },
+			fromOrders:      func() (int64, error) { return 0, errNoRows },
+			fromTable:       func() (int64, error) { return 3, nil },
+			autoCreate:      panicFn,
+			wantID:          3,
 		},
 		{
-			name:       "all three fail → error",
-			fromOrders: func() (int64, error) { return 0, errNoRows },
-			fromTable:  func() (int64, error) { return 0, errNoRows },
-			autoCreate: func() (int64, error) { return 0, errNoRows },
-			wantErr:    true,
+			name:            "auto-creates via upsert when everything empty",
+			fromAccessPoint: func() (int64, error) { return 0, errNoRows },
+			fromOrders:      func() (int64, error) { return 0, errNoRows },
+			fromTable:       func() (int64, error) { return 0, errNoRows },
+			autoCreate:      func() (int64, error) { return 1, nil },
+			wantID:          1,
+		},
+		{
+			name:            "all tiers fail → error",
+			fromAccessPoint: func() (int64, error) { return 0, errNoRows },
+			fromOrders:      func() (int64, error) { return 0, errNoRows },
+			fromTable:       func() (int64, error) { return 0, errNoRows },
+			autoCreate:      func() (int64, error) { return 0, errNoRows },
+			wantErr:         true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			id, err := detectExchangeID(tt.fromOrders, tt.fromTable, tt.autoCreate)
+			id, err := detectExchangeID(tt.fromAccessPoint, tt.fromOrders, tt.fromTable, tt.autoCreate)
 			if tt.wantErr {
 				if err == nil {
 					t.Error("expected error, got nil")
@@ -492,6 +509,46 @@ func TestDetectExchangeID(t *testing.T) {
 			}
 			if id != tt.wantID {
 				t.Errorf("got id=%d want %d", id, tt.wantID)
+			}
+		})
+	}
+}
+
+func TestDetectAccessPointID(t *testing.T) {
+	errNoRows := pgx.ErrNoRows
+
+	tests := []struct {
+		name             string
+		fromAccessPoints func() (int64, error)
+		fromOrders       func() (int64, error)
+		want             int64
+	}{
+		{
+			// Authoritative table wins, even if stale orders reference a
+			// different (wrong) access point.
+			name:             "from access points table",
+			fromAccessPoints: func() (int64, error) { return 2, nil },
+			fromOrders:       func() (int64, error) { panic("should not be called") },
+			want:             2,
+		},
+		{
+			name:             "falls back to existing orders",
+			fromAccessPoints: func() (int64, error) { return 0, errNoRows },
+			fromOrders:       func() (int64, error) { return 5, nil },
+			want:             5,
+		},
+		{
+			name:             "defaults to 1 when nothing found",
+			fromAccessPoints: func() (int64, error) { return 0, errNoRows },
+			fromOrders:       func() (int64, error) { return 0, errNoRows },
+			want:             1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := detectAccessPointID(tt.fromAccessPoints, tt.fromOrders); got != tt.want {
+				t.Errorf("got %d want %d", got, tt.want)
 			}
 		})
 	}

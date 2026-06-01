@@ -256,19 +256,31 @@ func (e *Exchange) gameNow() int64 {
 	return time.Now().Unix() - e.gameEpochUnix
 }
 
-// detectExchangeID resolves the exchange ID via a three-tier cascade:
-//  1. An existing player order's exchange_id (most reliable).
-//  2. Any row in dune_exchanges (works on fresh servers with no player trades).
-//  3. An upsert via get_dune_exchange_id('Global') so a completely empty DB
+// detectExchangeID resolves the exchange ID via a four-tier cascade:
+//  1. The exchange a real access point points to (authoritative — this is the
+//     exchange players actually reach in-game). The "Global" exchange has no
+//     access point, so this correctly skips it.
+//  2. An existing player order's exchange_id.
+//  3. Any row in dune_exchanges (works on fresh servers with no player trades).
+//  4. An upsert via get_dune_exchange_id('Global') so a completely empty DB
 //     still boots rather than crashing with "no rows in result set".
+//
+// Tier 1 is what fixes the "items posted to the wrong exchange" bug: previously
+// the bot fell back to the lowest dune_exchanges id (the phantom Global
+// exchange) whenever no player sell orders existed, so its listings never
+// appeared in-game.
 //
 // Each tier is provided as a closure so the function can be unit-tested without
 // a live Postgres connection.
 func detectExchangeID(
+	fromAccessPoint func() (int64, error),
 	fromOrders func() (int64, error),
 	fromTable func() (int64, error),
 	autoCreate func() (int64, error),
 ) (int64, error) {
+	if id, err := fromAccessPoint(); err == nil {
+		return id, nil
+	}
 	if id, err := fromOrders(); err == nil {
 		return id, nil
 	}
@@ -282,8 +294,34 @@ func detectExchangeID(
 	return id, nil
 }
 
+// detectAccessPointID resolves the access point ID for the resolved exchange.
+// The access points table is authoritative (it's what the game uses); existing
+// orders are only a fallback, and 1 is the last resort. Reading from the table
+// rather than scanning orders avoids inheriting a stale/wrong access point that
+// bad historical data may have written.
+func detectAccessPointID(
+	fromAccessPoints func() (int64, error),
+	fromOrders func() (int64, error),
+) int64 {
+	if id, err := fromAccessPoints(); err == nil {
+		return id
+	}
+	if id, err := fromOrders(); err == nil {
+		return id
+	}
+	return 1
+}
+
 func (e *Exchange) Init(ctx context.Context, catalog []CatalogItem) error {
 	id, err := detectExchangeID(
+		func() (int64, error) {
+			var id int64
+			return id, e.db.QueryRow(ctx,
+				`SELECT ap.exchange_id
+				 FROM dune.dune_exchange_accesspoints ap
+				 JOIN dune.dune_exchanges e ON e.id = ap.exchange_id
+				 ORDER BY ap.id LIMIT 1`).Scan(&id)
+		},
 		func() (int64, error) {
 			var id int64
 			return id, e.db.QueryRow(ctx,
@@ -306,14 +344,21 @@ func (e *Exchange) Init(ctx context.Context, catalog []CatalogItem) error {
 	e.exchangeID = id
 	log.Printf("exchange id: %d", e.exchangeID)
 
-	if err := e.db.QueryRow(ctx,
-		`SELECT DISTINCT access_point_id FROM dune.dune_exchange_orders WHERE exchange_id = $1 LIMIT 1`,
-		e.exchangeID).Scan(&e.accessPointID); err != nil {
-		e.accessPointID = 1
-		log.Printf("access point: no existing orders, defaulting to 1")
-	} else {
-		log.Printf("access point id: %d", e.accessPointID)
-	}
+	e.accessPointID = detectAccessPointID(
+		func() (int64, error) {
+			var id int64
+			return id, e.db.QueryRow(ctx,
+				`SELECT id FROM dune.dune_exchange_accesspoints WHERE exchange_id = $1 ORDER BY id LIMIT 1`,
+				e.exchangeID).Scan(&id)
+		},
+		func() (int64, error) {
+			var id int64
+			return id, e.db.QueryRow(ctx,
+				`SELECT DISTINCT access_point_id FROM dune.dune_exchange_orders WHERE exchange_id = $1 LIMIT 1`,
+				e.exchangeID).Scan(&id)
+		},
+	)
+	log.Printf("access point id: %d", e.accessPointID)
 
 	if err := e.db.QueryRow(ctx,
 		`SELECT dune.get_exchange_inventory_id($1)`, e.exchangeID).Scan(&e.botInvID); err != nil {
