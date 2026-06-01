@@ -55,3 +55,4 @@ deploy/k8s/dune-admin.rendered.yaml
 # Reference material / ideas / scratch — not for sharing
 Samples-Ideas/
 tmp/dune-admin
+.worktrees
