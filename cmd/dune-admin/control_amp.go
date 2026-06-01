@@ -75,6 +75,8 @@ func (c *ampControl) GetStatus(ctx context.Context, exec Executor) (*Battlegroup
 		if meta, ok := dirMeta[p.partition]; ok {
 			row.Dimension = meta.dimension
 			row.Players = meta.players
+			row.PlayerHardCap = meta.playerHardCap
+			row.Queue = meta.queue
 			if meta.label != "" {
 				row.Sietch = meta.label
 			}
@@ -100,9 +102,11 @@ var directorHTTPClient = &http.Client{Timeout: 3 * time.Second}
 
 // partitionMeta is director-sourced metadata for one game-server partition.
 type partitionMeta struct {
-	dimension int
-	label     string
-	players   int
+	dimension     int
+	label         string
+	players       int
+	playerHardCap int
+	queue         int
 }
 
 // fetchDirectorPartitions queries the Battlegroup Director's /v0/battlegroup
@@ -144,11 +148,14 @@ func collectPartitions(v any, out map[int]partitionMeta) {
 	case map[string]any:
 		if p, ok := t["partition"].(map[string]any); ok {
 			if id, ok := jsonPartitionID(p["partitionId"]); ok {
-				// Player count is a sibling of "partition" on the server node.
+				// Player count, queue, and caps are siblings of "partition" on
+				// the server node.
 				out[id] = partitionMeta{
-					dimension: jsonInt(p["dimensionIndex"]),
-					label:     jsonString(p["label"]),
-					players:   jsonInt(t["numPlayersInGame"]),
+					dimension:     jsonInt(p["dimensionIndex"]),
+					label:         jsonString(p["label"]),
+					players:       jsonInt(t["numPlayersInGame"]),
+					playerHardCap: effectivePlayerHardCap(t),
+					queue:         jsonInt(t["numPlayersInQueue"]),
 				}
 			}
 		}
@@ -183,6 +190,19 @@ func jsonInt(v any) int {
 func jsonString(v any) string {
 	s, _ := v.(string)
 	return s
+}
+
+// effectivePlayerHardCap resolves a server node's player cap: the per-server
+// override (serverPlayerHardCap) wins when positive, otherwise the configured
+// cap (cfg.playerHardCap). The director uses -1 for "no override".
+func effectivePlayerHardCap(node map[string]any) int {
+	if override := jsonInt(node["serverPlayerHardCap"]); override > 0 {
+		return override
+	}
+	if cfg, ok := node["cfg"].(map[string]any); ok {
+		return jsonInt(cfg["playerHardCap"])
+	}
+	return 0
 }
 
 func (c *ampControl) ExecCommand(_ context.Context, exec Executor, cmd string) (string, error) {

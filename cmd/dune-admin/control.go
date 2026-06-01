@@ -60,13 +60,15 @@ type BattlegroupStatus struct {
 }
 
 type ServerRow struct {
-	Map       string `json:"map"`
-	Sietch    string `json:"sietch"`
-	Dimension int    `json:"dimension"`
-	Partition int    `json:"partition"`
-	Phase     string `json:"phase"`
-	Ready     bool   `json:"ready"`
-	Players   int    `json:"players"`
+	Map           string `json:"map"`
+	Sietch        string `json:"sietch"`
+	Dimension     int    `json:"dimension"`
+	Partition     int    `json:"partition"`
+	Phase         string `json:"phase"`
+	Ready         bool   `json:"ready"`
+	Players       int    `json:"players"`
+	PlayerHardCap int    `json:"playerHardCap"`
+	Queue         int    `json:"queue"`
 }
 
 type ProcessInfo struct {

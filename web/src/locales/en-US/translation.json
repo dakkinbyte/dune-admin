@@ -114,6 +114,7 @@
       "map": "Map",
       "phase": "Phase",
       "players": "Players",
+      "queue": "Queue",
       "ready": "Ready",
       "dim": "Dim",
       "part": "Part"

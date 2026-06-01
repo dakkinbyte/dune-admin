@@ -338,9 +338,11 @@ const directorBattlegroupJSON = `{
   "bgTitle": "Test BG",
   "singleServerMaps": {
     "Overmap": {
-      "cfg": null,
+      "cfg": {"playerHardCap": 60},
       "gamePort": 7794,
       "numPlayersInGame": 5,
+      "numPlayersInQueue": 2,
+      "serverPlayerHardCap": -1,
       "partition": {"partitionId": 2, "dimensionIndex": 0, "label": "Overland"}
     }
   },
@@ -349,15 +351,15 @@ const directorBattlegroupJSON = `{
       "cfg": null,
       "webOverrideCfg": null,
       "serversByDimension": {
-        "0": {"gamePort": 7799, "numPlayersInGame": 2, "partition": {"partitionId": 8, "dimensionIndex": 0, "label": "DeepDesert_0"}},
-        "1": {"gamePort": 7800, "numPlayersInGame": 0, "partition": {"partitionId": 143, "dimensionIndex": 1, "label": "DeepDesert_1"}}
+        "0": {"gamePort": 7799, "numPlayersInGame": 2, "numPlayersInQueue": 0, "serverPlayerHardCap": -1, "cfg": {"playerHardCap": 80}, "partition": {"partitionId": 8, "dimensionIndex": 0, "label": "DeepDesert_0"}},
+        "1": {"gamePort": 7800, "numPlayersInGame": 0, "numPlayersInQueue": 1, "serverPlayerHardCap": 40, "cfg": {"playerHardCap": 80}, "partition": {"partitionId": 143, "dimensionIndex": 1, "label": "DeepDesert_1"}}
       }
     }
   },
   "instancedMaps": {
     "SH_Arrakeen": {
       "instances": {
-        "inst-a": {"gamePort": 7792, "numPlayersInGame": 7, "partition": {"partitionId": 3, "dimensionIndex": 0, "label": "Arrakeen_0"}}
+        "inst-a": {"gamePort": 7792, "numPlayersInGame": 7, "numPlayersInQueue": null, "serverPlayerHardCap": -1, "cfg": {"playerHardCap": 80}, "partition": {"partitionId": 3, "dimensionIndex": 0, "label": "Arrakeen_0"}}
       }
     }
   }
@@ -402,11 +404,13 @@ func TestAmpGetStatus_EnrichesDimensionFromDirector(t *testing.T) {
 		dim     int
 		sietch  string
 		players int
+		cap     int
+		queue   int
 	}{
-		2:   {0, "Overland", 5},
-		8:   {0, "DeepDesert_0", 2},
-		143: {1, "DeepDesert_1", 0},
-		3:   {0, "Arrakeen_0", 7},
+		2:   {0, "Overland", 5, 60, 2},     // serverPlayerHardCap -1 → cfg cap 60
+		8:   {0, "DeepDesert_0", 2, 80, 0}, // cfg cap 80
+		143: {1, "DeepDesert_1", 0, 40, 1}, // serverPlayerHardCap 40 overrides cfg 80
+		3:   {0, "Arrakeen_0", 7, 80, 0},   // queue null → 0
 	}
 	if len(status.Servers) != len(want) {
 		t.Fatalf("got %d servers, want %d", len(status.Servers), len(want))
@@ -424,6 +428,12 @@ func TestAmpGetStatus_EnrichesDimensionFromDirector(t *testing.T) {
 		}
 		if row.Players != exp.players {
 			t.Errorf("partition %d: players = %d, want %d", row.Partition, row.Players, exp.players)
+		}
+		if row.PlayerHardCap != exp.cap {
+			t.Errorf("partition %d: playerHardCap = %d, want %d", row.Partition, row.PlayerHardCap, exp.cap)
+		}
+		if row.Queue != exp.queue {
+			t.Errorf("partition %d: queue = %d, want %d", row.Partition, row.Queue, exp.queue)
 		}
 	}
 }
@@ -482,10 +492,10 @@ func TestCollectPartitions_WalksNestedAndIgnoresNull(t *testing.T) {
 	collectPartitions(raw, out)
 
 	for id, want := range map[int]partitionMeta{
-		2:   {dimension: 0, label: "Overland", players: 5},
-		8:   {dimension: 0, label: "DeepDesert_0", players: 2},
-		143: {dimension: 1, label: "DeepDesert_1", players: 0},
-		3:   {dimension: 0, label: "Arrakeen_0", players: 7},
+		2:   {dimension: 0, label: "Overland", players: 5, playerHardCap: 60, queue: 2},
+		8:   {dimension: 0, label: "DeepDesert_0", players: 2, playerHardCap: 80, queue: 0},
+		143: {dimension: 1, label: "DeepDesert_1", players: 0, playerHardCap: 40, queue: 1},
+		3:   {dimension: 0, label: "Arrakeen_0", players: 7, playerHardCap: 80, queue: 0},
 	} {
 		got, ok := out[id]
 		if !ok {

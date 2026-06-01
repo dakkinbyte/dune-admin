@@ -94,6 +94,7 @@
       "map": "Mapa",
       "phase": "Faza",
       "players": "Gracze",
+      "queue": "Kolejka",
       "ready": "Gotowy",
       "dim": "Dim",
       "part": "Part"

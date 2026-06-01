@@ -94,6 +94,7 @@
       "map": "Carte",
       "phase": "Phase",
       "players": "Joueurs",
+      "queue": "File",
       "ready": "Prêt",
       "dim": "Dim",
       "part": "Part"

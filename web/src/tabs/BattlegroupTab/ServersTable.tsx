@@ -38,6 +38,15 @@ export function ServersTable({ servers, isInitializing, emptyMessage }: Props) {
             return (
               <span className="font-semibold" style={{ color: s.players > 0 ? 'var(--success)' : 'var(--muted)' }}>
                 {s.players}
+                {s.playerHardCap > 0 && (
+                  <span className="font-normal text-muted">{`/${s.playerHardCap}`}</span>
+                )}
+              </span>
+            )
+          case 'queue':
+            return (
+              <span style={{ color: s.queue > 0 ? 'var(--warning)' : 'var(--muted)' }}>
+                {s.queue}
               </span>
             )
           case 'ready':
