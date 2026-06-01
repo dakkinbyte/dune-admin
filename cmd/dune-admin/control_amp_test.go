@@ -198,14 +198,38 @@ func TestAmpDiscoverIniDir_FallsBackToState(t *testing.T) {
 	}
 }
 
-// TestAmpDiscoverIniDir_ExplicitConfigSkipsProbe verifies that when server_ini_dir
-// is explicitly configured, DiscoverIniDir returns it without probing.
-func TestAmpDiscoverIniDir_ExplicitConfigSkipsProbe(t *testing.T) {
+// TestAmpDiscoverIniDir_ExplicitConfig_PrefersUE5SubDir verifies that when
+// server_ini_dir is set to a base state directory and ue5-saved/UserSettings
+// contains UserGame.ini, DiscoverIniDir returns the ue5-saved subdirectory.
+func TestAmpDiscoverIniDir_ExplicitConfig_PrefersUE5SubDir(t *testing.T) {
 	t.Parallel()
 
 	exec := &fnExecutor{fn: func(cmd string) (string, error) {
-		t.Error("executor must not be called when iniDir is explicitly configured")
-		return "", nil
+		if strings.Contains(cmd, "ue5-saved/UserSettings") {
+			return "yes\n", nil
+		}
+		return "no\n", nil
+	}}
+	ctrl := &ampControl{iniDir: "/custom/state"}
+
+	dir, err := ctrl.DiscoverIniDir(context.Background(), exec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := "/custom/state/ue5-saved/UserSettings"
+	if dir != want {
+		t.Errorf("got %q, want %q", dir, want)
+	}
+}
+
+// TestAmpDiscoverIniDir_ExplicitConfig_FallsBackToConfigured verifies that when
+// server_ini_dir is set and ue5-saved/UserSettings has no UserGame.ini, the
+// configured path is returned as-is.
+func TestAmpDiscoverIniDir_ExplicitConfig_FallsBackToConfigured(t *testing.T) {
+	t.Parallel()
+
+	exec := &fnExecutor{fn: func(cmd string) (string, error) {
+		return "no\n", nil
 	}}
 	ctrl := &ampControl{iniDir: "/custom/ini/dir"}
 
