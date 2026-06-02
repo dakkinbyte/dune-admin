@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, Drawer, Select, ListBox, SearchField, Spinner, toast } from '@heroui/react'
+import { Button, Select, ListBox, SearchField, Spinner, toast } from '@heroui/react'
 import { MapContainer, ImageOverlay, CircleMarker, Marker, Tooltip, useMapEvents, useMap } from 'react-leaflet'
 import L, { CRS, type LatLngBoundsExpression } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -356,7 +356,7 @@ function makeSpriteDivIcon(type: string, size: number): L.DivIcon | null {
   return L.divIcon({ html, iconSize: [size, size], iconAnchor: [size / 2, size / 2], className: '' })
 }
 
-// ── Filter Drawer ─────────────────────────────────────────────────────────────
+// ── Filter Panel (persistent sidebar) ────────────────────────────────────────
 
 const LIVE_TYPES = ['players', 'vehicles', 'bases'] as const
 
@@ -369,11 +369,9 @@ const CATEGORY_GROUPS: { id: string, labelKey: string }[] = [
   { id: 'static', labelKey: 'liveMap.filterStaticObjects' },
 ]
 
-function FilterDrawer({
-  open, onClose, filter, onToggle, onToggleCategory, spawns,
+function FilterPanel({
+  filter, onToggle, onToggleCategory, spawns,
 }: {
-  open: boolean
-  onClose: () => void
   filter: Record<string, boolean>
   onToggle: (key: string) => void
   onToggleCategory: (category: string, on: boolean) => void
@@ -475,71 +473,56 @@ function FilterDrawer({
   }
 
   return (
-    <Drawer>
-      <Drawer.Backdrop
-        variant="transparent"
-        isOpen={open}
-        onOpenChange={(v) => !v && onClose()}
-      >
-        <Drawer.Content placement="right">
-          <Drawer.Dialog className="w-72 flex flex-col bg-background" style={{ zIndex: 1100 }}>
-            <Drawer.Header className="border-b border-border px-3 py-2.5 shrink-0">
-              <div className="flex items-center justify-between w-full">
-                <span className="font-semibold text-foreground text-sm">{t('liveMap.filter')}</span>
-                <Drawer.CloseTrigger>
-                  <Button size="sm" variant="ghost" isIconOnly aria-label="close">
-                    <Icon name="x" className="size-4" />
-                  </Button>
-                </Drawer.CloseTrigger>
-              </div>
-            </Drawer.Header>
+    <div className="flex flex-col w-64 shrink-0 border-l border-border bg-background overflow-hidden">
+      {/* Header */}
+      <div className="border-b border-border px-3 py-2.5 shrink-0">
+        <span className="font-semibold text-foreground text-sm">{t('liveMap.filter')}</span>
+      </div>
 
-            {/* Search */}
-            <div className="px-2 py-2 border-b border-border shrink-0">
-              <SearchField
-                aria-label={t('liveMap.filter')}
-                value={search}
-                onChange={setSearch}
-              >
-                <SearchField.Group>
-                  <SearchField.SearchIcon />
-                  <SearchField.Input placeholder="Find filter…" />
-                  <SearchField.ClearButton />
-                </SearchField.Group>
-              </SearchField>
+      {/* Search */}
+      <div className="px-2 py-2 border-b border-border shrink-0">
+        <SearchField
+          aria-label={t('liveMap.filter')}
+          value={search}
+          onChange={setSearch}
+        >
+          <SearchField.Group>
+            <SearchField.SearchIcon />
+            <SearchField.Input placeholder="Find filter…" />
+            <SearchField.ClearButton />
+          </SearchField.Group>
+        </SearchField>
+      </div>
+
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto py-2 px-1">
+        {/* Live section */}
+        {!search && (
+          <div className="mb-2">
+            <div className="px-3 py-1 text-xs font-medium text-muted uppercase tracking-wide">
+              {t('liveMap.filterLive')}
             </div>
+            {LIVE_TYPES.map((id) => (
+              <label key={id} className="flex items-center gap-2 py-1.5 px-3 cursor-pointer hover:bg-surface-secondary rounded-[var(--radius)] select-none">
+                <input
+                  type="checkbox"
+                  checked={filter[id] ?? false}
+                  onChange={() => onToggle(id)}
+                  className="h-3.5 w-3.5 accent-accent shrink-0"
+                />
+                <span style={{ color: CAT_COLOR[id] }} className="text-xs shrink-0">●</span>
+                <span className="flex-1 text-xs text-foreground">{LIVE_LABELS[id]}</span>
+              </label>
+            ))}
+          </div>
+        )}
 
-            <Drawer.Body className="flex-1 overflow-y-auto py-2 px-1">
-              {/* Live section */}
-              {!search && (
-                <div className="mb-2">
-                  <div className="px-3 py-1 text-xs font-medium text-muted uppercase tracking-wide">
-                    {t('liveMap.filterLive')}
-                  </div>
-                  {LIVE_TYPES.map((id) => (
-                    <label key={id} className="flex items-center gap-2 py-1.5 px-3 cursor-pointer hover:bg-surface-secondary rounded-[var(--radius)] select-none">
-                      <input
-                        type="checkbox"
-                        checked={filter[id] ?? false}
-                        onChange={() => onToggle(id)}
-                        className="h-3.5 w-3.5 accent-accent shrink-0"
-                      />
-                      <span style={{ color: CAT_COLOR[id] }} className="text-xs shrink-0">●</span>
-                      <span className="flex-1 text-xs text-foreground">{LIVE_LABELS[id]}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-
-              {/* Static category sections */}
-              {CATEGORY_GROUPS.map((group) => (
-                <CategorySection key={group.id} group={group} />
-              ))}
-            </Drawer.Body>
-          </Drawer.Dialog>
-        </Drawer.Content>
-      </Drawer.Backdrop>
-    </Drawer>
+        {/* Static category sections */}
+        {CATEGORY_GROUPS.map((group) => (
+          <CategorySection key={group.id} group={group} />
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -734,14 +717,6 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
 
   return (
     <div className="flex flex-col h-full gap-3 min-h-0">
-      <FilterDrawer
-        open={filterOpen}
-        onClose={() => setFilterOpen(false)}
-        filter={filter}
-        onToggle={toggleFilter}
-        onToggleCategory={toggleCategory}
-        spawns={spawns}
-      />
 
       <PageHeader title={t('liveMap.title')} subtitle={t('liveMap.subtitle')}>
         <Button size="sm" variant="ghost" onPress={refresh} isDisabled={loading}>
@@ -896,153 +871,166 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
         </div>
       )}
 
-      {unsupported
-        ? <div className="py-8 text-center text-sm text-muted">{t('liveMap.unsupported')}</div>
-        : (
-            <div className="relative flex-1 min-h-0 overflow-hidden rounded-[var(--radius)] border border-border">
-              <MapContainer
-                crs={CRS.Simple}
-                bounds={IMAGE_BOUNDS}
-                minZoom={-3}
-                maxZoom={4}
-                zoomSnap={0.25}
-                attributionControl={false}
-                style={{ height: '100%', width: '100%', background: 'var(--color-surface)', cursor: mapCursor }}
-              >
-                <InvalidateOnActive active={isActive} />
-                <MapClickCapture active={calibrating || teleportMode} onPick={handleMapClick} />
-                {effCfg.image && (
-                  <ImageOverlay
-                    key={mapKey}
-                    url={`${import.meta.env.BASE_URL}${effCfg.image}`}
-                    bounds={IMAGE_BOUNDS}
-                  />
-                )}
+      {/* Map + filter panel share a flex row — filter is persistent, pushes map */}
+      <div className="flex flex-1 min-h-0 gap-0 overflow-hidden">
+        {unsupported
+          ? <div className="flex-1 py-8 text-center text-sm text-muted">{t('liveMap.unsupported')}</div>
+          : (
+              <div className="relative flex-1 min-h-0 overflow-hidden rounded-[var(--radius)] border border-border">
+                <MapContainer
+                  crs={CRS.Simple}
+                  bounds={IMAGE_BOUNDS}
+                  minZoom={-3}
+                  maxZoom={4}
+                  zoomSnap={0.25}
+                  attributionControl={false}
+                  style={{ height: '100%', width: '100%', background: 'var(--color-surface)', cursor: mapCursor }}
+                >
+                  <InvalidateOnActive active={isActive} />
+                  <MapClickCapture active={calibrating || teleportMode} onPick={handleMapClick} />
+                  {effCfg.image && (
+                    <ImageOverlay
+                      key={mapKey}
+                      url={`${import.meta.env.BASE_URL}${effCfg.image}`}
+                      bounds={IMAGE_BOUNDS}
+                    />
+                  )}
 
-                {/* Static spawn markers — sprite icon when available, circle otherwise */}
-                {visibleSpawns.map((s, i) => {
-                  const center = worldToLatLng(s.x, s.y, effCfg)
-                  // Dense categories get a smaller icon; sparse get the standard 22px.
-                  const isDense = s.category === 'resources' || s.category === 'static'
-                  const iconSize = isDense ? 16 : 22
-                  const divIcon = makeSpriteDivIcon(filterKey(s.type), iconSize)
-                  const tooltip = (
-                    <Tooltip>
-                      <div className="font-medium">{s.label ?? TYPE_LABELS[s.type] ?? s.type}</div>
-                      <div className="text-xs opacity-70">{s.category}</div>
-                      <div className="text-xs">
-                        {Math.round(s.x)}
-                        {', '}
-                        {Math.round(s.y)}
-                        {s.z != null ? `, ${Math.round(s.z)}` : ''}
-                      </div>
-                    </Tooltip>
-                  )
-                  const handlers = teleportMode
-                    ? { click: () => setTeleportDest({ x: Math.round(s.x), y: Math.round(s.y) }) }
-                    : undefined
-                  if (divIcon) {
+                  {/* Static spawn markers — sprite icon when available, circle otherwise */}
+                  {visibleSpawns.map((s, i) => {
+                    const center = worldToLatLng(s.x, s.y, effCfg)
+                    // Dense categories get a smaller icon; sparse get the standard 22px.
+                    const isDense = s.category === 'resources' || s.category === 'static'
+                    const iconSize = isDense ? 16 : 22
+                    const divIcon = makeSpriteDivIcon(filterKey(s.type), iconSize)
+                    const tooltip = (
+                      <Tooltip>
+                        <div className="font-medium">{s.label ?? TYPE_LABELS[s.type] ?? s.type}</div>
+                        <div className="text-xs opacity-70">{s.category}</div>
+                        <div className="text-xs">
+                          {Math.round(s.x)}
+                          {', '}
+                          {Math.round(s.y)}
+                          {s.z != null ? `, ${Math.round(s.z)}` : ''}
+                        </div>
+                      </Tooltip>
+                    )
+                    const handlers = teleportMode
+                      ? { click: () => setTeleportDest({ x: Math.round(s.x), y: Math.round(s.y) }) }
+                      : undefined
+                    if (divIcon) {
+                      return (
+                        <Marker
+                          key={`spawn-${i}`}
+                          position={center}
+                          icon={divIcon}
+                          eventHandlers={handlers}
+                        >
+                          {tooltip}
+                        </Marker>
+                      )
+                    }
                     return (
-                      <Marker
+                      <CircleMarker
                         key={`spawn-${i}`}
-                        position={center}
-                        icon={divIcon}
+                        center={center}
+                        radius={spawnRadius(s.category)}
+                        pathOptions={{
+                          color: 'transparent',
+                          weight: 0,
+                          fillColor: CAT_COLOR[s.category] ?? '#888',
+                          fillOpacity: 0.65,
+                        }}
                         eventHandlers={handlers}
                       >
                         {tooltip}
-                      </Marker>
-                    )
-                  }
-                  return (
-                    <CircleMarker
-                      key={`spawn-${i}`}
-                      center={center}
-                      radius={spawnRadius(s.category)}
-                      pathOptions={{
-                        color: 'transparent',
-                        weight: 0,
-                        fillColor: CAT_COLOR[s.category] ?? '#888',
-                        fillOpacity: 0.65,
-                      }}
-                      eventHandlers={handlers}
-                    >
-                      {tooltip}
-                    </CircleMarker>
-                  )
-                })}
-
-                {/* Live markers */}
-                {(filter.players || filter.vehicles) && orderedLive
-                  .filter((m) => m.type === 'player' ? filter.players : filter.vehicles)
-                  .map((m) => {
-                    const [lat, lng] = worldToLatLng(m.x, m.y, effCfg)
-                    const isPlayer = m.type === 'player'
-                    return (
-                      <CircleMarker
-                        key={`${m.type}-${m.id}`}
-                        center={[lat, lng]}
-                        radius={isPlayer ? 7 : 5}
-                        pathOptions={{
-                          color: '#0b0b0b',
-                          weight: 1.5,
-                          fillColor: CAT_COLOR[m.type] ?? CAT_COLOR.base,
-                          fillOpacity: 1,
-                        }}
-                        eventHandlers={teleportMode && isPlayer && m.fls_id
-                          ? { click: () => setTeleportFlsId(m.fls_id!) }
-                          : undefined}
-                      >
-                        <Tooltip>
-                          <div className="font-medium">{m.name || `${m.type} ${m.id}`}</div>
-                          <div>
-                            {m.type}
-                            {m.online_status ? ` · ${m.online_status}` : ''}
-                          </div>
-                          <div>
-                            {Math.round(m.x)}
-                            ,
-                            {' '}
-                            {Math.round(m.y)}
-                            ,
-                            {' '}
-                            {Math.round(m.z)}
-                          </div>
-                        </Tooltip>
                       </CircleMarker>
                     )
                   })}
 
-                {/* Teleport destination */}
-                {teleportDest && (
-                  <CircleMarker
-                    center={worldToLatLng(teleportDest.x, teleportDest.y, effCfg)}
-                    radius={10}
-                    pathOptions={{ color: '#ffffff', weight: 2, fillColor: '#f59e0b', fillOpacity: 0.85 }}
-                  >
-                    <Tooltip permanent>
-                      <span className="text-xs">
-                        {teleportDest.x}
-                        ,
-                        {' '}
-                        {teleportDest.y}
-                      </span>
-                    </Tooltip>
-                  </CircleMarker>
-                )}
+                  {/* Live markers */}
+                  {(filter.players || filter.vehicles) && orderedLive
+                    .filter((m) => m.type === 'player' ? filter.players : filter.vehicles)
+                    .map((m) => {
+                      const [lat, lng] = worldToLatLng(m.x, m.y, effCfg)
+                      const isPlayer = m.type === 'player'
+                      return (
+                        <CircleMarker
+                          key={`${m.type}-${m.id}`}
+                          center={[lat, lng]}
+                          radius={isPlayer ? 7 : 5}
+                          pathOptions={{
+                            color: '#0b0b0b',
+                            weight: 1.5,
+                            fillColor: CAT_COLOR[m.type] ?? CAT_COLOR.base,
+                            fillOpacity: 1,
+                          }}
+                          eventHandlers={teleportMode && isPlayer && m.fls_id
+                            ? { click: () => setTeleportFlsId(m.fls_id!) }
+                            : undefined}
+                        >
+                          <Tooltip>
+                            <div className="font-medium">{m.name || `${m.type} ${m.id}`}</div>
+                            <div>
+                              {m.type}
+                              {m.online_status ? ` · ${m.online_status}` : ''}
+                            </div>
+                            <div>
+                              {Math.round(m.x)}
+                              ,
+                              {' '}
+                              {Math.round(m.y)}
+                              ,
+                              {' '}
+                              {Math.round(m.z)}
+                            </div>
+                          </Tooltip>
+                        </CircleMarker>
+                      )
+                    })}
 
-                {calibrating && calibPoints.map((p, i) => (
-                  <CircleMarker
-                    key={`calib-${i}`}
-                    center={[p.fracYup * IMG_H, p.fracX * IMG_W]}
-                    radius={5}
-                    pathOptions={{ color: '#ffffff', weight: 2, fillColor: '#ff2bd6', fillOpacity: 0.9 }}
-                  >
-                    <Tooltip>{`calib ${i + 1}`}</Tooltip>
-                  </CircleMarker>
-                ))}
-              </MapContainer>
-            </div>
-          )}
+                  {/* Teleport destination */}
+                  {teleportDest && (
+                    <CircleMarker
+                      center={worldToLatLng(teleportDest.x, teleportDest.y, effCfg)}
+                      radius={10}
+                      pathOptions={{ color: '#ffffff', weight: 2, fillColor: '#f59e0b', fillOpacity: 0.85 }}
+                    >
+                      <Tooltip permanent>
+                        <span className="text-xs">
+                          {teleportDest.x}
+                          ,
+                          {' '}
+                          {teleportDest.y}
+                        </span>
+                      </Tooltip>
+                    </CircleMarker>
+                  )}
+
+                  {calibrating && calibPoints.map((p, i) => (
+                    <CircleMarker
+                      key={`calib-${i}`}
+                      center={[p.fracYup * IMG_H, p.fracX * IMG_W]}
+                      radius={5}
+                      pathOptions={{ color: '#ffffff', weight: 2, fillColor: '#ff2bd6', fillOpacity: 0.9 }}
+                    >
+                      <Tooltip>{`calib ${i + 1}`}</Tooltip>
+                    </CircleMarker>
+                  ))}
+                </MapContainer>
+              </div>
+            )}
+
+        {/* Persistent filter panel — always visible, pushes map left */}
+        {filterOpen && (
+          <FilterPanel
+            filter={filter}
+            onToggle={toggleFilter}
+            onToggleCategory={toggleCategory}
+            spawns={spawns}
+          />
+        )}
+      </div>
     </div>
   )
 }
