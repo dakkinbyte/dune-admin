@@ -101,7 +101,9 @@
     "spawnTooltipCoords": "{{x}}, {{y}}",
     "filterTrainers": "トレーナー",
     "filterKeys": "ペンタシールドキー",
-    "filterSearch": "フィルターを検索…"
+    "filterSearch": "フィルターを検索…",
+    "dragTeleportTitle": "{{name}} をテレポート？",
+    "dragTeleportDesc": "({{x}}, {{y}}) 付近の有効な地面に安全にスナップします。"
   },
   "battlegroup": {
     "statusTitle": "バトルグループ状態",

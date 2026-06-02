@@ -101,7 +101,9 @@
     "spawnTooltipCoords": "{{x}}, {{y}}",
     "filterTrainers": "Treinadores",
     "filterKeys": "Chaves Pentaescudo",
-    "filterSearch": "Encontrar filtro…"
+    "filterSearch": "Encontrar filtro…",
+    "dragTeleportTitle": "Teleportar {{name}}?",
+    "dragTeleportDesc": "Ajuste seguro para ({{x}}, {{y}}) — o jogador pousará no chão válido mais próximo."
   },
   "battlegroup": {
     "statusTitle": "Status do grupo de batalha",

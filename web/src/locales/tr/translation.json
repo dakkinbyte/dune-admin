@@ -101,7 +101,9 @@
     "spawnTooltipCoords": "{{x}}, {{y}}",
     "filterTrainers": "Eğitmenler",
     "filterKeys": "Pentakalkan Anahtarları",
-    "filterSearch": "Filtre bul…"
+    "filterSearch": "Filtre bul…",
+    "dragTeleportTitle": "{{name}} ışınlansın mı?",
+    "dragTeleportDesc": "({{x}}, {{y}}) konumuna güvenli yapışma — oyuncu en yakın geçerli zemine iner."
   },
   "battlegroup": {
     "statusTitle": "Savaş Grubu Durumu",

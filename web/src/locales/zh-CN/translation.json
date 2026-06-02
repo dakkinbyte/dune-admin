@@ -101,7 +101,9 @@
     "spawnTooltipCoords": "{{x}}, {{y}}",
     "filterTrainers": "训练师",
     "filterKeys": "五护盾钥匙",
-    "filterSearch": "查找筛选器…"
+    "filterSearch": "查找筛选器…",
+    "dragTeleportTitle": "传送 {{name}}？",
+    "dragTeleportDesc": "安全吸附至 ({{x}}, {{y}})，玩家将落在最近的有效地面上。"
   },
   "battlegroup": {
     "statusTitle": "战斗群状态",

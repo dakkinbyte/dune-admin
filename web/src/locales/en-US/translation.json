@@ -94,6 +94,8 @@
     "filterTrainers": "Trainers",
     "filterKeys": "Pentashield Keys",
     "filterSearch": "Find filter…",
+    "dragTeleportTitle": "Teleport {{name}}?",
+    "dragTeleportDesc": "Safe-snap to ({{x}}, {{y}}) — player will land on nearest valid ground.",
     "teleportMode": "Teleport mode",
     "teleportModeActive": "Click the map to set destination",
     "teleportPlayer": "Player to teleport",

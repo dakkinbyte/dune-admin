@@ -101,7 +101,9 @@
     "spawnTooltipCoords": "{{x}}, {{y}}",
     "filterTrainers": "Тренеры",
     "filterKeys": "Ключи пентащита",
-    "filterSearch": "Найти фильтр…"
+    "filterSearch": "Найти фильтр…",
+    "dragTeleportTitle": "Телепортировать {{name}}?",
+    "dragTeleportDesc": "Безопасная привязка к ({{x}}, {{y}}) — игрок приземлится на ближайшую допустимую поверхность."
   },
   "battlegroup": {
     "statusTitle": "Статус боевой группы",

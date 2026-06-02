@@ -7,7 +7,7 @@ import { CRS, type LatLngBoundsExpression } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { api, ApiError } from '../api/client'
 import type { MapMarker, Player } from '../api/client'
-import { Icon, PageHeader, Panel, SectionLabel } from '../dune-ui'
+import { ConfirmDialog, Icon, PageHeader, Panel, SectionLabel } from '../dune-ui'
 import { useAutoRefresh } from '../hooks/useAutoRefresh'
 
 const IMG_W = 1200
@@ -691,6 +691,12 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
   // filter persisted to localStorage — panel is always visible
   const [filter, setFilter] = useState<Record<string, boolean>>(loadFilter)
   const [selectedFlsId, setSelectedFlsId] = useState<string>('')
+  const [dragConfirm, setDragConfirm] = useState<{
+    flsId: string
+    name: string
+    x: number
+    y: number
+  } | null>(null)
 
   const [teleportMode, setTeleportMode] = useState(false)
   const [teleportDest, setTeleportDest] = useState<{ x: number, y: number } | null>(null)
@@ -1081,17 +1087,21 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
                                 setTeleportFlsId(m.fls_id!)
                               }
                             },
-                            dragend: async (e) => {
+                            dragend: (e) => {
                               if (!m.fls_id) return
-                              const { lat, lng } = (e.target as L.Marker).getLatLng()
+                              const marker = e.target as L.Marker
+                              const { lat, lng } = marker.getLatLng()
+                              // Reset marker to original position immediately — prevents
+                              // visual ghost if user cancels the confirmation.
+                              marker.setLatLng(center)
                               const { x, y } = latLngToWorld(lat, lng, effCfg)
-                              try {
-                                await api.players.teleportCoords(m.fls_id, Math.round(x), Math.round(y), 5000)
-                                toast.success(t('liveMap.teleportSent'))
-                              }
-                              catch (err) {
-                                toast.danger(err instanceof Error ? err.message : String(err))
-                              }
+                              // Show confirmation instead of teleporting immediately.
+                              setDragConfirm({
+                                flsId: m.fls_id!,
+                                name: m.name || m.fls_id!,
+                                x: Math.round(x),
+                                y: Math.round(y),
+                              })
                             },
                           }}
                         >
@@ -1145,6 +1155,26 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
             )}
 
       </div>
+
+      {/* Drag-to-teleport confirmation — marker already snapped back on dragend */}
+      <ConfirmDialog
+        open={dragConfirm !== null}
+        title={t('liveMap.dragTeleportTitle', { name: dragConfirm?.name ?? '' })}
+        description={t('liveMap.dragTeleportDesc', { x: dragConfirm?.x ?? 0, y: dragConfirm?.y ?? 0 })}
+        confirmLabel={t('liveMap.teleportHere')}
+        onConfirm={async () => {
+          if (!dragConfirm) return
+          try {
+            await api.players.teleportCoords(dragConfirm.flsId, dragConfirm.x, dragConfirm.y, 5000)
+            toast.success(t('liveMap.teleportSent'))
+          }
+          catch (err) {
+            toast.danger(err instanceof Error ? err.message : String(err))
+          }
+          setDragConfirm(null)
+        }}
+        onCancel={() => setDragConfirm(null)}
+      />
     </div>
   )
 }

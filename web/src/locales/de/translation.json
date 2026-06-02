@@ -101,7 +101,9 @@
     "spawnTooltipCoords": "{{x}}, {{y}}",
     "filterTrainers": "Trainer",
     "filterKeys": "Pentashild-Schlüssel",
-    "filterSearch": "Filter suchen…"
+    "filterSearch": "Filter suchen…",
+    "dragTeleportTitle": "{{name}} teleportieren?",
+    "dragTeleportDesc": "Sicher am nächsten gültigen Boden in der Nähe von ({{x}}, {{y}}) einrasten."
   },
   "battlegroup": {
     "statusTitle": "Kampfgruppenstatus",

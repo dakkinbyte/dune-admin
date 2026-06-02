@@ -101,7 +101,9 @@
     "spawnTooltipCoords": "{{x}}, {{y}}",
     "filterTrainers": "Entraîneurs",
     "filterKeys": "Clés Pentabouclier",
-    "filterSearch": "Trouver un filtre…"
+    "filterSearch": "Trouver un filtre…",
+    "dragTeleportTitle": "Téléporter {{name}} ?",
+    "dragTeleportDesc": "Accrochage sûr vers ({{x}}, {{y}}) — le joueur atterrira sur le sol le plus proche."
   },
   "battlegroup": {
     "statusTitle": "État du groupe de combat",

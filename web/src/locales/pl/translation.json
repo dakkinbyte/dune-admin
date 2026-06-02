@@ -101,7 +101,9 @@
     "spawnTooltipCoords": "{{x}}, {{y}}",
     "filterTrainers": "Trenerzy",
     "filterKeys": "Klucze Pentatarczy",
-    "filterSearch": "Znajdź filtr…"
+    "filterSearch": "Znajdź filtr…",
+    "dragTeleportTitle": "Teleportować {{name}}?",
+    "dragTeleportDesc": "Bezpieczne przyciąganie do ({{x}}, {{y}}) — gracz wyląduje na najbliższym ważnym terenie."
   },
   "battlegroup": {
     "statusTitle": "Status grupy bojowej",
