@@ -26,14 +26,15 @@
 #   2. Clones dune-admin source into $SOURCE_DIR (default: ~/src/dune-admin)
 #   3. Builds the Linux binary + frontend assets
 #   4. Copies the binary, SPA, and data files into $INSTALL_DIR (default: /opt/dune-admin)
-#   5. Prints next steps: setup wizard, sudoers entry, systemd unit, service start
+#   5. Writes the systemd unit (Restart=always) — but does not enable/start it
+#   6. Prints next steps: setup wizard, sudoers entry, service enable/start
 #
 # What this script does NOT do:
 #   - Install AMP, k3s, Docker, or set up game services — those are prerequisites
 #   - Run the setup wizard (interactive; you do that, see above)
 #   - Apply sudoers grants (security-sensitive; you review and apply)
-#   - Create or enable the systemd unit (host-specific)
-#   - Start the service (do that after the manual steps above)
+#   - Enable or start the systemd unit (it writes the unit, but you enable/start
+#     it after running the setup wizard)
 #
 # Re-running this script is safe and idempotent. If a toolchain version is
 # already correct, it's skipped. If source is already cloned, it's fetched
@@ -258,6 +259,41 @@ done
 ok "installed: $(ls -la "$INSTALL_DIR/dune-admin" | awk '{print $NF, $5, "bytes"}')"
 log ""
 
+# ── 4b. systemd unit ─────────────────────────────────────────────────────────
+# Write (or repair) the unit with Restart=always. This is REQUIRED for in-app
+# self-update: after swapping the binary the process re-execs/exits, and only
+# Restart=always reliably brings it back on a clean exit (a hand-made unit with
+# Restart=on-failure leaves the service down after an update). We deliberately
+# do NOT enable/start here — the service needs config.yaml from the setup
+# wizard first — but we DO restart it if it is already enabled (re-install).
+UNIT_PATH="/etc/systemd/system/dune-admin.service"
+log "writing systemd unit $UNIT_PATH (Restart=always)…"
+sudo tee "$UNIT_PATH" >/dev/null <<UNIT
+[Unit]
+Description=Dune Admin
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=$SERVICE_USER
+Group=$SERVICE_USER
+WorkingDirectory=$INSTALL_DIR
+ExecStart=$INSTALL_DIR/dune-admin
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+sudo systemctl daemon-reload
+if systemctl is-enabled --quiet dune-admin 2>/dev/null; then
+  log "existing service detected — restarting onto the new binary…"
+  sudo systemctl restart dune-admin || warn "restart failed; check: sudo journalctl -u dune-admin -e"
+fi
+ok "systemd unit installed (Restart=always)"
+log ""
+
 # ── 5. Next steps ────────────────────────────────────────────────────────────
 cat <<EOF
 
@@ -281,39 +317,19 @@ cat <<EOF
 
       sudo visudo -c
 
-    Without this, the Server Settings tab cannot write UserGame.ini.
+    Without this, the Server Settings tab cannot write the INI files.
 
- 3) CREATE THE SYSTEMD UNIT — drop something like this at
-    /etc/systemd/system/dune-admin.service:
+ 3) START THE SERVICE — the systemd unit is already installed at
+    /etc/systemd/system/dune-admin.service (Restart=always, User=$SERVICE_USER).
+    After the setup wizard has written the config, enable and start it:
 
-      [Unit]
-      Description=Dune Admin
-      After=network-online.target
-
-      [Service]
-      Type=simple
-      User=$SERVICE_USER
-      Group=$SERVICE_USER
-      WorkingDirectory=$INSTALL_DIR
-      ExecStart=$INSTALL_DIR/dune-admin
-      Restart=always
-      RestartSec=5s
-
-      [Install]
-      WantedBy=multi-user.target
-
- 4) START THE SERVICE:
-
-      sudo systemctl daemon-reload
       sudo systemctl enable --now dune-admin
       sudo journalctl -u dune-admin -f       # tail logs
 
     Browse to http://<this-host>:9090 (or whatever listen_addr you chose).
 
-    NOTE: Restart=always is required for in-app self-update (Settings → Check
-    for Updates). If you have an existing unit with Restart=on-failure, change
-    it and run: sudo systemctl daemon-reload && sudo systemctl restart dune-admin
-    Alternatively, use the CLI flag: dune-admin -update (then restart manually).
+    NOTE: this installer writes the unit with Restart=always, which is required
+    for in-app self-update (Settings → Check for Updates) to restart cleanly.
 
  ROLLBACK (if something is wrong):
 

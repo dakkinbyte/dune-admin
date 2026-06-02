@@ -89,7 +89,7 @@ export type ServerSetting = {
   category: string
   current: string
   is_overridden: boolean
-  source: 'userGame' | 'userEngine' | 'defaultGame' | 'defaultEngine' | ''
+  source: 'userGame' | 'userGameOverrides' | 'userEngine' | 'defaultGame' | 'defaultEngine' | ''
   layers: SettingLayer[]
 }
 
@@ -107,7 +107,7 @@ export type RawLine = {
 
 export type RawSection = {
   section: string
-  source: 'userGame' | 'userEngine' | 'defaultGame' | 'defaultEngine'
+  source: 'userGame' | 'userGameOverrides' | 'userEngine' | 'defaultGame' | 'defaultEngine'
   lines: RawLine[]
 }
 

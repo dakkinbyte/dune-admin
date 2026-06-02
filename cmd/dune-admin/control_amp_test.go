@@ -46,8 +46,12 @@ func (f *fakeAMPExecutor) Stream(string) (<-chan string, func(), error) {
 }
 func (f *fakeAMPExecutor) PipeToWriter(string, io.Writer) error { return nil }
 func (f *fakeAMPExecutor) WriteFile(string, io.Reader) error    { return nil }
-func (f *fakeAMPExecutor) Dial(string, string) (net.Conn, error) {
-	return nil, nil
+
+// Dial mirrors localExecutor: a real direct dial. The director HTTP client now
+// routes through the executor, so GetStatus tests that hit a loopback httptest
+// server need a functioning Dial here.
+func (f *fakeAMPExecutor) Dial(network, addr string) (net.Conn, error) {
+	return net.Dial(network, addr)
 }
 func (f *fakeAMPExecutor) Close()       {}
 func (f *fakeAMPExecutor) Type() string { return "local" }

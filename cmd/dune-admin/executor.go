@@ -3,15 +3,42 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 
 	"golang.org/x/crypto/ssh"
 )
+
+// dialThroughExecutor establishes a TCP connection through the active executor
+// (an SSH tunnel when configured), falling back to a direct dial when no
+// executor is set. This is the same dial path used for the DB pool and the
+// RabbitMQ brokers, letting HTTP clients reach hosts reachable from wherever
+// the executor runs (e.g. the AMP box over SSH) rather than the machine
+// dune-admin runs on.
+func dialThroughExecutor(network, addr string) (net.Conn, error) {
+	if globalExecutor != nil {
+		return globalExecutor.Dial(network, addr)
+	}
+	return net.Dial(network, addr)
+}
+
+// httpTransportVia returns an *http.Transport that establishes every connection
+// through dial. It clones http.DefaultTransport so timeouts and connection
+// pooling match the stdlib defaults; only the dial path is overridden. Used to
+// tunnel director HTTP traffic through the executor.
+func httpTransportVia(dial func(network, addr string) (net.Conn, error)) *http.Transport {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.DialContext = func(_ context.Context, network, addr string) (net.Conn, error) {
+		return dial(network, addr)
+	}
+	return t
+}
 
 // Executor abstracts where commands run and how TCP connections are made.
 // localExecutor runs everything on the same machine; sshExecutor tunnels

@@ -486,6 +486,9 @@ func runAmpSetup(ask func(string, string) string, ok, fail func(string), cfg *ap
 	defaultLogPath := gameRoot + "/logs"
 	defaultIniDir := fmt.Sprintf("/home/%s/.ampdata/instances/%s/%s/server/state",
 		cfg.AmpUser, cfg.AmpInstance, gameFolder)
+	// The game's stock Default*.ini ship under the extracted game-server tree,
+	// the same in container and native topologies.
+	defaultDefaultIniDir := gameRoot + "/extracted/game-server/home/dune/server/DuneSandbox/Config"
 	if !useContainer {
 		// Native topology: game files live under <game-root>/extracted/...
 		defaultLogPath = gameRoot + "/extracted/game-server/home/dune/server/DuneSandbox/Saved/Logs"
@@ -501,9 +504,15 @@ func runAmpSetup(ask func(string, string) string, ok, fail func(string), cfg *ap
 	cfg.DirectorURL = ask("Battlegroup Director URL (optional)", "http://127.0.0.1:11717")
 	fmt.Println()
 
-	fmt.Println("INI directories:")
-	cfg.ServerIniDir = ask("UserGame.ini directory (host path)", defaultIniDir)
-	cfg.DefaultIniDir = ask("DefaultGame.ini directory (optional)", "")
+	// INI paths are fully determined by the AMP instance layout, so we derive
+	// them instead of asking. The instance state dir holds UserOverrides.ini
+	// (where dune-admin writes game settings) and ue5-saved/UserSettings (where
+	// runtime auto-discovery finds UserGame.ini / UserEngine.ini).
+	cfg.ServerIniDir = defaultIniDir
+	cfg.DefaultIniDir = defaultDefaultIniDir
+	fmt.Println("INI directories (auto-derived from the AMP instance):")
+	fmt.Printf("  instance state: %s\n", cfg.ServerIniDir)
+	fmt.Printf("  game defaults:  %s\n", cfg.DefaultIniDir)
 	fmt.Println()
 
 	fmt.Println("RabbitMQ broker (used by capture mode AND live RMQ commands):")
@@ -553,9 +562,10 @@ func runAmpSetup(ask func(string, string) string, ok, fail func(string), cfg *ap
 	globalControl = newControlPlane("amp", *cfg)
 	ok("Database connected as: " + cfg.DBUser)
 	fmt.Println()
-	fmt.Println("Reminder: dune-admin needs sudoers grants to read and write UserGame.ini as " + cfg.AmpUser + ".")
+	fmt.Println("Reminder: dune-admin writes game settings to UserOverrides.ini and engine")
+	fmt.Println("settings to UserEngine.ini as " + cfg.AmpUser + " (AMP owns UserGame.ini itself).")
 	fmt.Println("Example /etc/sudoers.d/dune-admin entry:")
-	fmt.Printf("  %s ALL=(%s) NOPASSWD: /usr/bin/tee %s/UserGame.ini, /usr/bin/tee %s/UserEngine.ini\n",
+	fmt.Printf("  %s ALL=(%s) NOPASSWD: /usr/bin/tee %s/UserOverrides.ini, /usr/bin/tee %s/ue5-saved/UserSettings/UserEngine.ini\n",
 		envOr("USER", "dune-admin"), cfg.AmpUser, cfg.ServerIniDir, cfg.ServerIniDir)
 	fmt.Println("  (If the service user does not own the INI files, also add: /usr/bin/cat)")
 	fmt.Println()

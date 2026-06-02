@@ -390,6 +390,27 @@ func inferType(value string) settingType {
 	return settingString
 }
 
+// gameOverrideProvider is implemented by control planes that manage UserGame.ini
+// themselves and expect dune-admin's game-scoped settings in a separate
+// overrides file. AMP appends UserOverrides.ini to UserGame.ini at boot, so
+// writing there leaves AMP's dashboard-managed UserGame.ini untouched.
+type gameOverrideProvider interface {
+	gameOverridePath(dir string) string
+}
+
+// gameWritePath returns the file dune-admin writes game-scoped settings to.
+// When the active control plane provides a game-overrides path (AMP), writes go
+// there (UserOverrides.ini); otherwise game settings are written directly to
+// UserGame.ini in dir, matching the historical behaviour for kubectl/docker/local.
+func gameWritePath(dir string) string {
+	if provider, ok := globalControl.(gameOverrideProvider); ok {
+		if path := provider.gameOverridePath(dir); path != "" {
+			return path
+		}
+	}
+	return dir + "/UserGame.ini"
+}
+
 func iniDir() (string, error) {
 	// Always try the control plane first so amp can probe for ue5-saved/UserSettings
 	// even when server_ini_dir is explicitly configured. Control planes that don't
@@ -473,6 +494,28 @@ func relativeDefaultINICandidates(iniDir, filename string) []string {
 	}
 }
 
+// defaultINIDirProvider is implemented by control planes that can locate the
+// game's stock Default*.ini directory on the host without configuration. AMP
+// derives it from the instance layout.
+type defaultINIDirProvider interface {
+	defaultINIDir(iniDir string) string
+}
+
+// discoverViaControlDefaultDir reads a Default INI from the directory the active
+// control plane derives for the host (AMP's extracted game-server tree).
+// Returns "" when the control plane provides no such directory.
+func discoverViaControlDefaultDir(iniDir, filename string) string {
+	provider, ok := globalControl.(defaultINIDirProvider)
+	if !ok {
+		return ""
+	}
+	dir := provider.defaultINIDir(iniDir)
+	if dir == "" {
+		return ""
+	}
+	return readINIContent(dir + "/" + filename)
+}
+
 func discoverViaConfiguredPath(filename string) string {
 	path := configuredDefaultINIPath(filename)
 	if path == "" {
@@ -528,6 +571,13 @@ func discoverViaRelativePath(iniDir, filename string) string {
 
 func discoverDefaultINI(iniDir, filename string) string {
 	if content := discoverViaConfiguredPath(filename); content != "" {
+		return content
+	}
+
+	// 1a. Control-plane-derived host directory (AMP's extracted game-server tree).
+	// Deterministic and configuration-free; the stock defaults live deeper than
+	// the host-find maxdepth, so this must run before the find fallback.
+	if content := discoverViaControlDefaultDir(iniDir, filename); content != "" {
 		return content
 	}
 
@@ -627,13 +677,17 @@ func buildLayerSources(
 	defaultEngineIni,
 	defaultGameIni,
 	engineIni,
-	gameIni map[string]map[string]string,
+	gameIni,
+	gameOverridesIni map[string]map[string]string,
 ) []layerSource {
+	// Ordered low → high priority. userGameOverrides is highest: AMP appends
+	// UserOverrides.ini after UserGame.ini at boot, so its keys win at runtime.
 	return []layerSource{
 		{name: "defaultEngine", ini: defaultEngineIni},
 		{name: "defaultGame", ini: defaultGameIni},
 		{name: "userEngine", ini: engineIni},
 		{name: "userGame", ini: gameIni},
+		{name: "userGameOverrides", ini: gameOverridesIni},
 	}
 }
 
@@ -735,7 +789,8 @@ func buildServerSettingsRawSections(
 	defaultGameContent,
 	defaultEngineContent,
 	gameContent,
-	engineContent string,
+	engineContent,
+	gameOverridesContent string,
 	schemaKeys map[string]bool,
 ) []RawSection {
 	raw := make([]RawSection, 0, 16)
@@ -743,6 +798,7 @@ func buildServerSettingsRawSections(
 	raw = append(raw, parseINILines(defaultEngineContent, "defaultEngine", schemaKeys)...)
 	raw = append(raw, parseINILines(gameContent, "userGame", schemaKeys)...)
 	raw = append(raw, parseINILines(engineContent, "userEngine", schemaKeys)...)
+	raw = append(raw, parseINILines(gameOverridesContent, "userGameOverrides", schemaKeys)...)
 	return raw
 }
 
@@ -788,17 +844,27 @@ func handleGetServerSettings(w http.ResponseWriter, r *http.Request) {
 	defaultGameContent := readDefaultINIContent(dir, "DefaultGame.ini")
 	defaultEngineContent := readDefaultINIContent(dir, "DefaultEngine.ini")
 
+	// When the control plane manages UserGame.ini itself (AMP), dune-admin's
+	// game settings live in a separate overrides file that wins at runtime.
+	// Surface it as the highest-priority layer. Skip the read when the override
+	// path is just UserGame.ini (non-AMP) to avoid duplicating that layer.
+	var overridesContent string
+	if overridePath := gameWritePath(dir); overridePath != dir+"/UserGame.ini" {
+		overridesContent = readINIContent(overridePath)
+	}
+
 	gameIni := parseINI(gameContent)
 	engineIni := parseINI(engineContent)
 	defaultGameIni := parseINI(defaultGameContent)
 	defaultEngineIni := parseINI(defaultEngineContent)
+	gameOverridesIni := parseINI(overridesContent)
 
-	layerSources := buildLayerSources(defaultEngineIni, defaultGameIni, engineIni, gameIni)
+	layerSources := buildLayerSources(defaultEngineIni, defaultGameIni, engineIni, gameIni, gameOverridesIni)
 	schemaKeys := serverSettingsSchemaKeys()
 	settings := buildSchemaSettings(layerSources)
 	discovered := discoverUnknownSettings(layerSources, schemaKeys)
 	settings = append(settings, buildDiscoveredSettings(discovered, layerSources, schemaKeys)...)
-	raw := buildServerSettingsRawSections(defaultGameContent, defaultEngineContent, gameContent, engineContent, schemaKeys)
+	raw := buildServerSettingsRawSections(defaultGameContent, defaultEngineContent, gameContent, engineContent, overridesContent, schemaKeys)
 
 	jsonOK(w, map[string]any{
 		"settings": settings,
@@ -1326,15 +1392,18 @@ func handleUpdateServerSettings(w http.ResponseWriter, r *http.Request) {
 	defaultEngineIni := parseINI(readDefaultINIContent(dir, "DefaultEngine.ini"))
 	gameUpdates, engineUpdates := splitServerSettingsUpdatesByFile(defaultEngineIni, normalized.updates)
 
-	gamePath := dir + "/UserGame.ini"
+	// Game settings route to UserOverrides.ini under AMP (leaving AMP's
+	// dashboard-managed UserGame.ini untouched) and to UserGame.ini otherwise.
+	gamePath := gameWritePath(dir)
+	gameName := pathpkg.Base(gamePath)
 	gameBody, err := buildUpdatedINIContent(gamePath, gameUpdates)
 	if err != nil {
-		jsonErr(w, fmt.Errorf("UserGame.ini: %w", err), 409)
+		jsonErr(w, fmt.Errorf("%s: %w", gameName, err), 409)
 		return
 	}
 	if len(gameUpdates) > 0 {
 		if err := writeINIContent(gamePath, gameBody); err != nil {
-			jsonErr(w, fmt.Errorf("write UserGame.ini: %w", err), 500)
+			jsonErr(w, fmt.Errorf("write %s: %w", gameName, err), 500)
 			return
 		}
 	}
@@ -1397,7 +1466,7 @@ func handleUpdateRawSection(w http.ResponseWriter, r *http.Request) {
 	if _, inEngine := defaultEngineIni[req.Section]; inEngine {
 		filePath = dir + "/UserEngine.ini"
 	} else {
-		filePath = dir + "/UserGame.ini"
+		filePath = gameWritePath(dir)
 	}
 
 	existing := readINIContent(filePath)

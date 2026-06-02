@@ -54,16 +54,23 @@ const SOURCE_FILE: Record<string, string> = {
   defaultEngine: 'DefaultEngine.ini',
   userGame: 'UserGame.ini',
   userEngine: 'UserEngine.ini',
+  userGameOverrides: 'UserOverrides.ini',
 }
 
 const LAYER_STYLE: Record<string, { cls: string }> = {
   defaultGame: { cls: 'text-muted/60' },
   defaultEngine: { cls: 'text-muted/60' },
   userEngine: { cls: 'text-foreground/70' },
-  userGame: { cls: 'text-warning' },
+  userGame: { cls: 'text-foreground/70' },
+  // userGameOverrides is dune-admin's active write target under AMP; highlight it.
+  userGameOverrides: { cls: 'text-warning' },
 }
 
-const SOURCE_PRIORITY = ['defaultGame', 'defaultEngine', 'userEngine', 'userGame'] as const
+const SOURCE_PRIORITY = ['defaultGame', 'defaultEngine', 'userEngine', 'userGame', 'userGameOverrides'] as const
+
+// Sources dune-admin writes to (and can clear). userGameOverrides is the AMP
+// write target (UserOverrides.ini); userGame is the direct target elsewhere.
+const USER_SOURCES = new Set(['userGame', 'userEngine', 'userGameOverrides'])
 
 function groupByCategory(items: ServerSetting[]) {
   const map = new Map<string, ServerSetting[]>()
@@ -208,7 +215,7 @@ function SettingRow({
                   className="w-32"
                 />
               )}
-        {(item.source === 'userGame' || item.source === 'userEngine') && (
+        {USER_SOURCES.has(item.source) && (
           <button
             onClick={onDelete}
             title={`Remove from ${SOURCE_FILE[item.source]}`}
@@ -253,8 +260,10 @@ function groupLinesByKey(lines: RawSection['lines']) {
 function RawSectionPanel({ sections, onSaved }: { sections: RawSection[], onSaved: () => void }) {
   const { t } = useTranslation()
   const sectionName = sections[0].section
-  // Find the active user-writable source for this section (userGame or userEngine).
-  const userSec = sections.find((s) => s.source === 'userGame')
+  // Find the active user-writable source for this section. Prefer the AMP
+  // override file (highest priority), then UserGame.ini, then UserEngine.ini.
+  const userSec = sections.find((s) => s.source === 'userGameOverrides')
+    ?? sections.find((s) => s.source === 'userGame')
     ?? sections.find((s) => s.source === 'userEngine')
 
   const [editing, setEditing] = useState(false)
@@ -430,8 +439,6 @@ function RawSectionPanel({ sections, onSaved }: { sections: RawSection[], onSave
     </Panel>
   )
 }
-
-const USER_SOURCES = new Set(['userGame', 'userEngine'])
 
 export default function ServerSettingsTab() {
   const { t } = useTranslation()

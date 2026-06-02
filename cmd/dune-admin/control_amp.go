@@ -59,7 +59,7 @@ func (c *ampControl) GetStatus(ctx context.Context, exec Executor) (*Battlegroup
 	// Battlegroup Director knows each partition's dimensionIndex and label, so
 	// enrich rows from there. Best-effort: a missing/unreachable director just
 	// leaves Dimension at zero.
-	dirMeta, err := c.fetchDirectorPartitions(ctx)
+	dirMeta, err := c.fetchDirectorPartitions(ctx, exec)
 	if err != nil {
 		log.Printf("ampControl.GetStatus: director enrichment unavailable: %v", err)
 	}
@@ -96,10 +96,6 @@ func (c *ampControl) GetStatus(ctx context.Context, exec Executor) (*Battlegroup
 	}, nil
 }
 
-// directorHTTPClient is the short-timeout client used to poll the Battlegroup
-// Director. Status polling must stay snappy, so failures fall back fast.
-var directorHTTPClient = &http.Client{Timeout: 3 * time.Second}
-
 // partitionMeta is director-sourced metadata for one game-server partition.
 type partitionMeta struct {
 	dimension     int
@@ -113,7 +109,7 @@ type partitionMeta struct {
 // endpoint and returns a map of partitionId → metadata. It returns nil (no
 // error) when no director URL is configured; transport, status, and decode
 // failures are returned as errors so the caller can log them and continue.
-func (c *ampControl) fetchDirectorPartitions(ctx context.Context) (map[int]partitionMeta, error) {
+func (c *ampControl) fetchDirectorPartitions(ctx context.Context, exec Executor) (map[int]partitionMeta, error) {
 	if c.directorURL == "" {
 		return nil, nil
 	}
@@ -122,7 +118,11 @@ func (c *ampControl) fetchDirectorPartitions(ctx context.Context) (map[int]parti
 	if err != nil {
 		return nil, fmt.Errorf("build director request: %w", err)
 	}
-	resp, err := directorHTTPClient.Do(req)
+	// Route through the executor so the director is reachable from wherever the
+	// executor runs (e.g. the AMP box over SSH), not the dune-admin host. Status
+	// polling must stay snappy, so a short timeout falls back fast.
+	client := &http.Client{Timeout: 3 * time.Second, Transport: httpTransportVia(exec.Dial)}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("query director: %w", err)
 	}
@@ -466,6 +466,51 @@ func (c *ampControl) EvalOnGameBroker(_ context.Context, exec Executor, expr str
 }
 
 // ── INI discovery ─────────────────────────────────────────────────────────────
+
+// gameOverridePath returns the file AMP appends to UserGame.ini at boot:
+// UserOverrides.ini in the instance state dir. AMP owns UserGame.ini (written
+// from its dashboard), so dune-admin writes game-scoped settings here instead
+// of clobbering it. Keys in UserOverrides.ini take precedence at runtime.
+//
+// dir is the discovered INI directory. In the standard container layout that is
+// …/state/ue5-saved/UserSettings; UserOverrides.ini lives two levels up in
+// …/state. If dir does not match that layout the override file is placed
+// alongside it, so the method always returns a usable path.
+func (c *ampControl) gameOverridePath(dir string) string {
+	d := strings.TrimRight(filepath.ToSlash(dir), "/")
+	d = strings.TrimSuffix(d, "/ue5-saved/UserSettings")
+	return d + "/UserOverrides.ini"
+}
+
+// defaultINIDir returns the host directory holding the game's stock
+// DefaultGame.ini / DefaultEngine.ini so default discovery needs no
+// configuration under AMP. The game ships them in the extracted game-server
+// tree at <gameRoot>/extracted/game-server/home/dune/server/DuneSandbox/Config,
+// where gameRoot is the instance's duneawakening dir. gameRoot is recovered
+// from the discovered INI dir, then the configured server_ini_dir (both contain
+// "…/server/state"), and finally the conventional ampdata path for the
+// instance. Returns "" when none apply (e.g. native layout), letting the other
+// discovery strategies take over.
+func (c *ampControl) defaultINIDir(iniDir string) string {
+	for _, base := range []string{iniDir, c.iniDir} {
+		if i := strings.Index(base, "/server/state"); i > 0 {
+			return base[:i] + ampDefaultsConfigSuffix
+		}
+	}
+	if c.useContainer && c.instance != "" {
+		user := c.ampUser
+		if user == "" {
+			user = "amp"
+		}
+		return fmt.Sprintf("/home/%s/.ampdata/instances/%s/duneawakening%s",
+			user, c.instance, ampDefaultsConfigSuffix)
+	}
+	return ""
+}
+
+// ampDefaultsConfigSuffix is the path, relative to the instance's duneawakening
+// gameRoot, to the directory containing the stock Default*.ini files.
+const ampDefaultsConfigSuffix = "/extracted/game-server/home/dune/server/DuneSandbox/Config"
 
 func (c *ampControl) DiscoverIniDir(_ context.Context, exec Executor) (string, error) {
 	base := c.iniDir

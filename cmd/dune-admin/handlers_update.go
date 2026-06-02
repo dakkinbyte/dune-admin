@@ -341,18 +341,57 @@ func makeUpdateApplyHandler(
 	}
 }
 
-// scheduleRestart sends SIGTERM to the current process after a short delay so
-// the HTTP response can flush. systemd (Restart=always) restarts with the new binary.
-func scheduleRestart() {
-	time.Sleep(500 * time.Millisecond)
+// reExecSelf replaces the current process image with the freshly-swapped binary
+// via execve, keeping the same PID. This makes self-update work regardless of
+// the systemd Restart= policy — a unit with Restart=on-failure would otherwise
+// not restart after the clean SIGTERM exit, leaving the service down.
+//
+// bin MUST be the executable path captured BEFORE applyUpdate ran: applyUpdate
+// renames the running binary to <bin>.prev before moving the new one to <bin>,
+// so os.Executable() now resolves (via /proc/self/exe) to the OLD .prev inode.
+// Exec'ing that would relaunch the old binary; exec'ing the captured <bin> path
+// runs the newly-installed one. Returns an error (rather than replacing the
+// process) on platforms where Exec is unsupported, e.g. Windows.
+func reExecSelf(bin string) error {
+	if bin == "" {
+		var err error
+		if bin, err = os.Executable(); err != nil {
+			return fmt.Errorf("locate executable: %w", err)
+		}
+	}
+	return syscall.Exec(bin, os.Args, os.Environ()) // #nosec G204,G702 -- re-exec of our own binary at its original install path with our own args/env; no external input
+}
+
+// signalSelfTERM sends SIGTERM to the current process so a Restart=always unit
+// restarts it. Used as the fallback when in-place re-exec is unavailable.
+func signalSelfTERM() error {
 	p, err := os.FindProcess(os.Getpid())
 	if err != nil {
-		log.Printf("update: cannot find self: %v", err)
-		return
+		return err
 	}
-	if err := p.Signal(syscall.SIGTERM); err != nil {
-		log.Printf("update: SIGTERM failed: %v", err)
+	return p.Signal(syscall.SIGTERM)
+}
+
+// restartProcess re-executes the new binary in place; if that fails it falls
+// back to signalling the process for systemd to restart. Extracted from
+// scheduleRestart so the success/fallback branching is testable without
+// actually replacing or killing the test process.
+func restartProcess(reExec, signalSelf func() error) {
+	if err := reExec(); err != nil {
+		log.Printf("update: in-place re-exec failed (%v); falling back to SIGTERM", err)
+		if serr := signalSelf(); serr != nil {
+			log.Printf("update: SIGTERM fallback failed: %v", serr)
+		}
 	}
+}
+
+// scheduleRestart restarts into the new binary after a short delay so the HTTP
+// response can flush. It prefers in-place re-exec (works under any systemd
+// Restart= policy) and falls back to SIGTERM (needs Restart=always). bin is the
+// executable path captured before the binary swap — see reExecSelf.
+func scheduleRestart(bin string) {
+	time.Sleep(500 * time.Millisecond)
+	restartProcess(func() error { return reExecSelf(bin) }, signalSelfTERM)
 }
 
 // @Summary Download and apply the latest release, then restart
@@ -373,7 +412,9 @@ func handleUpdateApply(w http.ResponseWriter, r *http.Request) {
 	makeUpdateApplyHandler(
 		updateFetcher, updateFetcher,
 		exe, runtime.GOOS, runtime.GOARCH,
-		func() { go scheduleRestart() },
+		// Capture exe (the pre-swap install path) so the re-exec runs the newly
+		// installed binary, not the renamed .prev inode. See reExecSelf.
+		func() { go scheduleRestart(exe) },
 	)(w, r)
 }
 

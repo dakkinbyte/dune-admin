@@ -35,6 +35,23 @@ func originAllowed(origin string) bool {
 	return false
 }
 
+// newDirectorProxy builds the /director/ reverse-proxy handler for target. It
+// strips the /director prefix before forwarding and routes upstream connections
+// through dial (the executor tunnel), so the director is reachable from
+// wherever the executor runs rather than the dune-admin host.
+func newDirectorProxy(target *url.URL, dial func(network, addr string) (net.Conn, error)) http.HandlerFunc {
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.Transport = httpTransportVia(dial)
+	return func(w http.ResponseWriter, r *http.Request) {
+		r.URL.Path = strings.TrimPrefix(r.URL.Path, "/director")
+		if r.URL.Path == "" {
+			r.URL.Path = "/"
+		}
+		r.Host = target.Host
+		proxy.ServeHTTP(w, r)
+	}
+}
+
 // originAllowedForRequest applies the explicit allowlist AND a same-host
 // exception: a browser requesting from `http://172.16.12.59:9090/` against the
 // dune-admin server running on the same host should not be considered cross-
@@ -247,15 +264,7 @@ func startServer(addr string) {
 	// ── director reverse proxy (universal, opt-in) ──────────────────────────
 	if loadedConfig.DirectorURL != "" {
 		if target, err := url.Parse(loadedConfig.DirectorURL); err == nil {
-			proxy := httputil.NewSingleHostReverseProxy(target)
-			mux.HandleFunc("/director/", func(w http.ResponseWriter, r *http.Request) {
-				r.URL.Path = strings.TrimPrefix(r.URL.Path, "/director")
-				if r.URL.Path == "" {
-					r.URL.Path = "/"
-				}
-				r.Host = target.Host
-				proxy.ServeHTTP(w, r)
-			})
+			mux.HandleFunc("/director/", newDirectorProxy(target, dialThroughExecutor))
 			log.Printf("Proxying /director/ → %s", loadedConfig.DirectorURL)
 		}
 	}

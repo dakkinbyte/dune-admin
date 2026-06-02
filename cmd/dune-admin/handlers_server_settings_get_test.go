@@ -100,7 +100,7 @@ func TestBuildServerSettingsRawSections(t *testing.T) {
 	schemaKeys := map[string]bool{"Sec|Known": true}
 	defaultGame := "[Sec]\nKnown=1\nOther=2\n+Array=3\n"
 	defaultEngine := "[Sec]\n-Array=4\n"
-	raw := buildServerSettingsRawSections(defaultGame, defaultEngine, "", "", schemaKeys)
+	raw := buildServerSettingsRawSections(defaultGame, defaultEngine, "", "", "", schemaKeys)
 
 	if len(raw) != 2 {
 		t.Fatalf("expected 2 raw sections, got %d", len(raw))
