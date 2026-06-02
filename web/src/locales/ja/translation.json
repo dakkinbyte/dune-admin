@@ -98,7 +98,9 @@
     "teleportSelectPlayer": "プレイヤーを選択…",
     "teleportSent": "テレポートを送信しました",
     "spawnsLoaded": "{{count}}個の固定マーカーを読み込みました",
-    "spawnTooltipCoords": "{{x}}, {{y}}"
+    "spawnTooltipCoords": "{{x}}, {{y}}",
+    "filterTrainers": "トレーナー",
+    "filterKeys": "ペンタシールドキー"
   },
   "battlegroup": {
     "statusTitle": "バトルグループ状態",

@@ -98,7 +98,9 @@
     "teleportSelectPlayer": "Sélectionner un joueur…",
     "teleportSent": "Téléportation envoyée",
     "spawnsLoaded": "{{count}} marqueurs statiques chargés",
-    "spawnTooltipCoords": "{{x}}, {{y}}"
+    "spawnTooltipCoords": "{{x}}, {{y}}",
+    "filterTrainers": "Entraîneurs",
+    "filterKeys": "Clés Pentabouclier"
   },
   "battlegroup": {
     "statusTitle": "État du groupe de combat",

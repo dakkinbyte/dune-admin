@@ -98,7 +98,9 @@
     "teleportSelectPlayer": "Выберите игрока…",
     "teleportSent": "Телепортация отправлена",
     "spawnsLoaded": "Загружено {{count}} статических маркеров",
-    "spawnTooltipCoords": "{{x}}, {{y}}"
+    "spawnTooltipCoords": "{{x}}, {{y}}",
+    "filterTrainers": "Тренеры",
+    "filterKeys": "Ключи пентащита"
   },
   "battlegroup": {
     "statusTitle": "Статус боевой группы",

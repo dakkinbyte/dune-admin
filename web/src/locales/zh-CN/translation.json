@@ -98,7 +98,9 @@
     "teleportSelectPlayer": "选择玩家…",
     "teleportSent": "传送已发送",
     "spawnsLoaded": "已加载 {{count}} 个静态标记",
-    "spawnTooltipCoords": "{{x}}, {{y}}"
+    "spawnTooltipCoords": "{{x}}, {{y}}",
+    "filterTrainers": "训练师",
+    "filterKeys": "五护盾钥匙"
   },
   "battlegroup": {
     "statusTitle": "战斗群状态",

@@ -91,6 +91,8 @@
     "filterVendors": "Vendors",
     "filterLandsraad": "Landsraad",
     "filterStaticObjects": "Static Objects",
+    "filterTrainers": "Trainers",
+    "filterKeys": "Pentashield Keys",
     "teleportMode": "Teleport mode",
     "teleportModeActive": "Click the map to set destination",
     "teleportPlayer": "Player to teleport",

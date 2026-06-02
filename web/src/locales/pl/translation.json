@@ -98,7 +98,9 @@
     "teleportSelectPlayer": "Wybierz gracza…",
     "teleportSent": "Teleportacja wysłana",
     "spawnsLoaded": "{{count}} statycznych znaczników załadowanych",
-    "spawnTooltipCoords": "{{x}}, {{y}}"
+    "spawnTooltipCoords": "{{x}}, {{y}}",
+    "filterTrainers": "Trenerzy",
+    "filterKeys": "Klucze Pentatarczy"
   },
   "battlegroup": {
     "statusTitle": "Status grupy bojowej",

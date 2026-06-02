@@ -98,7 +98,9 @@
     "teleportSelectPlayer": "Spieler auswählen…",
     "teleportSent": "Teleport gesendet",
     "spawnsLoaded": "{{count}} statische Marker geladen",
-    "spawnTooltipCoords": "{{x}}, {{y}}"
+    "spawnTooltipCoords": "{{x}}, {{y}}",
+    "filterTrainers": "Trainer",
+    "filterKeys": "Pentashild-Schlüssel"
   },
   "battlegroup": {
     "statusTitle": "Kampfgruppenstatus",

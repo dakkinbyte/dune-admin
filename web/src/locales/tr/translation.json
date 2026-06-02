@@ -98,7 +98,9 @@
     "teleportSelectPlayer": "Oyuncu seçin…",
     "teleportSent": "Işınlanma gönderildi",
     "spawnsLoaded": "{{count}} statik işaretçi yüklendi",
-    "spawnTooltipCoords": "{{x}}, {{y}}"
+    "spawnTooltipCoords": "{{x}}, {{y}}",
+    "filterTrainers": "Eğitmenler",
+    "filterKeys": "Pentakalkan Anahtarları"
   },
   "battlegroup": {
     "statusTitle": "Savaş Grubu Durumu",

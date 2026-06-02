@@ -98,7 +98,9 @@
     "teleportSelectPlayer": "Selecionar um jogador…",
     "teleportSent": "Teletransporte enviado",
     "spawnsLoaded": "{{count}} marcadores estáticos carregados",
-    "spawnTooltipCoords": "{{x}}, {{y}}"
+    "spawnTooltipCoords": "{{x}}, {{y}}",
+    "filterTrainers": "Treinadores",
+    "filterKeys": "Chaves Pentaescudo"
   },
   "battlegroup": {
     "statusTitle": "Status do grupo de batalha",

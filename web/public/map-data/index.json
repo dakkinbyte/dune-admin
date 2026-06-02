@@ -4,13 +4,13 @@
       "label": "Hagga Basin",
       "game_key": "HaggaBasin",
       "map_type": "open_world",
-      "total": 103038
+      "total": 103093
     },
     "deepdesert": {
       "label": "Deep Desert",
       "game_key": "DeepDesert",
       "map_type": "open_world",
-      "total": 72227
+      "total": 72246
     },
     "arrakeen": {
       "label": "Arrakeen",

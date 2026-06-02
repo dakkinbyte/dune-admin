@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button, Select, ListBox, SearchField, Spinner, toast } from '@heroui/react'
-import { MapContainer, ImageOverlay, CircleMarker, Tooltip, useMapEvents, useMap } from 'react-leaflet'
+import { MapContainer, ImageOverlay, CircleMarker, Marker, Tooltip, useMapEvents, useMap } from 'react-leaflet'
+import L from 'leaflet'
 import { CRS, type LatLngBoundsExpression } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { api, ApiError } from '../api/client'
 import type { MapMarker, Player } from '../api/client'
-import { Icon, PageHeader } from '../dune-ui'
+import { Icon, PageHeader, Panel, SectionLabel } from '../dune-ui'
 import { useAutoRefresh } from '../hooks/useAutoRefresh'
 
 const IMG_W = 1200
@@ -112,6 +113,19 @@ const ICON_POS: Record<string, [number, number]> = {
   mutelli: [4, 7], novebruns: [8, 3], richese: [2, 4], sor: [2, 5],
   spinette: [2, 6], taligari: [0, 3], thorvald: [0, 5], tseida: [7, 3],
   varota: [3, 7], vernius: [0, 4], wallach: [5, 7], wayku: [7, 7], wydras: [8, 1],
+  // No-underscore binary type variants
+  enemycamp: [4, 0], enemyoutpost: [6, 1], enemylaboroutpost: [10, 3],
+  wreck: [2, 2], tradingpost: [9, 1], sietch: [0, 2], ecolab: [7, 2],
+  small_shipwreck: [7, 0], atreides: [3, 4], harkonnen: [8, 4], poi: [6, 7],
+  // NPCs by faction
+  npc_harkonnen: [8, 5], npc_atreides: [3, 5], npc_bandits: [3, 5],
+  npc_unaffiliated: [7, 1], npc_choam: [7, 5], npc_fremen: [0, 6],
+  npc_sardaukar: [9, 5], npc_smugglers: [6, 5], npc_spacingguild: [8, 5],
+  // Trainers (no-underscore binary format)
+  trainersswordmaster: [1, 5], trainersmentat: [9, 4], trainersbenegesserit: [1, 4],
+  trainersplanetologist: [8, 2], trainerstrooper: [10, 1],
+  // Vehicles (no-underscore)
+  sandbike: [10, 2],
 }
 
 // Per-category dot colors for non-sprite fallback
@@ -146,6 +160,18 @@ const TYPE_CATEGORY: Record<string, string> = {
   rhyolite: 'resources', rhyolite_pickup: 'resources',
   primrose_field: 'resources', stravidium: 'resources', titanium_ore: 'resources',
   static: 'static',
+  // No-underscore binary types
+  enemycamp: 'locations', enemyoutpost: 'locations', enemylaboroutpost: 'locations',
+  cave: 'locations', wreck: 'locations', tradingpost: 'locations', sietch: 'locations',
+  ecolab: 'locations', secret_door: 'locations', shipwreck: 'locations',
+  small_shipwreck: 'locations', atreides: 'locations', harkonnen: 'locations', poi: 'locations',
+  npc_harkonnen: 'npcs', npc_atreides: 'npcs', npc_bandits: 'npcs', npc_unaffiliated: 'npcs',
+  npc_choam: 'npcs', npc_fremen: 'npcs', npc_sardaukar: 'npcs', npc_smugglers: 'npcs', npc_spacingguild: 'npcs',
+  trainersswordmaster: 'trainers', trainersmentat: 'trainers', trainersbenegesserit: 'trainers',
+  trainersplanetologist: 'trainers', trainerstrooper: 'trainers',
+  purple_id_band: 'pentashield_keys', green_id_band: 'pentashield_keys',
+  red_id_band: 'pentashield_keys', orange_id_band: 'pentashield_keys', blue_id_band: 'pentashield_keys',
+  sandbike: 'vehicles',
 }
 
 // Friendly display names for types
@@ -174,6 +200,19 @@ const TYPE_LABELS: Record<string, string> = {
   rhyolite: 'Granite Stone', rhyolite_pickup: 'Granite (Node)',
   primrose_field: 'Primrose Field', stravidium: 'Stravidium', titanium_ore: 'Titanium',
   static: 'Static Object',
+  // No-underscore binary types
+  enemycamp: 'Enemy Camp', enemyoutpost: 'Enemy Outpost', enemylaboroutpost: 'Enemy Lab Outpost',
+  cave: 'Cave', wreck: 'Wreck', tradingpost: 'Trading Post', sietch: 'Sietch',
+  ecolab: 'Eco Lab', secret_door: 'Secret Door', shipwreck: 'Shipwreck',
+  small_shipwreck: 'Small Shipwreck', atreides: 'Atreides', harkonnen: 'Harkonnen', poi: 'Point of Interest',
+  npc_harkonnen: 'Harkonnen NPC', npc_atreides: 'Atreides NPC', npc_bandits: 'Bandits',
+  npc_unaffiliated: 'Unaffiliated', npc_choam: 'CHOAM', npc_fremen: 'Fremen',
+  npc_sardaukar: 'Sardaukar', npc_smugglers: 'Smugglers', npc_spacingguild: 'Spacing Guild',
+  trainersswordmaster: 'Swordmaster', trainersmentat: 'Mentat', trainersbenegesserit: 'Bene Gesserit',
+  trainersplanetologist: 'Planetologist', trainerstrooper: 'Trooper',
+  purple_id_band: 'Purple ID Band', green_id_band: 'Green ID Band',
+  red_id_band: 'Red ID Band', orange_id_band: 'Orange ID Band', blue_id_band: 'Blue ID Band',
+  sandbike: 'Sandbike',
 }
 
 // Map types that should be merged (same visual/filter group)
@@ -449,14 +488,18 @@ function SpawnCanvasLayer({
 const LIVE_TYPES = ['players', 'vehicles', 'bases'] as const
 
 const CATEGORY_GROUPS: { id: string, labelKey: string }[] = [
-  { id: 'resources', labelKey: 'liveMap.filterResources' },
   { id: 'locations', labelKey: 'liveMap.filterLocations' },
+  { id: 'resources', labelKey: 'liveMap.filterResources' },
   { id: 'npcs', labelKey: 'liveMap.filterNPCs' },
   { id: 'vendors', labelKey: 'liveMap.filterVendors' },
+  { id: 'trainers', labelKey: 'liveMap.filterTrainers' },
   { id: 'landsraad', labelKey: 'liveMap.filterLandsraad' },
+  { id: 'pentashield_keys', labelKey: 'liveMap.filterKeys' },
+  { id: 'vehicles', labelKey: 'liveMap.vehicles' },
   { id: 'static', labelKey: 'liveMap.filterStaticObjects' },
 ]
 
+// FilterPanel is always-visible — no open/close state, rendered inline as a left sidebar.
 function FilterPanel({
   filter, onToggle, onToggleCategory, spawns,
 }: {
@@ -561,14 +604,9 @@ function FilterPanel({
   }
 
   return (
-    <div className="flex flex-col w-64 shrink-0 border-l border-border bg-background overflow-hidden">
-      {/* Header */}
-      <div className="border-b border-border px-3 py-2.5 shrink-0">
-        <span className="font-semibold text-foreground text-sm">{t('liveMap.filter')}</span>
-      </div>
-
+    <div className="flex flex-col w-60 shrink-0 min-h-0 overflow-hidden border-r border-border bg-background">
       {/* Search */}
-      <div className="px-2 py-2 border-b border-border shrink-0">
+      <div className="px-2 pt-2 pb-1 shrink-0">
         <SearchField
           aria-label={t('liveMap.filter')}
           value={search}
@@ -583,15 +621,13 @@ function FilterPanel({
       </div>
 
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto py-2 px-1">
+      <div className="flex-1 overflow-y-auto px-2 pb-2">
         {/* Live section */}
         {!search && (
-          <div className="mb-2">
-            <div className="px-3 py-1 text-xs font-medium text-muted uppercase tracking-wide">
-              {t('liveMap.filterLive')}
-            </div>
+          <Panel className="mb-2 mt-1">
+            <SectionLabel>{t('liveMap.filterLive')}</SectionLabel>
             {LIVE_TYPES.map((id) => (
-              <label key={id} className="flex items-center gap-2 py-1.5 px-3 cursor-pointer hover:bg-surface-secondary rounded-[var(--radius)] select-none">
+              <label key={id} className="flex items-center gap-2 py-1.5 cursor-pointer hover:bg-surface-secondary rounded-[var(--radius)] select-none px-1">
                 <input
                   type="checkbox"
                   checked={filter[id] ?? false}
@@ -602,7 +638,7 @@ function FilterPanel({
                 <span className="flex-1 text-xs text-foreground">{LIVE_LABELS[id]}</span>
               </label>
             ))}
-          </div>
+          </Panel>
         )}
 
         {/* Static category sections */}
@@ -634,9 +670,9 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
   const [spawns, setSpawns] = useState<SpawnEntry[]>([])
   const loadedSpawnKey = useRef<string>('')
 
-  const [filterOpen, setFilterOpen] = useState(false)
-  // filter keyed by merged type key OR live category
+  // filter keyed by merged type key OR live category — filter panel is always visible
   const [filter, setFilter] = useState<Record<string, boolean>>(LIVE_FILTER_DEFAULTS)
+  const [selectedFlsId, setSelectedFlsId] = useState<string>('')
 
   const [teleportMode, setTeleportMode] = useState(false)
   const [teleportDest, setTeleportDest] = useState<{ x: number, y: number } | null>(null)
@@ -824,30 +860,41 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2 shrink-0">
-        {MAPS.map((m) => (
-          <Button
-            key={m.key}
-            size="sm"
-            variant={m.key === mapKey ? 'primary' : 'outline'}
-            onPress={() => {
-              loadedSpawnKey.current = ''
-              setMapKey(m.key)
-              setSpawns([])
-              setTeleportDest(null)
-              setCalibrating(false)
-            }}
-          >
-            {m.label}
-          </Button>
-        ))}
-        <div className="h-4 border-l border-border mx-1" />
-        <Button size="sm" variant={filterOpen ? 'primary' : 'outline'} onPress={() => setFilterOpen((v) => !v)}>
-          <Icon name="layers" />
-          {' '}
-          {t('liveMap.filter')}
-        </Button>
+      {/* Toolbar — map dropdown + mode buttons */}
+      <div className="flex items-center gap-2 shrink-0">
+        {/* Map selector dropdown */}
+        <Select
+          aria-label={t('liveMap.title')}
+          selectedKey={mapKey}
+          onSelectionChange={(k) => {
+            const key = String(k)
+            loadedSpawnKey.current = ''
+            setMapKey(key)
+            setSpawns([])
+            setTeleportDest(null)
+            setCalibrating(false)
+          }}
+          className="w-44"
+        >
+          <Select.Trigger>
+            <Icon name="map" className="size-3.5 text-muted shrink-0 mr-1" />
+            <Select.Value />
+            <Select.Indicator />
+          </Select.Trigger>
+          <Select.Popover>
+            <ListBox>
+              {MAPS.map((m) => (
+                <ListBox.Item key={m.key} id={m.key} textValue={m.label}>
+                  {m.label}
+                  <ListBox.ItemIndicator />
+                </ListBox.Item>
+              ))}
+            </ListBox>
+          </Select.Popover>
+        </Select>
+
+        <div className="h-4 border-l border-border mx-0.5" />
+
         <Button
           size="sm"
           variant={teleportMode ? 'primary' : 'outline'}
@@ -950,8 +997,14 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
         </div>
       )}
 
-      {/* Map + filter panel share a flex row — filter is persistent, pushes map */}
+      {/* Filter panel (left) + map (right) — filter is always visible */}
       <div className="flex flex-1 min-h-0 gap-0 overflow-hidden">
+        <FilterPanel
+          filter={filter}
+          onToggle={toggleFilter}
+          onToggleCategory={toggleCategory}
+          spawns={spawns}
+        />
         {unsupported
           ? <div className="flex-1 py-8 text-center text-sm text-muted">{t('liveMap.unsupported')}</div>
           : (
@@ -982,44 +1035,58 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
                     filter={filter}
                   />
 
-                  {/* Live markers */}
+                  {/* Live entity markers — draggable for direct teleport */}
                   {(filter.players || filter.vehicles) && orderedLive
                     .filter((m) => m.type === 'player' ? filter.players : filter.vehicles)
                     .map((m) => {
-                      const [lat, lng] = worldToLatLng(m.x, m.y, effCfg)
+                      const center = worldToLatLng(m.x, m.y, effCfg)
                       const isPlayer = m.type === 'player'
+                      const isSelected = m.fls_id === selectedFlsId
+                      const color = isSelected ? '#f59e0b' : (CAT_COLOR[m.type] ?? CAT_COLOR.base)
+                      const size = isPlayer ? 32 : 24
+                      const html = `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2.5px solid #0b0b0b;box-shadow:0 0 0 1.5px ${color}40;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#0b0b0b;line-height:1;cursor:${isPlayer ? 'grab' : 'default'}">${isPlayer ? (m.name?.[0]?.toUpperCase() ?? '?') : '🚗'}</div>`
+                      const icon = L.divIcon({ html, iconSize: [size, size], iconAnchor: [size / 2, size / 2], className: '' })
                       return (
-                        <CircleMarker
+                        <Marker
                           key={`${m.type}-${m.id}`}
-                          center={[lat, lng]}
-                          radius={isPlayer ? 7 : 5}
-                          pathOptions={{
-                            color: '#0b0b0b',
-                            weight: 1.5,
-                            fillColor: CAT_COLOR[m.type] ?? CAT_COLOR.base,
-                            fillOpacity: 1,
+                          position={center}
+                          icon={icon}
+                          draggable={isPlayer}
+                          eventHandlers={{
+                            click: () => {
+                              if (m.fls_id) {
+                                setSelectedFlsId((prev) => prev === m.fls_id ? '' : m.fls_id!)
+                                setTeleportFlsId(m.fls_id!)
+                              }
+                            },
+                            dragend: async (e) => {
+                              if (!m.fls_id) return
+                              const { lat, lng } = (e.target as L.Marker).getLatLng()
+                              const { x, y } = latLngToWorld(lat, lng, effCfg)
+                              try {
+                                await api.players.teleportCoords(m.fls_id, Math.round(x), Math.round(y), 5000)
+                                toast.success(t('liveMap.teleportSent'))
+                              }
+                              catch (err) {
+                                toast.danger(err instanceof Error ? err.message : String(err))
+                              }
+                            },
                           }}
-                          eventHandlers={teleportMode && isPlayer && m.fls_id
-                            ? { click: () => setTeleportFlsId(m.fls_id!) }
-                            : undefined}
                         >
-                          <Tooltip>
+                          <Tooltip direction="top" offset={[0, -(size / 2)]}>
                             <div className="font-medium">{m.name || `${m.type} ${m.id}`}</div>
-                            <div>
+                            <div className="text-xs opacity-70">
                               {m.type}
                               {m.online_status ? ` · ${m.online_status}` : ''}
                             </div>
-                            <div>
+                            <div className="text-xs font-mono">
                               {Math.round(m.x)}
-                              ,
-                              {' '}
+                              {', '}
                               {Math.round(m.y)}
-                              ,
-                              {' '}
-                              {Math.round(m.z)}
                             </div>
+                            {isPlayer && <div className="text-xs text-accent mt-0.5">Drag to teleport</div>}
                           </Tooltip>
-                        </CircleMarker>
+                        </Marker>
                       )
                     })}
 
@@ -1055,15 +1122,6 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
               </div>
             )}
 
-        {/* Persistent filter panel — always visible, pushes map left */}
-        {filterOpen && (
-          <FilterPanel
-            filter={filter}
-            onToggle={toggleFilter}
-            onToggleCategory={toggleCategory}
-            spawns={spawns}
-          />
-        )}
       </div>
     </div>
   )
