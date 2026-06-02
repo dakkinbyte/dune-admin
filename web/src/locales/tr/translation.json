@@ -103,7 +103,12 @@
     "filterKeys": "Pentakalkan Anahtarları",
     "filterSearch": "Filtre bul…",
     "dragTeleportTitle": "{{name}} ışınlansın mı?",
-    "dragTeleportDesc": "({{x}}, {{y}}) konumuna güvenli yapışma — oyuncu en yakın geçerli zemine iner."
+    "dragTeleportDesc": "({{x}}, {{y}}) konumuna güvenli yapışma — oyuncu en yakın geçerli zemine iner.",
+    "filterDensity": "Yoğunluk Katmanı",
+    "densityOverlay": "Kaynak yoğunluğunu göster",
+    "filterHazards": "Tehlikeler",
+    "densityNoneSelected": "Yoğunluğu görmek için yukarıdaki kaynak türlerini etkinleştirin.",
+    "clearFilters": "Filtreleri temizle"
   },
   "battlegroup": {
     "statusTitle": "Savaş Grubu Durumu",

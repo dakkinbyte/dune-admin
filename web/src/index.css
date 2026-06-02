@@ -177,6 +177,20 @@ html, body, #root {
   background: var(--background) !important;
 }
 
+/* Depth/hillshade overlay blends into the tile layer for perceived terrain depth. */
+.leaflet-depth-overlay {
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* Leaflet's control elements (z-index: 1000) escape their container's stacking
+   context. Override dialogs/modals to always appear above the map. */
+.alert-dialog__backdrop,
+.modal__backdrop {
+  z-index: 9999;
+}
+
 /* ── Top tabs — uppercase white labels, amber pill when selected.
    The selected-state pill is rendered by `Tabs.Indicator`, NOT the tab's
    own background, so we color that element directly to match the

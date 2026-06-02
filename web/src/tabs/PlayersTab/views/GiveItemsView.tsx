@@ -7,6 +7,7 @@ import { api } from '../../../api/client'
 import type { Player } from '../../../api/client'
 import { Icon, NumberInput } from '../../../dune-ui'
 import type { PacksData } from '../types'
+import { cdnBase } from '../../../data/itemData'
 
 interface Props {
   player: Player
@@ -42,7 +43,7 @@ export function GiveItemsView({ player }: Props) {
       })
       .then(() => Promise.all([
         api.players.templates(),
-        fetch('/packs.json').then((r) => r.json() as Promise<PacksData>).catch(() => ({ packs: {} } as PacksData)),
+        fetch(`${cdnBase()}/packs.json`).then((r) => r.json() as Promise<PacksData>).catch(() => ({ packs: {} } as PacksData)),
       ]))
       .then(([tmpls, packs]) => {
         setTemplates(tmpls)

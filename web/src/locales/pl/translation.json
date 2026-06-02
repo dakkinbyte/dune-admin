@@ -103,7 +103,12 @@
     "filterKeys": "Klucze Pentatarczy",
     "filterSearch": "Znajdź filtr…",
     "dragTeleportTitle": "Teleportować {{name}}?",
-    "dragTeleportDesc": "Bezpieczne przyciąganie do ({{x}}, {{y}}) — gracz wyląduje na najbliższym ważnym terenie."
+    "dragTeleportDesc": "Bezpieczne przyciąganie do ({{x}}, {{y}}) — gracz wyląduje na najbliższym ważnym terenie.",
+    "filterDensity": "Nakładka gęstości",
+    "densityOverlay": "Pokaż gęstość zasobów",
+    "filterHazards": "Zagrożenia",
+    "densityNoneSelected": "Włącz typy zasobów powyżej, aby zobaczyć ich gęstość.",
+    "clearFilters": "Wyczyść filtry"
   },
   "battlegroup": {
     "statusTitle": "Status grupy bojowej",

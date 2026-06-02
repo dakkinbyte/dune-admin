@@ -10,14 +10,25 @@ import type { MapMarker, Player } from '../api/client'
 import { ConfirmDialog, Icon, PageHeader, Panel, SectionLabel } from '../dune-ui'
 import { useAutoRefresh } from '../hooks/useAutoRefresh'
 
-const IMG_W = 1200
-const IMG_H = 1200
+// Map asset base URL — same CDN as item icons. Always serves from R2, even locally.
+// Override with VITE_CDN_BASE_URL to point at a different host (e.g. local R2 dev proxy).
+const MAP_BASE = ((import.meta.env.VITE_CDN_BASE_URL as string) ?? 'https://assets.dune.layout.tools').replace(/\/$/, '')
+const mapUrl = (path: string) => `${MAP_BASE}/${path}`
+
+// Tile CDN — serves the zoom pyramid (z=0..4) for Hagga Basin and Deep Desert.
+// URL scheme: /{tileId}/{cdnZ}/{cdnY}/{cdnX}.webp  (y before x — confirmed empirically)
+const TILE_CDN = 'https://cdn.th.gl/dune-awakening/map-tiles'
+
+// 4096×4096 coordinate space aligns with the CDN tile pyramid:
+//   CDN_z = Leaflet_z + 3  →  z=-3 → CDN z=0 (1 tile), z=1 → CDN z=4 (16×16)
+const IMG_W = 4096
+const IMG_H = 4096
 const IMAGE_BOUNDS: LatLngBoundsExpression = [[0, 0], [IMG_H, IMG_W]]
 const POLL_MS = 30000
 
 // Sprite sheet: 11 cols × 12 rows, each icon 64×64px
 // Positions extracted from the reference tool's HTML (object-position / 64).
-const SPRITE_URL = `${import.meta.env.BASE_URL}map-icons.webp`
+const SPRITE_URL = mapUrl('map-data/map-icons.webp')
 const SPRITE_COLS = 11
 const SPRITE_ROWS = 12
 const SPRITE_CELL = 64
@@ -113,6 +124,18 @@ const ICON_POS: Record<string, [number, number]> = {
   mutelli: [4, 7], novebruns: [8, 3], richese: [2, 4], sor: [2, 5],
   spinette: [2, 6], taligari: [0, 3], thorvald: [0, 5], tseida: [7, 3],
   varota: [3, 7], vernius: [0, 4], wallach: [5, 7], wayku: [7, 7], wydras: [8, 1],
+  // Heatmap resource types — mapped to equivalent existing sprites
+  aluminum_ore: [7, 8], // bauxite sprite
+  copper_ore: [8, 8], // azurite sprite
+  carbon_fiber: [10, 8], // dolomite sprite
+  iron_ore: [2, 9], // magnetite sprite
+  stone: [9, 8], // rhyolite sprite
+  fiber: [6, 8], // fiber_plant sprite
+  cistanche: [1, 9], // agave_seeds sprite (closest flora)
+  saguaro_cactus: [1, 9], // agave_seeds sprite
+  t6_resource_a: [4, 8], // stravidium sprite
+  t6_resource_b: [3, 8], // titanium_ore sprite
+  sandworm_territory: [4, 0], // enemy_camp sprite (danger zone)
   // No-underscore binary type variants
   enemycamp: [4, 0], enemyoutpost: [6, 1], enemylaboroutpost: [10, 3],
   wreck: [2, 2], tradingpost: [9, 1], sietch: [0, 2], ecolab: [7, 2],
@@ -133,46 +156,10 @@ const CAT_COLOR: Record<string, string> = {
   player: '#3b9dff', vehicle: '#5fd35a', base: '#e0a13a',
   resources: '#f5a623', locations: '#9b59b6', npcs: '#e74c3c',
   vendors: '#2ecc71', landsraad: '#e91e8c', static: '#7f8c8d',
+  hazards: '#ff5020',
 }
 
 // Map spawn type → category
-const TYPE_CATEGORY: Record<string, string> = {
-  basic: 'resources', vbasic: 'resources', wbasic: 'resources', ebasic: 'resources', rbasic: 'resources', srbasic: 'resources',
-  rare: 'resources', vrare: 'resources', wrare: 'resources', drare: 'resources',
-  ultra_rare: 'resources', ammo: 'resources', vammo: 'resources', wammo: 'resources', uammo: 'resources', dammo: 'resources',
-  medical: 'resources', weapon: 'resources', corpse: 'resources', vcorpse: 'resources', fcorpse: 'resources',
-  fuel: 'resources', vfuel: 'resources', wfuel: 'resources', dfuel: 'resources', ufuel: 'resources', owfuel: 'resources',
-  contract: 'resources', refinery: 'resources', water_tank: 'resources', buried_treasure: 'resources',
-  treasure_loot_container: 'resources',
-  enemy_camp: 'locations', primitive: 'locations', kirab_camp: 'locations', intel_point: 'locations',
-  buggy: 'vehicles', ebuggy: 'vehicles',
-  spice_field_small: 'resources', spice_field_medium: 'resources', spice_field_large: 'resources',
-  basalt: 'resources', basalt_pickup: 'resources',
-  fiber_plant: 'resources', plant_fiber: 'resources',
-  bauxite: 'resources', bauxite_pickup: 'resources',
-  agave_seeds: 'resources', erythrite: 'resources', erythrite_pickup: 'resources',
-  jasmium: 'resources', jasmium_crystal: 'resources',
-  scrap_electronics: 'resources', scrap_metal: 'resources',
-  fuel_cells: 'resources',
-  azurite: 'resources', azurite_pickup: 'resources',
-  dolomite: 'resources', dolomite_pickup: 'resources',
-  magnetite: 'resources', magnetite_pickup: 'resources',
-  rhyolite: 'resources', rhyolite_pickup: 'resources',
-  primrose_field: 'resources', stravidium: 'resources', titanium_ore: 'resources',
-  static: 'static',
-  // No-underscore binary types
-  enemycamp: 'locations', enemyoutpost: 'locations', enemylaboroutpost: 'locations',
-  cave: 'locations', wreck: 'locations', tradingpost: 'locations', sietch: 'locations',
-  ecolab: 'locations', secret_door: 'locations', shipwreck: 'locations',
-  small_shipwreck: 'locations', atreides: 'locations', harkonnen: 'locations', poi: 'locations',
-  npc_harkonnen: 'npcs', npc_atreides: 'npcs', npc_bandits: 'npcs', npc_unaffiliated: 'npcs',
-  npc_choam: 'npcs', npc_fremen: 'npcs', npc_sardaukar: 'npcs', npc_smugglers: 'npcs', npc_spacingguild: 'npcs',
-  trainersswordmaster: 'trainers', trainersmentat: 'trainers', trainersbenegesserit: 'trainers',
-  trainersplanetologist: 'trainers', trainerstrooper: 'trainers',
-  purple_id_band: 'pentashield_keys', green_id_band: 'pentashield_keys',
-  red_id_band: 'pentashield_keys', orange_id_band: 'pentashield_keys', blue_id_band: 'pentashield_keys',
-  sandbike: 'vehicles',
-}
 
 // Friendly display names for types
 const TYPE_LABELS: Record<string, string> = {
@@ -199,6 +186,12 @@ const TYPE_LABELS: Record<string, string> = {
   magnetite: 'Iron Ore', magnetite_pickup: 'Iron (Node)',
   rhyolite: 'Granite Stone', rhyolite_pickup: 'Granite (Node)',
   primrose_field: 'Primrose Field', stravidium: 'Stravidium', titanium_ore: 'Titanium',
+  // Heatmap types
+  aluminum_ore: 'Aluminum Ore', copper_ore: 'Copper Ore', carbon_fiber: 'Carbon Fiber',
+  iron_ore: 'Iron Ore', stone: 'Stone', fiber: 'Plant Fiber',
+  cistanche: 'Cistanche', saguaro_cactus: 'Saguaro Cactus',
+  t6_resource_a: 'T6 Resource A', t6_resource_b: 'T6 Resource B',
+  sandworm_territory: 'Sandworm Territory', buried_treasure: 'Buried Treasure',
   static: 'Static Object',
   // No-underscore binary types
   enemycamp: 'Enemy Camp', enemyoutpost: 'Enemy Outpost', enemylaboroutpost: 'Enemy Lab Outpost',
@@ -239,16 +232,28 @@ function filterKey(type: string): string {
 }
 
 type Bounds = { minX: number, maxX: number, minY: number, maxY: number, flipX?: boolean, flipY?: boolean }
-type MapCfg = Bounds & { key: string, label: string, image?: string, spawnFile?: string, hasLiveData?: boolean }
+type MapCfg = Bounds & {
+  key: string
+  label: string
+  image?: string
+  spawnFile?: string
+  hasLiveData?: boolean
+  tileId?: string
+  depthFile?: string
+}
 
 const MAPS: MapCfg[] = [
   {
     key: 'HaggaBasin', label: 'Hagga Basin', image: 'hagga-basin.webp', spawnFile: 'hagga',
+    tileId: 'survival_1-0c70ddebb3e41cf49915b22e103e94ed',
+    depthFile: 'hagga-depth.webp',
     hasLiveData: true,
     minX: -437871, maxX: 350539, minY: -462011, maxY: 376267, flipY: true,
   },
   {
     key: 'DeepDesert', label: 'Deep Desert', image: 'deepdesert.webp', spawnFile: 'deepdesert',
+    tileId: 'deepdesert_1-40f176fc4cce018dff08f3cd66b52f08',
+    depthFile: 'deepdesert-depth.webp',
     hasLiveData: true,
     minX: -1300000, maxX: 1200000, minY: -1300000, maxY: 1200000,
   },
@@ -266,8 +271,65 @@ const MAPS: MapCfg[] = [
 
 const CALIB_LS_KEY = 'dune_admin_livemap_calib'
 
-type SpawnEntry = { type: string, label?: string, category: string, x: number, y: number, z?: number }
+type SpawnEntry = { type: string, label?: string, category: string, x: number, y: number, z?: number, density?: number }
 type SpawnFile = { spawns: SpawnEntry[] }
+
+// Heatmap world bounds per map key (CartographyMapLayerComponent meters × 100 = UE cm)
+const HEATMAP_BOUNDS: Record<string, { minX: number, maxX: number, minY: number, maxY: number }> = {
+  HaggaBasin: { minX: -457200, maxX: 355600, minY: -457200, maxY: 355600 },
+  DeepDesert: { minX: -1270000, maxX: 1168400, minY: -1270000, maxY: 1168400 },
+}
+
+// Heatmap file prefix per map key
+const HEATMAP_PREFIX: Record<string, string> = {
+  HaggaBasin: 'hagga',
+  DeepDesert: 'deepdesert',
+}
+
+// Maps heatmap type name → filter panel canonical key (from .raw spawn data via TYPE_MERGE_KEY).
+// Heatmap uses descriptive names; .raw data uses mineral names — same resource, different labels.
+const HEATMAP_TO_FILTER: Record<string, string> = {
+  aluminum_ore: 'bauxite',
+  copper_ore: 'azurite',
+  carbon_fiber: 'dolomite',
+  iron_ore: 'magnetite',
+  stone: 'rhyolite',
+  fiber: 'fiber_plant',
+}
+function heatmapFilterKey(type: string): string {
+  return HEATMAP_TO_FILTER[type] ?? type
+}
+
+// CSS color per heatmap type — matches what build-map-heatmaps.py bakes into the PNGs
+const HEATMAP_COLORS: Record<string, string> = {
+  aluminum_ore: 'rgb(201,130,10)', copper_ore: 'rgb(184,115,51)',
+  carbon_fiber: 'rgb(90,90,90)', iron_ore: 'rgb(130,130,145)',
+  stone: 'rgb(160,145,120)', basalt: 'rgb(150,100,50)',
+  scrap_metal: 'rgb(100,120,145)', fuel: 'rgb(255,200,50)',
+  fiber: 'rgb(120,200,80)', cistanche: 'rgb(60,180,120)',
+  saguaro_cactus: 'rgb(40,160,80)', primrose_field: 'rgb(200,200,60)',
+  jasmium: 'rgb(180,100,220)', erythrite: 'rgb(220,60,60)',
+  t6_resource_a: 'rgb(100,220,220)', t6_resource_b: 'rgb(60,180,220)',
+  sandworm_territory: 'rgb(255,80,30)',
+}
+
+// Deep Desert zone grid: rows A(south)..I(north), columns 1(west)..9(east)
+const DD_ROWS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
+const DD_COLS = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+// Types with non-empty heatmap PNGs per map
+const HEATMAP_TYPES: Record<string, string[]> = {
+  HaggaBasin: [
+    'aluminum_ore', 'basalt', 'carbon_fiber', 'cistanche', 'copper_ore',
+    'erythrite', 'fiber', 'fuel', 'iron_ore', 'jasmium',
+    'primrose_field', 'saguaro_cactus', 'sandworm_territory', 'scrap_metal', 'stone',
+  ],
+  DeepDesert: [
+    'aluminum_ore', 'basalt', 'carbon_fiber', 'copper_ore',
+    'fiber', 'fuel', 'iron_ore',
+    'sandworm_territory', 'scrap_metal', 'stone', 't6_resource_a', 't6_resource_b',
+  ],
+}
 
 // ── Utility ──────────────────────────────────────────────────────────────────
 
@@ -382,13 +444,12 @@ function SpriteIcon({ type, size = 22 }: { type: string, size?: number }) {
 // magnitude faster than per-marker DOM elements.
 
 function SpawnCanvasLayer({
-  spawns,
-  effCfg,
-  filter,
+  spawns, effCfg, filter, heatmapMode,
 }: {
   spawns: SpawnEntry[]
   effCfg: MapCfg
   filter: Record<string, boolean>
+  heatmapMode: boolean
 }) {
   const map = useMap()
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -397,8 +458,13 @@ function SpawnCanvasLayer({
 
   // Pre-compute visible spawn list whenever inputs change
   const visible = useMemo(
-    () => spawns.filter((s) => filter[filterKey(s.type)] ?? false),
-    [spawns, filter],
+    () => spawns.filter((s) => {
+      if (!(filter[filterKey(s.type)] ?? false)) return false
+      // When density overlay is on, hide all resource nodes — the heatmap conveys this
+      if (heatmapMode && (s.category === 'resources' || s.category === 'hazards')) return false
+      return true
+    }),
+    [spawns, filter, heatmapMode],
   )
 
   // Draw everything onto the canvas
@@ -415,6 +481,8 @@ function SpawnCanvasLayer({
     const sprite = spriteRef.current
 
     for (const s of visible) {
+      const isDense = s.category === 'resources' || s.category === 'static'
+
       const [lat, lng] = worldToLatLng(s.x, s.y, effCfg)
       const pt = map.latLngToContainerPoint([lat, lng])
 
@@ -423,8 +491,7 @@ function SpawnCanvasLayer({
 
       const typeKey = filterKey(s.type)
       const pos = ICON_POS[typeKey]
-      const isDense = s.category === 'resources' || s.category === 'static'
-      const iconSize = isDense ? 14 : 20
+      const iconSize = isDense ? 20 : 28
 
       if (sprite && spriteReady.current && pos) {
         const [col, row] = pos
@@ -439,7 +506,7 @@ function SpawnCanvasLayer({
       else {
         // Fallback colored dot
         ctx.beginPath()
-        ctx.arc(pt.x, pt.y, isDense ? 2 : 4, 0, Math.PI * 2)
+        ctx.arc(pt.x, pt.y, isDense ? 3 : 5, 0, Math.PI * 2)
         ctx.fillStyle = CAT_COLOR[s.category] ?? '#888'
         ctx.globalAlpha = 0.65
         ctx.fill()
@@ -483,6 +550,232 @@ function SpawnCanvasLayer({
   return null
 }
 
+// ── Heatmap density overlay ───────────────────────────────────────────────────
+// Renders pre-baked 256×256 RGBA density PNGs over the map, one per resource type.
+// Images are loaded lazily when first needed and cached for the session.
+function HeatmapCanvasLayer({
+  mapKey, effCfg, filter,
+}: {
+  mapKey: string
+  effCfg: MapCfg
+  filter: Record<string, boolean>
+}) {
+  const map = useMap()
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const imageCache = useRef(new Map<string, HTMLImageElement | null>())
+  const pendingRef = useRef(new Set<string>())
+
+  const bounds = HEATMAP_BOUNDS[mapKey]
+  const prefix = HEATMAP_PREFIX[mapKey]
+  const types = useMemo(() => HEATMAP_TYPES[mapKey] ?? [], [mapKey])
+
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current
+    if (!canvas || !bounds) return
+    const mapSize = map.getSize()
+    canvas.width = mapSize.x
+    canvas.height = mapSize.y
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.clearRect(0, 0, mapSize.x, mapSize.y)
+
+    // Map the heatmap grid extent to canvas coordinates.
+    // For flipY maps (Hagga), minX/maxY → screen top-left; for others the draw height
+    // is negative which flips the image vertically — both cases are handled correctly.
+    const [tlLat, tlLng] = worldToLatLng(bounds.minX, bounds.maxY, effCfg)
+    const [brLat, brLng] = worldToLatLng(bounds.maxX, bounds.minY, effCfg)
+    const tl = map.latLngToContainerPoint([tlLat, tlLng])
+    const br = map.latLngToContainerPoint([brLat, brLng])
+    const dw = br.x - tl.x
+    const dh = br.y - tl.y
+
+    ctx.globalAlpha = 0.65
+    for (const type of types) {
+      if (!(filter[heatmapFilterKey(type)] ?? false)) continue
+      const img = imageCache.current.get(type)
+      if (img) ctx.drawImage(img, tl.x, tl.y, dw, dh)
+    }
+    ctx.globalAlpha = 1
+  }, [map, bounds, effCfg, filter, types])
+
+  // Lazily load PNGs for enabled types
+  useEffect(() => {
+    if (!prefix) return
+    for (const type of types) {
+      if (!(filter[heatmapFilterKey(type)] ?? false)) continue
+      if (imageCache.current.has(type) || pendingRef.current.has(type)) continue
+      pendingRef.current.add(type)
+      const img = new Image()
+      img.onload = () => {
+        imageCache.current.set(type, img)
+        pendingRef.current.delete(type)
+        draw()
+      }
+      img.onerror = () => {
+        imageCache.current.set(type, null)
+        pendingRef.current.delete(type)
+      }
+      img.src = mapUrl(`map-data/${prefix}-heatmap-${type}.png`)
+    }
+  }, [filter, types, prefix, draw])
+
+  useEffect(() => {
+    const container = map.getContainer()
+    const canvas = document.createElement('canvas')
+    canvas.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;z-index:498'
+    container.appendChild(canvas)
+    canvasRef.current = canvas
+    return () => {
+      canvas.remove()
+      canvasRef.current = null
+    }
+  }, [map])
+
+  useEffect(() => {
+    map.on('move zoom moveend zoomend viewreset resize', draw)
+    draw()
+    return () => {
+      map.off('move zoom moveend zoomend viewreset resize', draw)
+    }
+  }, [map, draw])
+
+  return null
+}
+
+// ── CDN tile layer ────────────────────────────────────────────────────────────
+// CDN_z = Leaflet_z + 3.  maxNativeZoom=1 means Leaflet zoom > 1 reuses CDN z=4 tiles scaled up.
+function MapTileLayer({ tileId }: { tileId: string }) {
+  const map = useMap()
+
+  useEffect(() => {
+    const layer = new L.TileLayer('', {
+      tileSize: 512,
+      minZoom: -3,
+      maxZoom: 4,
+      maxNativeZoom: 1,
+      noWrap: true,
+      attribution: '',
+    })
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(layer as any).getTileUrl = (coords: L.Coords): string => {
+      const cdnZ = Math.min(4, Math.max(0, coords.z + 3))
+      // CRS.Simple with transformation (1,0,-1,0) inverts the y axis, so Leaflet tile y
+      // indices are negative (e.g. -8..-1 at z_L=0 for an 8-tile-tall map).
+      // CDN_y = 2^cdnZ + leaflet_y/scale  maps negative Leaflet y → positive CDN y [0, 2^cdnZ).
+      const scale = Math.pow(2, coords.z + 3 - cdnZ)
+      const cdnX = Math.floor(coords.x / scale)
+      const cdnY = Math.floor(Math.pow(2, cdnZ) + coords.y / scale)
+      const maxTile = Math.pow(2, cdnZ)
+      if (cdnX < 0 || cdnX >= maxTile || cdnY < 0 || cdnY >= maxTile) return ''
+      return `${TILE_CDN}/${tileId}/${cdnZ}/${cdnY}/${cdnX}.webp`
+    }
+
+    layer.addTo(map)
+    return () => {
+      layer.remove()
+    }
+  }, [map, tileId])
+
+  return null
+}
+
+// ── Deep Desert zone grid (A1-I9) ─────────────────────────────────────────────
+function ZoneGridLayer({ effCfg }: { effCfg: MapCfg }) {
+  const map = useMap()
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const mapSize = map.getSize()
+    canvas.width = mapSize.x
+    canvas.height = mapSize.y
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.clearRect(0, 0, mapSize.x, mapSize.y)
+
+    const b = { minX: effCfg.minX, maxX: effCfg.maxX, minY: effCfg.minY, maxY: effCfg.maxY }
+    const cellW = (b.maxX - b.minX) / 9
+    const cellH = (b.maxY - b.minY) / 9
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)'
+    ctx.lineWidth = 1
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'
+    ctx.font = '11px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+
+    // Draw grid lines and labels
+    for (let ci = 0; ci <= 9; ci++) {
+      const x = b.minX + ci * cellW
+      const [latB, lngB] = worldToLatLng(x, b.minY, effCfg)
+      const [latT, lngT] = worldToLatLng(x, b.maxY, effCfg)
+      const ptB = map.latLngToContainerPoint([latB, lngB])
+      const ptT = map.latLngToContainerPoint([latT, lngT])
+      ctx.beginPath()
+      ctx.moveTo(ptB.x, ptB.y)
+      ctx.lineTo(ptT.x, ptT.y)
+      ctx.stroke()
+    }
+    for (let ri = 0; ri <= 9; ri++) {
+      const y = b.minY + ri * cellH
+      const [latL, lngL] = worldToLatLng(b.minX, y, effCfg)
+      const [latR, lngR] = worldToLatLng(b.maxX, y, effCfg)
+      const ptL = map.latLngToContainerPoint([latL, lngL])
+      const ptR = map.latLngToContainerPoint([latR, lngR])
+      ctx.beginPath()
+      ctx.moveTo(ptL.x, ptL.y)
+      ctx.lineTo(ptR.x, ptR.y)
+      ctx.stroke()
+    }
+
+    // Zone labels — A(bottom/minY row) to I(top/maxY row), 1..9 left to right
+    for (let ci = 0; ci < 9; ci++) {
+      for (let ri = 0; ri < 9; ri++) {
+        const cx = b.minX + (ci + 0.5) * cellW
+        const cy = b.minY + (ri + 0.5) * cellH
+        const [lat, lng] = worldToLatLng(cx, cy, effCfg)
+        const pt = map.latLngToContainerPoint([lat, lng])
+        if (pt.x < -20 || pt.x > mapSize.x + 20 || pt.y < -20 || pt.y > mapSize.y + 20) continue
+        const label = `${DD_ROWS[ri]}${DD_COLS[ci]}`
+        ctx.fillText(label, pt.x, pt.y)
+      }
+    }
+  }, [map, effCfg])
+
+  useEffect(() => {
+    const container = map.getContainer()
+    const canvas = document.createElement('canvas')
+    canvas.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;z-index:497'
+    container.appendChild(canvas)
+    canvasRef.current = canvas
+    return () => {
+      canvas.remove()
+      canvasRef.current = null
+    }
+  }, [map])
+
+  useEffect(() => {
+    map.on('move zoom moveend zoomend viewreset resize', draw)
+    draw()
+    return () => {
+      map.off('move zoom moveend zoomend viewreset resize', draw)
+    }
+  }, [map, draw])
+
+  return null
+}
+
+// ── Fit-bounds bridge (must render inside MapContainer to access useMap) ───────
+function FitBoundsController({ fitRef }: { fitRef: React.MutableRefObject<(() => void) | null> }) {
+  const map = useMap()
+  useEffect(() => {
+    fitRef.current = () => map.fitBounds(IMAGE_BOUNDS, { animate: true })
+  }, [map, fitRef])
+  return null
+}
+
 // ── Filter Panel (persistent sidebar) ────────────────────────────────────────
 
 const LIVE_TYPES = ['players', 'vehicles', 'bases'] as const
@@ -497,16 +790,20 @@ const CATEGORY_GROUPS: { id: string, labelKey: string }[] = [
   { id: 'pentashield_keys', labelKey: 'liveMap.filterKeys' },
   { id: 'vehicles', labelKey: 'liveMap.vehicles' },
   { id: 'static', labelKey: 'liveMap.filterStaticObjects' },
+  { id: 'hazards', labelKey: 'liveMap.filterHazards' },
 ]
 
 // FilterPanel is always-visible — no open/close state, rendered inline as a left sidebar.
 function FilterPanel({
-  filter, onToggle, onToggleCategory, spawns,
+  filter, onToggle, onClear, spawns, mapKey, heatmapMode, onHeatmapToggle,
 }: {
   filter: Record<string, boolean>
-  onToggle: (key: string) => void
-  onToggleCategory: (category: string, on: boolean) => void
+  onToggle: (key: string, currentVisual: boolean) => void
+  onClear: () => void
   spawns: SpawnEntry[]
+  mapKey: string
+  heatmapMode: boolean
+  onHeatmapToggle: () => void
 }) {
   const { t } = useTranslation()
   const [search, setSearch] = useState('')
@@ -534,13 +831,13 @@ function FilterPanel({
 
   type TypeRowProps = { typeKey: string, label: string, count: number, category: string }
   function TypeRow({ typeKey, label, count, category }: TypeRowProps) {
-    const isOn = filter[typeKey] ?? filter[category] ?? false
+    const isOn = filter[typeKey] ?? false
     return (
       <label className="flex items-center gap-2 py-1.5 px-3 cursor-pointer hover:bg-surface-secondary rounded-[var(--radius)] select-none">
         <input
           type="checkbox"
           checked={isOn}
-          onChange={() => onToggle(typeKey)}
+          onChange={() => onToggle(typeKey, isOn)}
           className="h-3.5 w-3.5 accent-accent shrink-0"
         />
         <SpriteIcon type={typeKey} size={18} />
@@ -557,8 +854,8 @@ function FilterPanel({
     const items = typesByCategory[group.id]
     if (!items?.size) return null
     const isExpanded = expanded[group.id] ?? false
-    const allOn = [...items.keys()].every((k) => filter[k] ?? filter[group.id] ?? false)
-    const anyOn = [...items.keys()].some((k) => filter[k] ?? filter[group.id] ?? false)
+    const allOn = [...items.keys()].every((k) => filter[k] ?? false)
+    const anyOn = [...items.keys()].some((k) => filter[k] ?? false)
     const q = search.toLowerCase()
     const filteredItems = q
       ? [...items.entries()].filter(([k, v]) => v.label.toLowerCase().includes(q) || k.toLowerCase().includes(q))
@@ -573,7 +870,10 @@ function FilterPanel({
             type="checkbox"
             checked={allOn}
             ref={(el) => { if (el) el.indeterminate = !allOn && anyOn }}
-            onChange={(e) => onToggleCategory(group.id, e.target.checked)}
+            onChange={(e) => {
+              const target = e.target.checked
+              ;[...items.keys()].forEach((k) => onToggle(k, !target))
+            }}
             className="h-3.5 w-3.5 accent-accent shrink-0"
           />
           <button
@@ -619,6 +919,15 @@ function FilterPanel({
           </SearchField.Group>
         </SearchField>
       </div>
+      <div className="px-2 pb-1 shrink-0 flex justify-end">
+        <button
+          type="button"
+          onClick={onClear}
+          className="text-xs text-muted hover:text-accent transition-colors"
+        >
+          {t('liveMap.clearFilters')}
+        </button>
+      </div>
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-2 pb-2">
@@ -631,13 +940,46 @@ function FilterPanel({
                 <input
                   type="checkbox"
                   checked={filter[id] ?? false}
-                  onChange={() => onToggle(id)}
+                  onChange={() => onToggle(id, filter[id] ?? false)}
                   className="h-3.5 w-3.5 accent-accent shrink-0"
                 />
                 <span style={{ color: CAT_COLOR[id] }} className="text-xs shrink-0">●</span>
                 <span className="flex-1 text-xs text-foreground">{LIVE_LABELS[id]}</span>
               </label>
             ))}
+          </Panel>
+        )}
+
+        {/* Density overlay toggle + legend — only for maps that have heatmap data */}
+        {!search && HEATMAP_BOUNDS[mapKey] && (
+          <Panel className="mb-2">
+            <SectionLabel>{t('liveMap.filterDensity')}</SectionLabel>
+            <label className="flex items-center gap-2 py-1.5 cursor-pointer hover:bg-surface-secondary rounded-[var(--radius)] select-none px-1">
+              <input
+                type="checkbox"
+                checked={heatmapMode}
+                onChange={onHeatmapToggle}
+                className="h-3.5 w-3.5 accent-accent shrink-0"
+              />
+              <Icon name="layers" className="text-accent shrink-0" />
+              <span className="flex-1 text-xs text-foreground">{t('liveMap.densityOverlay')}</span>
+            </label>
+            {heatmapMode && (() => {
+              const active = (HEATMAP_TYPES[mapKey] ?? []).filter((type) => filter[heatmapFilterKey(type)] ?? false)
+              if (!active.length) return (
+                <p className="text-xs text-muted px-1 pb-1">{t('liveMap.densityNoneSelected')}</p>
+              )
+              return (
+                <div className="px-1 pb-1 flex flex-col gap-0.5">
+                  {active.map((type) => (
+                    <div key={type} className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-sm shrink-0 opacity-80" style={{ background: HEATMAP_COLORS[type] ?? '#888' }} />
+                      <span className="text-xs text-muted truncate">{TYPE_LABELS[type] ?? type.replace(/_/g, ' ')}</span>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
           </Panel>
         )}
 
@@ -687,6 +1029,7 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
 
   const [spawns, setSpawns] = useState<SpawnEntry[]>([])
   const loadedSpawnKey = useRef<string>('')
+  const isDragging = useRef(false)
 
   // filter persisted to localStorage — panel is always visible
   const [filter, setFilter] = useState<Record<string, boolean>>(loadFilter)
@@ -698,6 +1041,8 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
     y: number
   } | null>(null)
 
+  const [heatmapMode, setHeatmapMode] = useState(false)
+  const fitBoundsRef = useRef<(() => void) | null>(null)
   const [teleportMode, setTeleportMode] = useState(false)
   const [teleportDest, setTeleportDest] = useState<{ x: number, y: number } | null>(null)
   const [teleportFlsId, setTeleportFlsId] = useState<string>('')
@@ -711,6 +1056,7 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
   )
 
   const load = useCallback((key: string) => {
+    if (isDragging.current) return
     const cfg = MAPS.find((m) => m.key === key)
     if (!cfg?.hasLiveData) {
       setMarkers([])
@@ -720,20 +1066,23 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
     }
     Promise.resolve()
       .then(() => {
+        if (isDragging.current) return
         setLoading(true)
         setUnsupported(false)
       })
       .then(() => api.map.markers(key))
       .then((rows) => {
+        if (isDragging.current) return
         setMarkers(rows)
         setUpdatedLabel(new Date().toLocaleTimeString())
       })
       .catch((e: unknown) => {
+        if (isDragging.current) return
         if (e instanceof ApiError && e.status === 404) setUnsupported(true)
         else toast.danger(t('liveMap.failedToLoad', { message: e instanceof Error ? e.message : String(e) }))
         setMarkers([])
       })
-      .finally(() => setLoading(false))
+      .finally(() => { if (!isDragging.current) setLoading(false) })
   }, [t])
 
   const loadCurrent = useCallback(() => load(mapKey), [load, mapKey])
@@ -749,7 +1098,7 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
     const cfg = MAPS.find((m) => m.key === mapKey)
     if (!cfg?.spawnFile || loadedSpawnKey.current === mapKey) return
     loadedSpawnKey.current = mapKey
-    fetch(`${import.meta.env.BASE_URL}map-data/${cfg.spawnFile}-spawns.json`)
+    fetch(mapUrl(`map-data/${cfg.spawnFile}-spawns.json`))
       .then((r) => r.json() as Promise<SpawnFile>)
       .then((d) => setSpawns(d.spawns))
       .catch(() => setSpawns([]))
@@ -764,8 +1113,27 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
   const playerCount = markers.filter((m) => m.type === 'player').length
   const vehicleCount = markers.filter((m) => m.type === 'vehicle').length
   const orderedLive = useMemo(
-    () => [...markers].sort((a, b) => (a.type === 'player' ? 1 : 0) - (b.type === 'player' ? 1 : 0)),
-    [markers],
+    () => [...markers]
+      .sort((a, b) => (a.type === 'player' ? 1 : 0) - (b.type === 'player' ? 1 : 0))
+      .map((m) => {
+        const isPlayer = m.type === 'player'
+        const size = isPlayer ? 32 : 24
+        const baseColor = CAT_COLOR[m.type] ?? CAT_COLOR.base
+        const label = isPlayer ? (m.name?.[0]?.toUpperCase() ?? '?') : '🚗'
+        const cursor = isPlayer ? 'grab' : 'default'
+        const makeHtml = (color: string) =>
+          `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2.5px solid #0b0b0b;box-shadow:0 0 0 1.5px ${color}40;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#0b0b0b;line-height:1;cursor:${cursor}">${label}</div>`
+        const iconOpts = { iconSize: [size, size] as L.PointTuple, iconAnchor: [size / 2, size / 2] as L.PointTuple, className: '' }
+        return {
+          ...m,
+          center: worldToLatLng(m.x, m.y, effCfg) as L.LatLngTuple,
+          isPlayer,
+          size,
+          icon: L.divIcon({ ...iconOpts, html: makeHtml(baseColor) }),
+          selectedIcon: L.divIcon({ ...iconOpts, html: makeHtml('#f59e0b') }),
+        }
+      }),
+    [markers, effCfg],
   )
 
   const handleMapClick = useCallback((lat: number, lng: number) => {
@@ -834,22 +1202,21 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
     }
   }, [teleportDest, teleportFlsId, t])
 
-  const toggleFilter = useCallback((key: string) => {
+  const toggleFilter = useCallback((key: string, currentVisual: boolean) => {
     setFilter((f) => {
-      const next = { ...f, [key]: !f[key] }
+      const next = { ...f, [key]: !currentVisual }
       saveFilter(next)
       return next
     })
   }, [])
 
-  const toggleCategory = useCallback((category: string, on: boolean) => {
+  const clearFilters = useCallback(() => {
     setFilter((f) => {
-      const next = { ...f }
-      Object.keys(TYPE_CATEGORY).forEach((type) => {
-        if (TYPE_CATEGORY[type] === category) {
-          next[filterKey(type)] = on
-        }
+      const next: Record<string, boolean> = {}
+      Object.keys(f).forEach((k) => {
+        next[k] = false
       })
+      Object.assign(next, LIVE_FILTER_DEFAULTS)
       saveFilter(next)
       return next
     })
@@ -922,6 +1289,10 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
         </Select>
 
         <div className="h-4 border-l border-border mx-0.5" />
+
+        <Button size="sm" variant="outline" onPress={() => fitBoundsRef.current?.()}>
+          <Icon name="home" />
+        </Button>
 
         <Button
           size="sm"
@@ -1030,8 +1401,11 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
         <FilterPanel
           filter={filter}
           onToggle={toggleFilter}
-          onToggleCategory={toggleCategory}
+          onClear={clearFilters}
           spawns={spawns}
+          mapKey={mapKey}
+          heatmapMode={heatmapMode}
+          onHeatmapToggle={() => setHeatmapMode((v) => !v)}
         />
         {unsupported
           ? <div className="flex-1 py-8 text-center text-sm text-muted">{t('liveMap.unsupported')}</div>
@@ -1048,11 +1422,39 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
                 >
                   <InvalidateOnActive active={isActive} />
                   <MapClickCapture active={calibrating || teleportMode} onPick={handleMapClick} />
-                  {effCfg.image && (
+                  {effCfg.tileId
+                    ? <MapTileLayer key={mapKey} tileId={effCfg.tileId} />
+                    : effCfg.image && (
+                      <ImageOverlay
+                        key={mapKey}
+                        url={mapUrl(`map-data/${effCfg.image}`)}
+                        bounds={IMAGE_BOUNDS}
+                      />
+                    )}
+
+                  {/* Terrain depth overlay — hillshade+AO blended with multiply */}
+                  {effCfg.depthFile && (
                     <ImageOverlay
-                      key={mapKey}
-                      url={`${import.meta.env.BASE_URL}${effCfg.image}`}
+                      key={`depth-${mapKey}`}
+                      url={mapUrl(`map-data/${effCfg.depthFile}`)}
                       bounds={IMAGE_BOUNDS}
+                      className="leaflet-depth-overlay"
+                    />
+                  )}
+
+                  <FitBoundsController fitRef={fitBoundsRef} />
+
+                  {/* Deep Desert zone grid overlay */}
+                  {mapKey === 'DeepDesert' && (
+                    <ZoneGridLayer effCfg={effCfg} />
+                  )}
+
+                  {/* Density heatmap overlay — drawn below spawn icons */}
+                  {heatmapMode && (
+                    <HeatmapCanvasLayer
+                      mapKey={mapKey}
+                      effCfg={effCfg}
+                      filter={filter}
                     />
                   )}
 
@@ -1061,24 +1463,20 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
                     spawns={spawns}
                     effCfg={effCfg}
                     filter={filter}
+                    heatmapMode={heatmapMode}
                   />
 
                   {/* Live entity markers — draggable for direct teleport */}
                   {(filter.players || filter.vehicles) && orderedLive
                     .filter((m) => m.type === 'player' ? filter.players : filter.vehicles)
                     .map((m) => {
-                      const center = worldToLatLng(m.x, m.y, effCfg)
-                      const isPlayer = m.type === 'player'
+                      const { center, isPlayer, size, icon, selectedIcon } = m
                       const isSelected = m.fls_id === selectedFlsId
-                      const color = isSelected ? '#f59e0b' : (CAT_COLOR[m.type] ?? CAT_COLOR.base)
-                      const size = isPlayer ? 32 : 24
-                      const html = `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2.5px solid #0b0b0b;box-shadow:0 0 0 1.5px ${color}40;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#0b0b0b;line-height:1;cursor:${isPlayer ? 'grab' : 'default'}">${isPlayer ? (m.name?.[0]?.toUpperCase() ?? '?') : '🚗'}</div>`
-                      const icon = L.divIcon({ html, iconSize: [size, size], iconAnchor: [size / 2, size / 2], className: '' })
                       return (
                         <Marker
                           key={`${m.type}-${m.id}`}
                           position={center}
-                          icon={icon}
+                          icon={isSelected ? selectedIcon : icon}
                           draggable={isPlayer}
                           eventHandlers={{
                             click: () => {
@@ -1087,15 +1485,14 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
                                 setTeleportFlsId(m.fls_id!)
                               }
                             },
+                            dragstart: () => { isDragging.current = true },
                             dragend: (e) => {
+                              isDragging.current = false
                               if (!m.fls_id) return
                               const marker = e.target as L.Marker
                               const { lat, lng } = marker.getLatLng()
-                              // Reset marker to original position immediately — prevents
-                              // visual ghost if user cancels the confirmation.
                               marker.setLatLng(center)
                               const { x, y } = latLngToWorld(lat, lng, effCfg)
-                              // Show confirmation instead of teleporting immediately.
                               setDragConfirm({
                                 flsId: m.fls_id!,
                                 name: m.name || m.fls_id!,
@@ -1156,7 +1553,6 @@ export default function LiveMapTab({ isActive = true }: { isActive?: boolean }) 
 
       </div>
 
-      {/* Drag-to-teleport confirmation — marker already snapped back on dragend */}
       <ConfirmDialog
         open={dragConfirm !== null}
         title={t('liveMap.dragTeleportTitle', { name: dragConfirm?.name ?? '' })}

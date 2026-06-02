@@ -103,7 +103,12 @@
     "filterKeys": "Clés Pentabouclier",
     "filterSearch": "Trouver un filtre…",
     "dragTeleportTitle": "Téléporter {{name}} ?",
-    "dragTeleportDesc": "Accrochage sûr vers ({{x}}, {{y}}) — le joueur atterrira sur le sol le plus proche."
+    "dragTeleportDesc": "Accrochage sûr vers ({{x}}, {{y}}) — le joueur atterrira sur le sol le plus proche.",
+    "filterDensity": "Superposition de densité",
+    "densityOverlay": "Afficher la densité des ressources",
+    "filterHazards": "Dangers",
+    "densityNoneSelected": "Activez des types de ressources ci-dessus pour voir leur densité.",
+    "clearFilters": "Effacer les filtres"
   },
   "battlegroup": {
     "statusTitle": "État du groupe de combat",

@@ -15,10 +15,13 @@ type ItemDataFile = {
 let cache: ItemDataFile | null = null
 let fetchPromise: Promise<ItemDataFile> | null = null
 
+export const cdnBase = (): string =>
+  ((import.meta.env.VITE_CDN_BASE_URL as string) ?? 'https://assets.dune.layout.tools').replace(/\/$/, '')
+
 export function getItemData(): Promise<ItemDataFile> {
   if (cache) return Promise.resolve(cache)
   if (fetchPromise) return fetchPromise
-  fetchPromise = fetch('/item-data.json')
+  fetchPromise = fetch(`${cdnBase()}/item-data.json`)
     .then((r) => r.json() as Promise<ItemDataFile>)
     .then((data) => {
       cache = data

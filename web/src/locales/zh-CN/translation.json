@@ -103,7 +103,12 @@
     "filterKeys": "五护盾钥匙",
     "filterSearch": "查找筛选器…",
     "dragTeleportTitle": "传送 {{name}}？",
-    "dragTeleportDesc": "安全吸附至 ({{x}}, {{y}})，玩家将落在最近的有效地面上。"
+    "dragTeleportDesc": "安全吸附至 ({{x}}, {{y}})，玩家将落在最近的有效地面上。",
+    "filterDensity": "密度叠加",
+    "densityOverlay": "显示资源密度",
+    "filterHazards": "危险",
+    "densityNoneSelected": "启用上方资源类型以查看其密度。",
+    "clearFilters": "清除筛选"
   },
   "battlegroup": {
     "statusTitle": "战斗群状态",

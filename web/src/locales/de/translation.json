@@ -103,7 +103,12 @@
     "filterKeys": "Pentashild-Schlüssel",
     "filterSearch": "Filter suchen…",
     "dragTeleportTitle": "{{name}} teleportieren?",
-    "dragTeleportDesc": "Sicher am nächsten gültigen Boden in der Nähe von ({{x}}, {{y}}) einrasten."
+    "dragTeleportDesc": "Sicher am nächsten gültigen Boden in der Nähe von ({{x}}, {{y}}) einrasten.",
+    "filterDensity": "Dichte-Overlay",
+    "densityOverlay": "Ressourcendichte anzeigen",
+    "filterHazards": "Gefahren",
+    "densityNoneSelected": "Ressourcentypen oben aktivieren, um die Dichte zu sehen.",
+    "clearFilters": "Filter zurücksetzen"
   },
   "battlegroup": {
     "statusTitle": "Kampfgruppenstatus",

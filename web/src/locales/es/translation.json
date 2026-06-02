@@ -103,7 +103,12 @@
     "filterKeys": "Llaves Pentaescudo",
     "filterSearch": "Buscar filtro…",
     "dragTeleportTitle": "¿Teleportar a {{name}}?",
-    "dragTeleportDesc": "Ajuste seguro a ({{x}}, {{y}}) — el jugador aterrizará en el suelo válido más cercano."
+    "dragTeleportDesc": "Ajuste seguro a ({{x}}, {{y}}) — el jugador aterrizará en el suelo válido más cercano.",
+    "filterDensity": "Superposición de densidad",
+    "densityOverlay": "Mostrar densidad de recursos",
+    "filterHazards": "Peligros",
+    "densityNoneSelected": "Activa tipos de recursos arriba para ver su densidad.",
+    "clearFilters": "Borrar filtros"
   },
   "battlegroup": {
     "statusTitle": "Estado del grupo de batalla",
