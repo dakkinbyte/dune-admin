@@ -20,7 +20,7 @@ COPY web/ ./
 RUN VITE_MARKET_BOT_ENABLED=true pnpm build
 
 # ── Go build ──────────────────────────────────────────────────────────────────
-FROM --platform=$BUILDPLATFORM golang:1.26.3 AS go-builder
+FROM --platform=$BUILDPLATFORM golang:1.26.4 AS go-builder
 
 WORKDIR /build
 
