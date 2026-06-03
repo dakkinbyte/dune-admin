@@ -285,7 +285,7 @@ make verify   # fmt-check + vet + test-race + vulncheck + lint + gocognit
 
 ## Item data (optional)
 
-`item-data.json` provides friendly item names, stack limits, volume, tier, and rarity. It ships with the repo but can be regenerated from game PAK files using [dune-item-data](https://github.com/Icehunter/dune-item-data).
+`item-data.json` provides friendly item names, stack limits, volume, tier, and rarity. It ships with the repo.
 
 Without it the panel still works — inventory items show raw template IDs.
 
