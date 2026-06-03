@@ -537,7 +537,22 @@ func (e *Exchange) categoryFor(item CatalogItem) (mask int32, depth int16, ok bo
 	return 0, 0, false
 }
 
-func (e *Exchange) buyPlayerListings(ctx context.Context, orderExpiry int64, snap configValues) {
+// buyExpiryCutoff returns the game-time cutoff for filtering already-expired
+// player sell orders from the buy query. Returns 0 when the epoch is unknown;
+// the SQL uses ($2 = 0 OR ...) to skip the filter in that case so no valid
+// orders are missed on first boot or after cache clear.
+//
+// CRITICAL: this is a SELECT filter only — the bot must NEVER delete, expire,
+// or otherwise modify player (is_npc_order=FALSE) orders. Players must go to
+// the exchange access point to collect their items and Solari manually.
+func buyExpiryCutoff(gameNow int64) int64 {
+	if gameNow <= 0 {
+		return 0
+	}
+	return gameNow
+}
+
+func (e *Exchange) buyPlayerListings(ctx context.Context, orderExpiry int64, gameNow int64, snap configValues) {
 	if snap.BuyThreshold <= 0 {
 		return
 	}
@@ -548,6 +563,16 @@ func (e *Exchange) buyPlayerListings(ctx context.Context, orderExpiry int64, sna
 	// Use actual current stack_size from items so partial fills pay the right amount.
 	// quality_level is needed to compare the player's grade-adjusted price against the
 	// bot's grade-adjusted reference price rather than the raw base price.
+	//
+	// Exclude orders whose expiration_time has already passed in game time.
+	// The game server's dune_exchange_expire_orders proc runs every ~5 minutes and
+	// processes these same expired orders; buying them races with that proc and can
+	// cause the seller's Completed-tab entry ("Take Solari") to be purged before
+	// they collect. When the epoch is unknown (cutoff = 0) we skip the filter so
+	// no valid orders are dropped on first boot.
+	//
+	// MUST NOT touch player orders — only the SELECT filter is applied here.
+	cutoff := buyExpiryCutoff(gameNow)
 	rows, err := e.db.Query(ctx, `
 		SELECT o.id, o.template_id, o.item_price, o.item_id, o.owner_id,
 		       COALESCE(i.stack_size, s.initial_stack_size) AS actual_stack,
@@ -556,7 +581,8 @@ func (e *Exchange) buyPlayerListings(ctx context.Context, orderExpiry int64, sna
 		JOIN dune.dune_exchange_sell_orders s ON s.order_id = o.id
 		LEFT JOIN dune.items i ON i.id = o.item_id
 		WHERE o.is_npc_order = FALSE AND o.exchange_id = $1
-		LIMIT $2`, e.exchangeID, snap.MaxBuys*10)
+		  AND ($2 = 0 OR o.expiration_time IS NULL OR o.expiration_time > $2)
+		LIMIT $3`, e.exchangeID, cutoff, snap.MaxBuys*10)
 	if err != nil {
 		log.Printf("buy: query: %v", err)
 		return
@@ -776,7 +802,7 @@ func (e *Exchange) BuyTick(ctx context.Context) {
 		orderExpiry = 999_999_999
 	}
 
-	e.buyPlayerListings(ctx, orderExpiry, snap)
+	e.buyPlayerListings(ctx, orderExpiry, gameNow, snap)
 	e.lastBuyNano.Store(time.Now().UnixNano())
 }
 

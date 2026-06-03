@@ -290,6 +290,35 @@ func newTestExchangeWithCategories(t *testing.T, cats map[string]categoryEntry) 
 	return e
 }
 
+// TestBuyExpiryCutoff verifies that the buy query's game-time expiry filter only
+// activates when the epoch is known. When gameNow <= 0 the cutoff is 0, which
+// triggers the SQL ($2 = 0 OR ...) short-circuit — no player orders are touched.
+//
+// CRITICAL: this filter is a SELECT guard only. The bot must NEVER delete or
+// expire player (is_npc_order=FALSE) orders. Players collect their items and
+// Solari at the exchange access point. The game server's dune_exchange_expire_orders
+// proc owns the lifecycle of player orders — we must not interfere.
+func TestBuyExpiryCutoff(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		gameNow    int64
+		wantCutoff int64
+	}{
+		{"zero skips filter (epoch unknown)", 0, 0},
+		{"negative skips filter", -1, 0},
+		{"positive passes through as cutoff", 1_800_000, 1_800_000},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := buyExpiryCutoff(tt.gameNow); got != tt.wantCutoff {
+				t.Errorf("buyExpiryCutoff(%d) = %d, want %d", tt.gameNow, got, tt.wantCutoff)
+			}
+		})
+	}
+}
+
 func TestCategoryFor_LiveCacheTakesPrecedenceOverComputedMask(t *testing.T) {
 	t.Parallel()
 
