@@ -12,6 +12,7 @@ interface NumberInputProps {
   isDisabled?: boolean
   className?: string
   showButtons?: boolean
+  formatOptions?: Intl.NumberFormatOptions
 }
 
 export function NumberInput({
@@ -26,6 +27,7 @@ export function NumberInput({
   isDisabled,
   className,
   showButtons = true,
+  formatOptions,
 }: NumberInputProps) {
   const field = (
     <NumberField
@@ -38,6 +40,7 @@ export function NumberInput({
       aria-label={ariaLabel ?? label ?? prefix}
       variant="secondary"
       className={prefix ? 'flex-1 min-w-0' : className}
+      formatOptions={formatOptions}
     >
       {label && <Label className="text-xs text-muted">{label}</Label>}
       <NumberField.Group

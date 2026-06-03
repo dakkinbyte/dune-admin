@@ -213,6 +213,7 @@ function SettingRow({
                   onChange={(v) => onChange(String(v))}
                   showButtons={false}
                   className="w-32"
+                  formatOptions={item.type === 'float' ? { minimumFractionDigits: 1 } : undefined}
                 />
               )}
         {USER_SOURCES.has(item.source) && (
