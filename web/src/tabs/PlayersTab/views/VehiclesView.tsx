@@ -22,7 +22,7 @@ export function VehiclesView({ player }: Props) {
     { key: 'chassis', label: t('players.vehicles.columns.chassis') },
     { key: 'name', label: t('players.vehicles.columns.name') },
     { key: 'type', label: t('players.vehicles.columns.type'), sortable: false },
-    { key: 'actions', label: '�', sortable: false },
+    { key: 'actions', label: ' ', sortable: false },
   ]
 
   useEffect(() => {
@@ -96,7 +96,7 @@ export function VehiclesView({ player }: Props) {
         renderCell={(v, key) => {
           switch (key) {
             case 'class': return <span className="font-semibold">{v.class}</span>
-            case 'location': return <span className="text-muted">{v.map || '—'}</span>
+            case 'location': return <span className="text-muted">{v.map || 'â'}</span>
             case 'chassis':
               return (
                 <span className={v.chassis_durability < 0.3 ? 'text-danger' : 'text-muted'}>
@@ -104,7 +104,7 @@ export function VehiclesView({ player }: Props) {
                   %
                 </span>
               )
-            case 'name': return <span className="text-muted">{v.vehicle_name || '—'}</span>
+            case 'name': return <span className="text-muted">{v.vehicle_name || 'â'}</span>
             case 'type':
               return (
                 <div className="flex gap-1">

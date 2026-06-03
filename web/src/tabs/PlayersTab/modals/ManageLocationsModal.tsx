@@ -16,7 +16,7 @@ const COLUMNS: Column<LocationKey>[] = [
   { key: 'x', label: 'X', width: 100 },
   { key: 'y', label: 'Y', width: 100 },
   { key: 'z', label: 'Z', width: 80 },
-  { key: 'actions', label: ' ', sortable: false, width: 80 },
+  { key: 'actions', label: ' ', sortable: false, width: 80 },
 ]
 
 export function ManageLocationsModal({ onClose }: Props) {

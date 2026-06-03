@@ -21,7 +21,7 @@ export function InventoryView({ player }: Props) {
     { key: 'stack', label: t('players.inventory.columns.stack') },
     { key: 'quality', label: t('players.inventory.columns.quality') },
     { key: 'durability', label: t('players.inventory.columns.durability') },
-    { key: 'actions', label: ' ', sortable: false },
+    { key: 'actions', label: ' ', sortable: false },
   ]
 
   useEffect(() => {

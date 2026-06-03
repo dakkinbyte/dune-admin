@@ -41,7 +41,7 @@ type TrainerKey = (typeof TRAINERS)[number]
 
 const MAIN_QUESTS = [
   { id: 'DA_MQ_ANewBeginning', label: '1. A New Beginning', nodes: 132 },
-  { id: 'DA_MQ_AssassinsHandbook', label: '2. Assassin’s Handbook', nodes: 91 },
+  { id: 'DA_MQ_AssassinsHandbook', label: '2. Assassinâs Handbook', nodes: 91 },
   { id: 'DA_MQ_FindTheFremen', label: '3. Find the Fremen', nodes: 46 },
   { id: 'DA_MQ_TheGreatConvention', label: '4. The Great Convention', nodes: 90 },
   { id: 'DA_MQ_TheGreatConventionPt2', label: '5. Great Convention Pt 2', nodes: 109 },
@@ -91,7 +91,7 @@ function KeystonesToggle({ keystones }: { keystones: KeystoneRow[] }) {
         onClick={() => setOpen((v) => !v)}
         className="text-xs text-muted/70 hover:text-muted flex items-center gap-0.5"
       >
-        <span>{open ? '▾' : '▸'}</span>
+        <span>{open ? 'â¾' : 'â¸'}</span>
         {keystones.length}
         {' '}
         keystone
@@ -101,7 +101,7 @@ function KeystonesToggle({ keystones }: { keystones: KeystoneRow[] }) {
         <div className="flex flex-col gap-0.5 mt-0.5">
           {keystones.map((k) => (
             <span key={k.id} className="text-xs font-mono text-muted">
-              ↳
+              â³
               {' '}
               {k.name.replace(/^DA_\w+Keystone_/, '').replace(/_/g, ' ')}
               {k.cost > 0 && (
@@ -697,8 +697,8 @@ export function ActionsView({ player }: Props) {
                   { key: 'track', label: t('players.actions.specs.columns.track'), isRowHeader: true },
                   { key: 'xp', label: t('players.actions.specs.columns.xp') },
                   { key: 'level', label: t('players.actions.specs.columns.level') },
-                  { key: 'grant', label: '�', sortable: false },
-                  { key: 'reset', label: '�', sortable: false },
+                  { key: 'grant', label: ' ', sortable: false },
+                  { key: 'reset', label: ' ', sortable: false },
                 ]}
                 rows={XP_TRACKS}
                 rowId={(t) => t}
@@ -1163,7 +1163,7 @@ export function ActionsView({ player }: Props) {
                           }
                         >
                           <span>
-                            {picked ? '✓ ' : '  '}
+                            {picked ? 'â ' : '  '}
                             {id}
                           </span>
                           <span className="text-muted">
@@ -1239,9 +1239,9 @@ export function ActionsView({ player }: Props) {
                 renderCell={(n, key) => {
                   switch (key) {
                     case 'node': return <span className="font-mono">{n.node_id}</span>
-                    case 'done': return n.is_complete ? '✓' : '—'
-                    case 'revealed': return n.is_revealed ? '✓' : '—'
-                    case 'reward': return n.has_pending_reward ? '✓' : '—'
+                    case 'done': return n.is_complete ? 'â' : 'â'
+                    case 'revealed': return n.is_revealed ? 'â' : 'â'
+                    case 'reward': return n.has_pending_reward ? 'â' : 'â'
                     case 'actions':
                       return (
                         <div className="grid grid-cols-2 gap-1 w-full">
@@ -1325,7 +1325,7 @@ export function ActionsView({ player }: Props) {
                       onPress={
                         danger
                           ? () =>
-                              gate(t('players.actions.experimental.runTitle', { label }), desc.replace(/^⚠ DESTRUCTIVE — /, ''), t('players.actions.experimental.confirmRun'), () =>
+                              gate(t('players.actions.experimental.runTitle', { label }), desc.replace(/^â {2}DESTRUCTIVE â /, ''), t('players.actions.experimental.confirmRun'), () =>
                                 run(
                                   () => api.players.cheatScript(player.fls_id, name),
                                   `CheatScript ${name} sent for ${player.name}`,
@@ -1657,8 +1657,8 @@ export function ActionsView({ player }: Props) {
                             >
                               <span className="font-medium">{p.name}</span>
                               <span className="text-muted">
-                                {p.map || '—'}
-                                {' · '}
+                                {p.map || 'â'}
+                                {' Â· '}
                                 {p.online_status}
                               </span>
                             </button>
@@ -1708,7 +1708,7 @@ export function ActionsView({ player }: Props) {
                   <textarea
                     value={whisperText}
                     onChange={(e) => setWhisperText(e.target.value)}
-                    placeholder={`Message to ${player.name}…`}
+                    placeholder={`Message to ${player.name}â¦`}
                     rows={2}
                     maxLength={500}
                     className="w-full bg-surface border border-border rounded px-2 py-1.5 text-sm text-foreground focus:outline-none focus:border-accent/60 resize-y"
@@ -1945,7 +1945,7 @@ export function ActionsView({ player }: Props) {
                             onPress={() => setPendingTags((prev) => prev.filter((t) => t !== tag))}
                             aria-label={`Unstage ${tag}`}
                           >
-                            ✕
+                            â
                           </Button>
                         </div>
                       ))}
@@ -1984,7 +1984,7 @@ export function ActionsView({ player }: Props) {
                         className="min-h-0 max-h-full"
                         columns={[
                           { key: 'tag', label: t('players.actions.tags.tagColumn'), isRowHeader: true },
-                          { key: 'actions', label: '�', sortable: false },
+                          { key: 'actions', label: ' ', sortable: false },
                         ]}
                         rows={filteredActiveTags}
                         rowId={(t) => t}
@@ -2003,7 +2003,7 @@ export function ActionsView({ player }: Props) {
                               }}
                               aria-label={`Remove ${tag}`}
                             >
-                              ✕
+                              â
                             </Button>
                           )
                         }}
