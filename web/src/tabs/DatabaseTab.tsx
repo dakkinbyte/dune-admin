@@ -9,7 +9,7 @@ import { acceptCompletion } from '@codemirror/autocomplete'
 import { tags as hlTags } from '@lezer/highlight'
 import { Button, SearchField, Spinner, toast } from '@heroui/react'
 import { api } from '../api/client'
-import { DataTable, Icon, NumberInput, PageHeader, SideNav, type Column } from '../dune-ui'
+import { DataTable, Icon, LoadingState, NumberInput, PageHeader, SideNav, type Column } from '../dune-ui'
 
 // ── CodeMirror theme ────────────────────────────────────────────────────────
 
@@ -417,9 +417,7 @@ export default function DatabaseTab({
       )}
 
       {loading && (
-        <div className="flex justify-center py-8 shrink-0">
-          <Spinner size="lg" />
-        </div>
+        <LoadingState size="md" className="shrink-0" />
       )}
 
       {error && !loading && (

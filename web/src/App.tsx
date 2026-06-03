@@ -572,7 +572,7 @@ function AppCore({ isSignedIn }: { isSignedIn: boolean }) {
 // state and the isActive auto-refresh contract when switching via the sidebar.
 function TabPane({ active, children }: { active: boolean, children: ReactNode }) {
   return (
-    <div className={`h-full min-h-0 ${active ? 'flex flex-col' : 'hidden'}`}>
+    <div className={`h-full min-h-0 ${active ? 'flex flex-col dune-tab-active' : 'hidden'}`}>
       {children}
     </div>
   )

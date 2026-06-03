@@ -75,67 +75,62 @@ export default function BasesTab({ isSignedIn = true }: { isSignedIn?: boolean }
         </Button>
       </PageHeader>
 
-      {loading
+      {unsupported
         ? (
-            <div className="flex justify-center py-12">
-              <Spinner size="lg" />
-            </div>
+            <Card className="self-center max-w-sm">
+              <Card.Header>
+                <Card.Title className="text-accent text-sm">{t('bases.featureNotAvailable')}</Card.Title>
+              </Card.Header>
+              <Card.Content>
+                <p className="text-xs text-muted text-center">
+                  {t('bases.featureNotAvailableDesc')}
+                </p>
+              </Card.Content>
+            </Card>
           )
-        : unsupported
-          ? (
-              <Card className="self-center max-w-sm">
-                <Card.Header>
-                  <Card.Title className="text-accent text-sm">{t('bases.featureNotAvailable')}</Card.Title>
-                </Card.Header>
-                <Card.Content>
-                  <p className="text-xs text-muted text-center">
-                    {t('bases.featureNotAvailableDesc')}
-                  </p>
-                </Card.Content>
-              </Card>
-            )
-          : (
-              <DataTable<BaseRow, Key>
-                aria-label={t('bases.ariaLabel')}
-                className="min-h-0 max-h-full"
-                columns={COLUMNS}
-                rows={bases}
-                rowId={(b) => String(b.id)}
-                initialSort={{ column: 'id', direction: 'ascending' }}
-                sortValue={(b, k) => (k === 'actions' ? '' : (b as unknown as Record<string, string | number>)[k])}
-                emptyState={<div className="py-8 text-center text-muted">{t('bases.noBasesFound')}</div>}
-                renderCell={(b, key) => {
-                  switch (key) {
-                    case 'id':
-                      return <span className="font-mono text-muted">{b.id}</span>
-                    case 'name':
-                      return b.name || <span className="text-muted">—</span>
-                    case 'pieces':
-                      return <span className="text-muted">{b.pieces}</span>
-                    case 'placeables':
-                      return <span className="text-muted">{b.placeables}</span>
-                    case 'actions':
-                      return isSignedIn
-                        ? (
-                            <a href={api.bases.exportUrl(b.id)} download={b.name ? `${b.name}.json` : `base-${b.id}.json`}>
-                              <Button size="sm" variant="outline" className="w-full">
-                                <Icon name="download" />
-                                {' '}
-                                {t('bases.export')}
-                              </Button>
-                            </a>
-                          )
-                        : (
-                            <Button size="sm" variant="outline" className="w-full" isDisabled>
+        : (
+            <DataTable<BaseRow, Key>
+              aria-label={t('bases.ariaLabel')}
+              className="min-h-0 max-h-full"
+              columns={COLUMNS}
+              rows={bases}
+              loading={loading}
+              rowId={(b) => String(b.id)}
+              initialSort={{ column: 'id', direction: 'ascending' }}
+              sortValue={(b, k) => (k === 'actions' ? '' : (b as unknown as Record<string, string | number>)[k])}
+              emptyState={<div className="py-8 text-center text-muted">{t('bases.noBasesFound')}</div>}
+              renderCell={(b, key) => {
+                switch (key) {
+                  case 'id':
+                    return <span className="font-mono text-muted">{b.id}</span>
+                  case 'name':
+                    return b.name || <span className="text-muted">—</span>
+                  case 'pieces':
+                    return <span className="text-muted">{b.pieces}</span>
+                  case 'placeables':
+                    return <span className="text-muted">{b.placeables}</span>
+                  case 'actions':
+                    return isSignedIn
+                      ? (
+                          <a href={api.bases.exportUrl(b.id)} download={b.name ? `${b.name}.json` : `base-${b.id}.json`}>
+                            <Button size="sm" variant="outline" className="w-full">
                               <Icon name="download" />
                               {' '}
                               {t('bases.export')}
                             </Button>
-                          )
-                  }
-                }}
-              />
-            )}
+                          </a>
+                        )
+                      : (
+                          <Button size="sm" variant="outline" className="w-full" isDisabled>
+                            <Icon name="download" />
+                            {' '}
+                            {t('bases.export')}
+                          </Button>
+                        )
+                }
+              }}
+            />
+          )}
     </div>
   )
 }

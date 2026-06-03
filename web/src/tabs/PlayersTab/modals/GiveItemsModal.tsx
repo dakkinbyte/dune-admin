@@ -6,7 +6,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { api } from '../../../api/client'
 import type { Player } from '../../../api/client'
-import { Icon, NumberInput } from '../../../dune-ui'
+import { Icon, LoadingState, NumberInput } from '../../../dune-ui'
 import type { PacksData } from '../types'
 import { cdnBase } from '../../../data/itemData'
 
@@ -136,7 +136,7 @@ export function GiveItemsModal({ player, open, onClose }: Props) {
             <Modal.Body className="flex flex-col gap-3">
               {loading
                 ? (
-                    <div className="flex justify-center py-6"><Spinner size="lg" /></div>
+                    <LoadingState size="sm" />
                   )
                 : (
                     <>

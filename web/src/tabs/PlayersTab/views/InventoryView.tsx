@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Button, Spinner, toast } from '@heroui/react'
+import { Button, toast } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../../api/client'
 import type { Player, InventoryItem } from '../../../api/client'
-import { DataTable, Icon, SectionLabel, type Column } from '../../../dune-ui'
+import { DataTable, Icon, LoadingState, SectionLabel, type Column } from '../../../dune-ui'
 
 type ItemKey = 'template' | 'stack' | 'quality' | 'durability' | 'actions'
 
@@ -21,7 +21,7 @@ export function InventoryView({ player }: Props) {
     { key: 'stack', label: t('players.inventory.columns.stack') },
     { key: 'quality', label: t('players.inventory.columns.quality') },
     { key: 'durability', label: t('players.inventory.columns.durability') },
-    { key: 'actions', label: '', sortable: false },
+    { key: 'actions', label: ' ', sortable: false },
   ]
 
   useEffect(() => {
@@ -79,7 +79,7 @@ export function InventoryView({ player }: Props) {
   }
 
   if (loading) {
-    return <div className="flex justify-center py-8"><Spinner size="lg" /></div>
+    return <LoadingState size="md" />
   }
 
   return (
@@ -106,7 +106,7 @@ export function InventoryView({ player }: Props) {
           if (k === 'durability') return typeof i.durability === 'number' ? i.durability : 0
           return ''
         }}
-        emptyState={<div className="py-6 text-center text-muted">{t('players.inventory.noItemsFound')}</div>}
+        emptyState={<div className="py-8 text-center text-muted">{t('players.inventory.noItemsFound')}</div>}
         renderCell={(i, key) => {
           switch (key) {
             case 'template':

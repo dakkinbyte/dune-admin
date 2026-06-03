@@ -76,6 +76,15 @@
   --danger:               #c9230a;   /* amber-red */
   --danger-foreground:    #ffffff;
 
+  /* Item rarity tiers — used by Market grid/table to color names & borders */
+  --rarity-common:        var(--foreground);
+  --rarity-uncommon:      var(--success);
+  --rarity-rare:          #4a90e2;   /* blue */
+  --rarity-epic:          #a855f7;   /* purple */
+  --rarity-legendary:     #f0a830;   /* amber */
+  --rarity-unique:        #f97316;   /* orange */
+  --rarity-memento:       #f43f5e;   /* rose */
+
   /* Borders / separators — mid-tone */
   --border:               #4e3411;
   --separator:            #2a1d0c;   /* subtle in-table dividers */
@@ -112,6 +121,13 @@
   --color-surface-alt:    var(--surface-alt);
   --color-surface-hover:  var(--surface-hover);
   --color-accent-soft:    var(--accent-soft-bg);
+  --color-rarity-common:     var(--rarity-common);
+  --color-rarity-uncommon:   var(--rarity-uncommon);
+  --color-rarity-rare:       var(--rarity-rare);
+  --color-rarity-epic:       var(--rarity-epic);
+  --color-rarity-legendary:  var(--rarity-legendary);
+  --color-rarity-unique:     var(--rarity-unique);
+  --color-rarity-memento:    var(--rarity-memento);
 }
 
 html, body, #root {
@@ -296,4 +312,16 @@ pre, .font-mono[class*="border"] {
 [class*='cl-card '] {
   border: 1px solid rgba(201, 130, 10, 0.2) !important;
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.02) inset !important;
+}
+
+/* ── Tab content fade-in ──────────────────────────────────────────────────
+   Triggered when a keep-alive TabPane becomes active (hidden → flex).
+   Pure opacity fade — no transform to avoid layout thrash on content reloads. */
+@keyframes dune-tab-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.dune-tab-active {
+  animation: dune-tab-in 180ms ease-out both;
 }

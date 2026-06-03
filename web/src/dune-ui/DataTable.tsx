@@ -1,5 +1,5 @@
 import { useState, useMemo, type ReactNode } from 'react'
-import { Table, TableLayout, Virtualizer } from '@heroui/react'
+import { Skeleton, Table, TableLayout, Virtualizer } from '@heroui/react'
 import type { SortDescriptor } from '@heroui/react'
 import { Icon } from './Icon'
 
@@ -31,6 +31,10 @@ type Props<T, K extends string> = {
   'sortValue'?: (row: T, key: K) => string | number | null | undefined
   /** Rendered when `rows` is empty. */
   'emptyState'?: ReactNode
+  /** Shows skeleton rows instead of data while true. */
+  'loading'?: boolean
+  /** Number of skeleton rows to show while loading. Defaults to 5. */
+  'skeletonRows'?: number
   /** Called when a row is clicked / activated. */
   'onRowAction'?: (row: T) => void
   /** Extra classes for the outer Table element. */
@@ -63,6 +67,8 @@ export function DataTable<T, K extends string>({
   initialSort,
   sortValue,
   emptyState,
+  loading = false,
+  skeletonRows = 5,
   onRowAction,
   className,
   virtualized = false,
@@ -98,7 +104,7 @@ export function DataTable<T, K extends string>({
           aria-label={ariaLabel}
           sortDescriptor={sortDescriptor}
           onSortChange={setSortDescriptor}
-          {...(onRowAction
+          {...(!loading && onRowAction
             ? {
                 onRowAction: (key) => {
                   const row = sorted.find((r) => rowId(r) === String(key))
@@ -107,13 +113,9 @@ export function DataTable<T, K extends string>({
               }
             : {})}
         >
-          {/* React Aria collections require the `columns` prop + render-function
-              pattern when the parent (Virtualizer/items) does its own
-              introspection — `columns.map(...)` as static children fails to
-              expose isRowHeader to the TableCollection. */}
           <Table.Header columns={cols}>
             {(col: Column<K>) => {
-              const sortable = col.sortable !== false
+              const sortable = col.sortable !== false && !loading
               return (
                 <Table.Column
                   id={col.key}
@@ -143,20 +145,25 @@ export function DataTable<T, K extends string>({
               )
             }}
           </Table.Header>
-          {
-            virtualized
+          {loading
+            ? (
+                <Table.Body>
+                  {Array.from({ length: skeletonRows }, (_, i) => (
+                    <Table.Row key={`skeleton-${i}`} id={`skeleton-${i}`}>
+                      {cols.map((c) => (
+                        <Table.Cell key={c.key}>
+                          <Skeleton className="h-3 w-full rounded" />
+                        </Table.Cell>
+                      ))}
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              )
+            : virtualized
               ? (
-                // Virtualizer-compatible Body: items-prop + render function so
-                // TableLayout can window the rows it actually paints.
-                // HeroUI types items as `object`; we cast to keep T generic
-                // (rows can be primitive types like strings in our usage).
                   <Table.Body
                     items={sorted as unknown as object[]}
-                    renderEmptyState={
-                      emptyState
-                        ? () => <>{emptyState}</>
-                        : undefined
-                    }
+                    renderEmptyState={emptyState ? () => <>{emptyState}</> : undefined}
                   >
                     {((row: T) => (
                       <Table.Row id={rowId(row)}>
@@ -169,11 +176,7 @@ export function DataTable<T, K extends string>({
                 )
               : (
                   <Table.Body
-                    renderEmptyState={
-                      emptyState
-                        ? () => <>{emptyState}</>
-                        : undefined
-                    }
+                    renderEmptyState={emptyState ? () => <>{emptyState}</> : undefined}
                   >
                     {sorted.map((row) => (
                       <Table.Row key={rowId(row)} id={rowId(row)}>
@@ -183,8 +186,7 @@ export function DataTable<T, K extends string>({
                       </Table.Row>
                     ))}
                   </Table.Body>
-                )
-          }
+                )}
         </Table.Content>
       </Table.ScrollContainer>
     </Table>

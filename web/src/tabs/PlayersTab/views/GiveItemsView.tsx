@@ -5,7 +5,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { api } from '../../../api/client'
 import type { Player } from '../../../api/client'
-import { Icon, NumberInput } from '../../../dune-ui'
+import { Icon, LoadingState, NumberInput } from '../../../dune-ui'
 import type { PacksData } from '../types'
 import { cdnBase } from '../../../data/itemData'
 
@@ -121,7 +121,7 @@ export function GiveItemsView({ player }: Props) {
   }
 
   if (loading) {
-    return <div className="flex justify-center py-12"><Spinner size="lg" /></div>
+    return <LoadingState />
   }
 
   return (

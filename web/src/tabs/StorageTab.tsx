@@ -5,7 +5,7 @@ import {
 } from '@heroui/react'
 import { api } from '../api/client'
 import type { InventoryItem } from '../api/client'
-import { DataTable, Icon, NumberInput, PageHeader, SideNav, type Column } from '../dune-ui'
+import { DataTable, Icon, LoadingState, NumberInput, PageHeader, SideNav, type Column } from '../dune-ui'
 
 type ItemKey = 'id' | 'template' | 'stack_size' | 'quality' | 'durability' | 'actions'
 
@@ -194,7 +194,7 @@ export default function StorageTab() {
 
                   {itemsLoading
                     ? (
-                        <div className="flex justify-center py-12"><Spinner size="lg" /></div>
+                        <LoadingState />
                       )
                     : (
                         <DataTable<InventoryItem, ItemKey>
@@ -367,7 +367,7 @@ function AddItemsModal({ container, open, onClose, onSuccess, onRefresh }: {
             <Modal.Body className="flex flex-col gap-3">
               {loading
                 ? (
-                    <div className="flex justify-center py-6"><Spinner size="lg" /></div>
+                    <LoadingState size="sm" />
                   )
                 : (
                     <>

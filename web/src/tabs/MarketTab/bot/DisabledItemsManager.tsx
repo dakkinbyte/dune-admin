@@ -22,7 +22,7 @@ export default function DisabledItemsManager({ config, onSaved }: Props) {
   const COLUMNS: Column<RowKey>[] = [
     { key: 'name', label: t('market.bot.disabledItems.columns.name') },
     { key: 'template_id', label: t('market.bot.disabledItems.columns.templateId') },
-    { key: 'actions', label: '', sortable: false },
+    { key: 'actions', label: ' ', sortable: false },
   ]
 
   useEffect(() => {

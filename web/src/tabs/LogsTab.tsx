@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Button, Checkbox, Chip, Spinner, toast } from '@heroui/react'
 import { api, getWsBase } from '../api/client'
 import type { LogPod, CheatEntry } from '../api/client'
-import { DataTable, Icon, SideNav, type Column } from '../dune-ui'
+import { DataTable, Icon, LoadingState, SideNav, type Column } from '../dune-ui'
 
 type ActiveView = 'pod' | 'cheats'
 type NavKey = 'cheats' | `pod:${string}`
@@ -213,7 +213,7 @@ export default function LogsTab({ control }: { control?: string }) {
 
                 {cheatsLoading
                   ? (
-                      <div className="flex justify-center py-12"><Spinner size="lg" /></div>
+                      <LoadingState />
                     )
                   : (
                       <DataTable<CheatEntry, CheatKey>

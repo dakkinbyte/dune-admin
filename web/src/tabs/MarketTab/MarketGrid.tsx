@@ -4,22 +4,22 @@ import { iconUrl, categoryColor, qualityLabel } from '../../utils/icons'
 
 const RARITY_BORDER: Record<string, string> = {
   common: 'border-border',
-  uncommon: 'border-success/60',
-  rare: 'border-blue-500/60',
-  epic: 'border-purple-500/60',
-  legendary: 'border-amber-500/60',
-  unique: 'border-orange-500/60',
-  memento: 'border-rose-500/60',
+  uncommon: 'border-rarity-uncommon/60',
+  rare: 'border-rarity-rare/60',
+  epic: 'border-rarity-epic/60',
+  legendary: 'border-rarity-legendary/60',
+  unique: 'border-rarity-unique/60',
+  memento: 'border-rarity-memento/60',
 }
 
 const RARITY_TEXT: Record<string, string> = {
   common: 'text-foreground',
-  uncommon: 'text-success',
-  rare: 'text-blue-400',
-  epic: 'text-purple-400',
-  legendary: 'text-amber-400',
-  unique: 'text-orange-400',
-  memento: 'text-rose-400',
+  uncommon: 'text-rarity-uncommon',
+  rare: 'text-rarity-rare',
+  epic: 'text-rarity-epic',
+  legendary: 'text-rarity-legendary',
+  unique: 'text-rarity-unique',
+  memento: 'text-rarity-memento',
 }
 
 type Props = {

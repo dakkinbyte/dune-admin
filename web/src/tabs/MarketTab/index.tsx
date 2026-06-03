@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Button, Spinner } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../api/client'
 import type { MarketItem } from '../../api/client'
-import { Icon, PageHeader } from '../../dune-ui'
+import { Icon, LoadingState, PageHeader } from '../../dune-ui'
 import MarketSidebar from './MarketSidebar'
 import MarketSearch, { type MarketFilters } from './MarketSearch'
 import MarketTable from './MarketTable'
@@ -18,6 +18,7 @@ export default function MarketTab() {
   const { t } = useTranslation()
   const [items, setItems] = useState<MarketItem[]>([])
   const [categories, setCategories] = useState<string[]>([])
+  const categoriesRef = useRef<string[]>([])
   const [loading, setLoading] = useState(false)
   const [filters, setFilters] = useState<MarketFilters>(DEFAULT_FILTERS)
   const [selected, setSelected] = useState<MarketItem | null>(null)
@@ -46,18 +47,21 @@ export default function MarketTab() {
             category: filters.category || undefined,
             owner: filters.owner || undefined,
           }),
-          categories.length === 0 ? api.market.categories() : Promise.resolve(categories),
+          categoriesRef.current.length === 0 ? api.market.categories() : Promise.resolve(categoriesRef.current),
         ]),
       )
       .then(([res, cats]) => {
         setItems(res.items)
-        if (categories.length === 0) setCategories(cats)
+        if (categoriesRef.current.length === 0) {
+          categoriesRef.current = cats
+          setCategories(cats)
+        }
       })
       .catch(() => {
         /* errors surface via empty state */
       })
       .finally(() => setLoading(false))
-  }, [filters, categories])
+  }, [filters])
 
   useEffect(() => {
     load()
@@ -118,11 +122,9 @@ export default function MarketTab() {
         <MarketSidebar categories={categories} selected={filters.category} onSelect={handleCategorySelect} />
 
         <div className="flex flex-1 min-w-0 min-h-0 overflow-hidden">
-          {loading
+          {loading && items.length === 0
             ? (
-                <div className="flex flex-1 justify-center py-12">
-                  <Spinner size="lg" />
-                </div>
+                <LoadingState fill />
               )
             : view === 'grid'
               ? (

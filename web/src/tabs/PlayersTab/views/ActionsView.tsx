@@ -13,7 +13,7 @@ import {
   Virtualizer,
   toast,
 } from '@heroui/react'
-import { ConfirmDialog, DataTable, Icon, NumberInput, Panel, SectionLabel } from '../../../dune-ui'
+import { ConfirmDialog, DataTable, Icon, LoadingState, NumberInput, Panel, SectionLabel } from '../../../dune-ui'
 import { ManageLocationsModal } from '../modals/ManageLocationsModal'
 import { MapCoordPickerModal } from '../modals/MapCoordPickerModal'
 import allGameplayTags from '../../../data/gameplayTags.json'
@@ -689,100 +689,97 @@ export function ActionsView({ player }: Props) {
                 </Button>
               </div>
               {player.online_status === 'Online' && onlineWarning}
-              {specsLoading
-                ? <div className="flex justify-center py-8"><Spinner size="lg" /></div>
-                : (
-                    <DataTable<string, 'track' | 'xp' | 'level' | 'grant' | 'reset'>
-                      aria-label={t('players.actions.specs.specsLabel')}
-                      className="min-h-0 max-h-full"
-                      columns={[
-                        { key: 'track', label: t('players.actions.specs.columns.track'), isRowHeader: true },
-                        { key: 'xp', label: t('players.actions.specs.columns.xp') },
-                        { key: 'level', label: t('players.actions.specs.columns.level') },
-                        { key: 'grant', label: '', sortable: false },
-                        { key: 'reset', label: '', sortable: false },
-                      ]}
-                      rows={XP_TRACKS}
-                      rowId={(t) => t}
-                      initialSort={{ column: 'track', direction: 'ascending' }}
-                      sortValue={(t, k) => {
-                        const found = playerSpecs.find((s) => s.track_type === t)
-                        if (k === 'track') return t
-                        if (k === 'xp') return found?.xp ?? 0
-                        if (k === 'level') return found?.level ?? 0
-                        return ''
-                      }}
-                      renderCell={(track, key) => {
-                        const found = playerSpecs.find((s) => s.track_type === track)
-                        const trackKeystones = playerKeystones.filter((k) => k.track === track)
-                        switch (key) {
-                          case 'track':
-                            return (
-                              <span className="inline-flex flex-col font-semibold align-top">
-                                <span>{track}</span>
-                                {trackKeystones.length > 0 && (
-                                  <KeystonesToggle keystones={trackKeystones} />
-                                )}
-                              </span>
-                            )
-                          case 'xp':
-                            return <span className="font-mono text-muted">{(found?.xp ?? 0).toLocaleString()}</span>
-                          case 'level':
-                            return <span className="font-mono text-muted">{found?.level ?? 0}</span>
-                          case 'grant':
-                            return (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                isDisabled={busy || player.online_status === 'Online'}
-                                onPress={() =>
-                                  run(
-                                    () => api.players.grantMaxSpec(player.controller_id, track),
-                                    `Grant max ${track} spec to ${player.name}`,
-                                  ).then(() => {
-                                    setPlayerSpecs((prev) => {
-                                      const exists = prev.find((s) => s.track_type === track)
-                                      if (exists)
-                                        return prev.map((s) =>
-                                          s.track_type === track ? { ...s, xp: 44182, level: 100 } : s,
-                                        )
-                                      return [
-                                        ...prev,
-                                        { player_id: player.controller_id, track_type: track, xp: 44182, level: 100 },
-                                      ]
-                                    })
-                                  })}
-                              >
-                                {t('players.actions.specs.grantMax')}
-                              </Button>
-                            )
-                          case 'reset':
-                            return (
-                              <Button
-                                size="sm"
-                                variant="danger-soft"
-                                isDisabled={busy}
-                                onPress={() =>
-                                  gate(
-                                    t('players.actions.specs.resetSpecTitle', { track }),
-                                    t('players.actions.specs.resetSpecDesc', { track }),
-                                    t('players.actions.specs.resetSpec'),
-                                    () =>
-                                      run(
-                                        () => api.players.resetSpec(player.controller_id, track),
-                                        `Reset ${track} spec for ${player.name}`,
-                                      ).then(() =>
-                                        setPlayerSpecs((prev) => prev.filter((s) => s.track_type !== track)),
-                                      ),
-                                  )}
-                              >
-                                {t('players.actions.specs.resetSpec')}
-                              </Button>
-                            )
-                        }
-                      }}
-                    />
-                  )}
+              <DataTable<string, 'track' | 'xp' | 'level' | 'grant' | 'reset'>
+                aria-label={t('players.actions.specs.specsLabel')}
+                className="min-h-0 max-h-full"
+                loading={specsLoading}
+                columns={[
+                  { key: 'track', label: t('players.actions.specs.columns.track'), isRowHeader: true },
+                  { key: 'xp', label: t('players.actions.specs.columns.xp') },
+                  { key: 'level', label: t('players.actions.specs.columns.level') },
+                  { key: 'grant', label: '�', sortable: false },
+                  { key: 'reset', label: '�', sortable: false },
+                ]}
+                rows={XP_TRACKS}
+                rowId={(t) => t}
+                initialSort={{ column: 'track', direction: 'ascending' }}
+                sortValue={(t, k) => {
+                  const found = playerSpecs.find((s) => s.track_type === t)
+                  if (k === 'track') return t
+                  if (k === 'xp') return found?.xp ?? 0
+                  if (k === 'level') return found?.level ?? 0
+                  return ''
+                }}
+                renderCell={(track, key) => {
+                  const found = playerSpecs.find((s) => s.track_type === track)
+                  const trackKeystones = playerKeystones.filter((k) => k.track === track)
+                  switch (key) {
+                    case 'track':
+                      return (
+                        <span className="inline-flex flex-col font-semibold align-top">
+                          <span>{track}</span>
+                          {trackKeystones.length > 0 && (
+                            <KeystonesToggle keystones={trackKeystones} />
+                          )}
+                        </span>
+                      )
+                    case 'xp':
+                      return <span className="font-mono text-muted">{(found?.xp ?? 0).toLocaleString()}</span>
+                    case 'level':
+                      return <span className="font-mono text-muted">{found?.level ?? 0}</span>
+                    case 'grant':
+                      return (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          isDisabled={busy || player.online_status === 'Online'}
+                          onPress={() =>
+                            run(
+                              () => api.players.grantMaxSpec(player.controller_id, track),
+                              `Grant max ${track} spec to ${player.name}`,
+                            ).then(() => {
+                              setPlayerSpecs((prev) => {
+                                const exists = prev.find((s) => s.track_type === track)
+                                if (exists)
+                                  return prev.map((s) =>
+                                    s.track_type === track ? { ...s, xp: 44182, level: 100 } : s,
+                                  )
+                                return [
+                                  ...prev,
+                                  { player_id: player.controller_id, track_type: track, xp: 44182, level: 100 },
+                                ]
+                              })
+                            })}
+                        >
+                          {t('players.actions.specs.grantMax')}
+                        </Button>
+                      )
+                    case 'reset':
+                      return (
+                        <Button
+                          size="sm"
+                          variant="danger-soft"
+                          isDisabled={busy}
+                          onPress={() =>
+                            gate(
+                              t('players.actions.specs.resetSpecTitle', { track }),
+                              t('players.actions.specs.resetSpecDesc', { track }),
+                              t('players.actions.specs.resetSpec'),
+                              () =>
+                                run(
+                                  () => api.players.resetSpec(player.controller_id, track),
+                                  `Reset ${track} spec for ${player.name}`,
+                                ).then(() =>
+                                  setPlayerSpecs((prev) => prev.filter((s) => s.track_type !== track)),
+                                ),
+                            )}
+                        >
+                          {t('players.actions.specs.resetSpec')}
+                        </Button>
+                      )
+                  }
+                }}
+              />
             </div>
           )}
 
@@ -1211,93 +1208,90 @@ export function ActionsView({ player }: Props) {
                 </Button>
               </div>
               <DebouncedSearchField className="shrink-0" placeholder={t('players.actions.journey.filterPlaceholder')} onSearch={setNodeSearch} />
-              {nodesLoading
-                ? <div className="flex justify-center py-8"><Spinner size="lg" /></div>
-                : (
-                    <DataTable<JourneyNode, 'node' | 'done' | 'revealed' | 'reward' | 'actions'>
-                      aria-label={t('players.actions.journey.journeyLabel')}
-                      className="min-h-0 max-h-full"
-                      virtualized
-                      rowHeight={36}
-                      columns={[
-                        { key: 'node', label: t('players.actions.journey.columns.nodeId'), isRowHeader: true, minWidth: 200 },
-                        { key: 'done', label: t('players.actions.journey.columns.done'), width: 70 },
-                        { key: 'revealed', label: t('players.actions.journey.columns.revealed'), width: 120 },
-                        { key: 'reward', label: t('players.actions.journey.columns.reward'), width: 105 },
-                        { key: 'actions', label: '', sortable: false, width: 200 },
-                      ]}
-                      rows={filteredNodes}
-                      rowId={(n) => n.node_id}
-                      initialSort={{ column: 'node', direction: 'ascending' }}
-                      sortValue={(n, k) => {
-                        if (k === 'node') return n.node_id
-                        if (k === 'done') return n.is_complete ? 1 : 0
-                        if (k === 'revealed') return n.is_revealed ? 1 : 0
-                        if (k === 'reward') return n.has_pending_reward ? 1 : 0
-                        return ''
-                      }}
-                      emptyState={(
-                        <div className="text-center py-8 text-xs text-muted">
-                          {nodes.length === 0 ? t('players.actions.journey.noNodes') : t('players.actions.journey.noMatching')}
+              <DataTable<JourneyNode, 'node' | 'done' | 'revealed' | 'reward' | 'actions'>
+                aria-label={t('players.actions.journey.journeyLabel')}
+                className="min-h-0 max-h-full"
+                loading={nodesLoading}
+                virtualized
+                rowHeight={36}
+                columns={[
+                  { key: 'node', label: t('players.actions.journey.columns.nodeId'), isRowHeader: true, minWidth: 200 },
+                  { key: 'done', label: t('players.actions.journey.columns.done'), width: 70 },
+                  { key: 'revealed', label: t('players.actions.journey.columns.revealed'), width: 120 },
+                  { key: 'reward', label: t('players.actions.journey.columns.reward'), width: 105 },
+                  { key: 'actions', label: '\u00a0', sortable: false, width: 200 },
+                ]}
+                rows={filteredNodes}
+                rowId={(n) => n.node_id}
+                initialSort={{ column: 'node', direction: 'ascending' }}
+                sortValue={(n, k) => {
+                  if (k === 'node') return n.node_id
+                  if (k === 'done') return n.is_complete ? 1 : 0
+                  if (k === 'revealed') return n.is_revealed ? 1 : 0
+                  if (k === 'reward') return n.has_pending_reward ? 1 : 0
+                  return ''
+                }}
+                emptyState={(
+                  <div className="text-center py-8 text-xs text-muted">
+                    {nodes.length === 0 ? t('players.actions.journey.noNodes') : t('players.actions.journey.noMatching')}
+                  </div>
+                )}
+                renderCell={(n, key) => {
+                  switch (key) {
+                    case 'node': return <span className="font-mono">{n.node_id}</span>
+                    case 'done': return n.is_complete ? '✓' : '—'
+                    case 'revealed': return n.is_revealed ? '✓' : '—'
+                    case 'reward': return n.has_pending_reward ? '✓' : '—'
+                    case 'actions':
+                      return (
+                        <div className="grid grid-cols-2 gap-1 w-full">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            isDisabled={busy}
+                            className="w-full"
+                            onPress={() =>
+                              run(
+                                () => api.players.journeyComplete(player.account_id, n.node_id),
+                                `Completed ${n.node_id}`,
+                              ).then(() => {
+                                setNodes((prev) =>
+                                  prev.map((x) =>
+                                    x.node_id === n.node_id || x.node_id.startsWith(n.node_id + '.')
+                                      ? { ...x, is_complete: true, is_revealed: true }
+                                      : x,
+                                  ),
+                                )
+                              })}
+                          >
+                            {n.is_complete ? t('players.actions.journey.redo') : t('players.actions.journey.complete')}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="danger-soft"
+                            isDisabled={busy}
+                            className="w-full"
+                            onPress={() =>
+                              run(
+                                () => api.players.journeyReset(player.account_id, n.node_id),
+                                `Reset ${n.node_id}`,
+                              ).then(() => {
+                                setNodes((prev) =>
+                                  prev.map((x) =>
+                                    x.node_id === n.node_id || x.node_id.startsWith(n.node_id + '.')
+                                      ? { ...x, is_complete: false, has_pending_reward: false }
+                                      : x,
+                                  ),
+                                )
+                              })}
+                          >
+                            {t('players.actions.journey.reset')}
+                          </Button>
                         </div>
-                      )}
-                      renderCell={(n, key) => {
-                        switch (key) {
-                          case 'node': return <span className="font-mono">{n.node_id}</span>
-                          case 'done': return n.is_complete ? '✓' : '—'
-                          case 'revealed': return n.is_revealed ? '✓' : '—'
-                          case 'reward': return n.has_pending_reward ? '✓' : '—'
-                          case 'actions':
-                            return (
-                              <div className="grid grid-cols-2 gap-1 w-full">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  isDisabled={busy}
-                                  className="w-full"
-                                  onPress={() =>
-                                    run(
-                                      () => api.players.journeyComplete(player.account_id, n.node_id),
-                                      `Completed ${n.node_id}`,
-                                    ).then(() => {
-                                      setNodes((prev) =>
-                                        prev.map((x) =>
-                                          x.node_id === n.node_id || x.node_id.startsWith(n.node_id + '.')
-                                            ? { ...x, is_complete: true, is_revealed: true }
-                                            : x,
-                                        ),
-                                      )
-                                    })}
-                                >
-                                  {n.is_complete ? t('players.actions.journey.redo') : t('players.actions.journey.complete')}
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="danger-soft"
-                                  isDisabled={busy}
-                                  className="w-full"
-                                  onPress={() =>
-                                    run(
-                                      () => api.players.journeyReset(player.account_id, n.node_id),
-                                      `Reset ${n.node_id}`,
-                                    ).then(() => {
-                                      setNodes((prev) =>
-                                        prev.map((x) =>
-                                          x.node_id === n.node_id || x.node_id.startsWith(n.node_id + '.')
-                                            ? { ...x, is_complete: false, has_pending_reward: false }
-                                            : x,
-                                        ),
-                                      )
-                                    })}
-                                >
-                                  {t('players.actions.journey.reset')}
-                                </Button>
-                              </div>
-                            )
-                        }
-                      }}
-                    />
-                  )}
+                      )
+                  }
+                }}
+              />
             </div>
           )}
 
@@ -1976,7 +1970,7 @@ export function ActionsView({ player }: Props) {
               </div>
 
               {tagsLoading
-                ? <div className="flex justify-center py-8"><Spinner size="lg" /></div>
+                ? <LoadingState size="md" />
                 : (
                     <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
                       <div className="flex items-center gap-2 shrink-0 min-h-8">
@@ -1990,13 +1984,13 @@ export function ActionsView({ player }: Props) {
                         className="min-h-0 max-h-full"
                         columns={[
                           { key: 'tag', label: t('players.actions.tags.tagColumn'), isRowHeader: true },
-                          { key: 'actions', label: '', sortable: false },
+                          { key: 'actions', label: '�', sortable: false },
                         ]}
                         rows={filteredActiveTags}
                         rowId={(t) => t}
                         initialSort={{ column: 'tag', direction: 'ascending' }}
                         sortValue={(t) => t}
-                        emptyState={<div className="py-6 text-center text-muted">{t('players.actions.tags.noTags')}</div>}
+                        emptyState={<div className="py-8 text-center text-muted">{t('players.actions.tags.noTags')}</div>}
                         renderCell={(tag, key) => {
                           if (key === 'tag') return <span className="font-mono">{tag}</span>
                           return (
@@ -2022,7 +2016,7 @@ export function ActionsView({ player }: Props) {
           {section === 'history' && (
             <div className="flex-1 overflow-y-auto flex flex-col gap-3 pr-2">
               {historyLoading
-                ? <div className="flex justify-center py-8"><Spinner size="lg" /></div>
+                ? <LoadingState size="md" />
                 : (
                     <>
                       <Panel>
@@ -2045,7 +2039,7 @@ export function ActionsView({ player }: Props) {
                             if (k === 'event_type') return evt.event_type
                             return ''
                           }}
-                          emptyState={<div className="py-6 text-center text-muted">{t('players.actions.history.noEvents')}</div>}
+                          emptyState={<div className="py-8 text-center text-muted">{t('players.actions.history.noEvents')}</div>}
                           renderCell={(evt, key) => {
                             switch (key) {
                               case 'time': return <span className="font-mono text-muted">{evt.universe_time}</span>
@@ -2091,7 +2085,7 @@ export function ActionsView({ player }: Props) {
                             if (k === 'duration') return d.duration_ms
                             return d.players_num
                           }}
-                          emptyState={<div className="py-6 text-center text-muted">{t('players.actions.history.noDungeons')}</div>}
+                          emptyState={<div className="py-8 text-center text-muted">{t('players.actions.history.noDungeons')}</div>}
                           renderCell={(d, key) => {
                             switch (key) {
                               case 'dungeon': return <span className="font-semibold">{d.dungeon_id}</span>

@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Spinner } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../../api/client'
 import type { Player, PlayerStats, SessionRecord, StatSnapshot } from '../../../api/client'
-import { Panel, SectionLabel } from '../../../dune-ui'
+import { LoadingState, Panel, SectionLabel } from '../../../dune-ui'
 import { SolarisChart } from './SolarisChart'
 import { SessionChart } from './SessionChart'
 import { XPChart } from './XPChart'
@@ -62,7 +61,7 @@ export function PlayerDetailPanel({ player }: Props) {
   }, [player.account_id])
 
   if (loading) {
-    return <div className="flex justify-center py-12"><Spinner size="lg" /></div>
+    return <LoadingState />
   }
 
   if (!stats) {

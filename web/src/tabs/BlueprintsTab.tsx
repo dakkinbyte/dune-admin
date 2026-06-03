@@ -87,61 +87,54 @@ export default function BlueprintsTab({ isSignedIn = true }: { isSignedIn?: bool
         </Button>
       </PageHeader>
 
-      {loading
-        ? (
-            <div className="flex justify-center py-12">
-              <Spinner size="lg" />
-            </div>
-          )
-        : (
-            <DataTable<BlueprintRow, Key>
-              aria-label={t('blueprints.ariaLabel')}
-              className="min-h-0 max-h-full"
-              columns={COLUMNS}
-              rows={blueprints}
-              rowId={(b) => String(b.id)}
-              initialSort={{ column: 'id', direction: 'ascending' }}
-              sortValue={(b, k) => (k === 'actions' ? '' : (b as unknown as Record<string, string | number>)[k])}
-              emptyState={<div className="py-8 text-center text-muted">{t('blueprints.noBlueprintsFound')}</div>}
-              renderCell={(b, key) => {
-                switch (key) {
-                  case 'id':
-                    return <span className="font-mono text-muted">{b.id}</span>
-                  case 'owner_name':
-                    return b.owner_name
-                  case 'name':
-                    return b.name || <span className="text-muted">—</span>
-                  case 'item_id':
-                    return <span className="font-mono text-muted">{b.item_id}</span>
-                  case 'pieces':
-                    return <span className="text-muted">{b.pieces}</span>
-                  case 'placeables':
-                    return <span className="text-muted">{b.placeables}</span>
-                  case 'actions':
-                    return isSignedIn
-                      ? (
-                          <a
-                            href={api.blueprints.exportUrl(b.id)}
-                            download={b.name ? `${b.name.replace(/[/\\:*?"<>|]/g, '_')}.json` : `blueprint_${b.id}.json`}
-                          >
-                            <Button size="sm" variant="outline" className="w-full">
-                              <Icon name="download" />
-                              {' '}
-                              {t('common.export')}
-                            </Button>
-                          </a>
-                        )
-                      : (
-                          <Button size="sm" variant="outline" className="w-full" isDisabled>
-                            <Icon name="download" />
-                            {' '}
-                            {t('common.export')}
-                          </Button>
-                        )
-                }
-              }}
-            />
-          )}
+      <DataTable<BlueprintRow, Key>
+        aria-label={t('blueprints.ariaLabel')}
+        className="min-h-0 max-h-full"
+        columns={COLUMNS}
+        rows={blueprints}
+        loading={loading}
+        rowId={(b) => String(b.id)}
+        initialSort={{ column: 'id', direction: 'ascending' }}
+        sortValue={(b, k) => (k === 'actions' ? '' : (b as unknown as Record<string, string | number>)[k])}
+        emptyState={<div className="py-8 text-center text-muted">{t('blueprints.noBlueprintsFound')}</div>}
+        renderCell={(b, key) => {
+          switch (key) {
+            case 'id':
+              return <span className="font-mono text-muted">{b.id}</span>
+            case 'owner_name':
+              return b.owner_name
+            case 'name':
+              return b.name || <span className="text-muted">—</span>
+            case 'item_id':
+              return <span className="font-mono text-muted">{b.item_id}</span>
+            case 'pieces':
+              return <span className="text-muted">{b.pieces}</span>
+            case 'placeables':
+              return <span className="text-muted">{b.placeables}</span>
+            case 'actions':
+              return isSignedIn
+                ? (
+                    <a
+                      href={api.blueprints.exportUrl(b.id)}
+                      download={b.name ? `${b.name.replace(/[/\\:*?"<>|]/g, '_')}.json` : `blueprint_${b.id}.json`}
+                    >
+                      <Button size="sm" variant="outline" className="w-full">
+                        <Icon name="download" />
+                        {' '}
+                        {t('common.export')}
+                      </Button>
+                    </a>
+                  )
+                : (
+                    <Button size="sm" variant="outline" className="w-full" isDisabled>
+                      <Icon name="download" />
+                      {' '}
+                      {t('common.export')}
+                    </Button>
+                  )
+          }
+        }}
+      />
 
       <ImportModal
         open={showImport}

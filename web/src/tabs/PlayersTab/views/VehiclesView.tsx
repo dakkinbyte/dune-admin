@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Button, Chip, Spinner, toast } from '@heroui/react'
+import { Button, Chip, toast } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../../api/client'
 import type { Player, VehicleRow } from '../../../api/client'
-import { DataTable, Icon, SectionLabel, type Column } from '../../../dune-ui'
+import { DataTable, Icon, LoadingState, SectionLabel, type Column } from '../../../dune-ui'
 
 type VehicleKey = 'class' | 'location' | 'chassis' | 'name' | 'type' | 'actions'
 
@@ -22,7 +22,7 @@ export function VehiclesView({ player }: Props) {
     { key: 'chassis', label: t('players.vehicles.columns.chassis') },
     { key: 'name', label: t('players.vehicles.columns.name') },
     { key: 'type', label: t('players.vehicles.columns.type'), sortable: false },
-    { key: 'actions', label: '', sortable: false },
+    { key: 'actions', label: ' ', sortable: false },
   ]
 
   useEffect(() => {
@@ -68,7 +68,7 @@ export function VehiclesView({ player }: Props) {
   }
 
   if (loading) {
-    return <div className="flex justify-center py-8"><Spinner size="lg" /></div>
+    return <LoadingState size="md" />
   }
 
   return (
@@ -92,7 +92,7 @@ export function VehiclesView({ player }: Props) {
           if (k === 'name') return v.vehicle_name ?? ''
           return ''
         }}
-        emptyState={<div className="py-6 text-center text-muted">{t('players.vehicles.noVehiclesFound')}</div>}
+        emptyState={<div className="py-8 text-center text-muted">{t('players.vehicles.noVehiclesFound')}</div>}
         renderCell={(v, key) => {
           switch (key) {
             case 'class': return <span className="font-semibold">{v.class}</span>

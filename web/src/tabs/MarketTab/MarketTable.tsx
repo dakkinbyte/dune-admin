@@ -7,12 +7,12 @@ type Key = 'display_name' | 'quality' | 'category' | 'tier' | 'rarity' | 'lowest
 
 const RARITY_COLORS: Record<string, string> = {
   common: 'text-foreground',
-  uncommon: 'text-success',
-  rare: 'text-blue-400',
-  epic: 'text-purple-400',
-  legendary: 'text-amber-400',
-  unique: 'text-orange-400',
-  memento: 'text-rose-400',
+  uncommon: 'text-rarity-uncommon',
+  rare: 'text-rarity-rare',
+  epic: 'text-rarity-epic',
+  legendary: 'text-rarity-legendary',
+  unique: 'text-rarity-unique',
+  memento: 'text-rarity-memento',
 }
 
 type Props = {

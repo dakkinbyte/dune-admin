@@ -3,7 +3,7 @@ import { Button, Chip, Modal, Spinner, toast } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../../api/client'
 import type { Player, InventoryItem, VehicleRow } from '../../../api/client'
-import { DataTable, Icon, Panel, SectionLabel, type Column } from '../../../dune-ui'
+import { DataTable, Icon, LoadingState, Panel, SectionLabel, type Column } from '../../../dune-ui'
 
 type ItemKey = 'template' | 'stack' | 'quality' | 'durability' | 'actions'
 type VehicleKey = 'class' | 'location' | 'chassis' | 'name' | 'type' | 'actions'
@@ -26,7 +26,7 @@ export function InventoryModal({ player, open, onClose }: Props) {
     { key: 'stack', label: t('players.inventory.columns.stack') },
     { key: 'quality', label: t('players.inventory.columns.quality') },
     { key: 'durability', label: t('players.inventory.columns.durability') },
-    { key: 'actions', label: '', sortable: false },
+    { key: 'actions', label: ' ', sortable: false },
   ]
 
   const VEHICLE_COLUMNS: Column<VehicleKey>[] = [
@@ -35,7 +35,7 @@ export function InventoryModal({ player, open, onClose }: Props) {
     { key: 'chassis', label: t('players.vehicles.columns.chassis') },
     { key: 'name', label: t('players.vehicles.columns.name') },
     { key: 'type', label: t('players.vehicles.columns.type'), sortable: false },
-    { key: 'actions', label: '', sortable: false },
+    { key: 'actions', label: ' ', sortable: false },
   ]
 
   useEffect(() => {
@@ -153,7 +153,7 @@ export function InventoryModal({ player, open, onClose }: Props) {
             <Modal.Body className="flex flex-col gap-4">
               {loading
                 ? (
-                    <div className="flex justify-center py-8"><Spinner size="lg" /></div>
+                    <LoadingState size="md" />
                   )
                 : (
                     <div className="flex flex-col gap-4 flex-1 min-h-0 overflow-hidden">
@@ -181,7 +181,7 @@ export function InventoryModal({ player, open, onClose }: Props) {
                             if (k === 'durability') return typeof i.durability === 'number' ? i.durability : 0
                             return ''
                           }}
-                          emptyState={<div className="py-6 text-center text-muted">{t('players.inventory.noItemsFound')}</div>}
+                          emptyState={<div className="py-8 text-center text-muted">{t('players.inventory.noItemsFound')}</div>}
                           renderCell={(i, key) => {
                             switch (key) {
                               case 'template':
@@ -240,7 +240,7 @@ export function InventoryModal({ player, open, onClose }: Props) {
                             if (k === 'name') return v.vehicle_name ?? ''
                             return ''
                           }}
-                          emptyState={<div className="py-6 text-center text-muted">{t('players.vehicles.noVehiclesFound')}</div>}
+                          emptyState={<div className="py-8 text-center text-muted">{t('players.vehicles.noVehiclesFound')}</div>}
                           renderCell={(v, key) => {
                             switch (key) {
                               case 'class': return <span className="font-semibold">{v.class}</span>
