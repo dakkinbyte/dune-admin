@@ -1,37 +1,63 @@
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useAtom, useSetAtom } from 'jotai'
 import { Button, Chip, CloseButton, SearchField } from '@heroui/react'
 import { SectionLabel } from '../../../../../dune-ui'
 import { api } from '../../../../../api/client'
 import type { Player } from '../../../../../api/client'
+import { busyAtom, contractCatalogAtom, contractCatalogLoadedAtom, contractCatalogErrorAtom, nodesLoadedAtom } from '../store'
+import { useRun } from '../hooks/useActions'
 
-interface ContractsSectionProps {
-  player: Player
-  busy: boolean
-  contractCatalog: { id: string, alias: string, tag_count: number }[]
-  contractCatalogLoaded: boolean
-  contractCatalogError: string
-  contractSearch: string
-  setContractSearch: (v: string) => void
-  selectedContracts: string[]
-  setSelectedContracts: (updater: ((prev: string[]) => string[]) | string[]) => void
-  onNodesInvalidate: () => void
-  run: (fn: () => Promise<unknown>, label: string) => Promise<void>
-}
+interface ContractsSectionProps { player: Player }
 
-export function ContractsSection({
-  player,
-  busy,
-  contractCatalog,
-  contractCatalogLoaded,
-  contractCatalogError,
-  contractSearch,
-  setContractSearch,
-  selectedContracts,
-  setSelectedContracts,
-  onNodesInvalidate,
-  run,
-}: ContractsSectionProps) {
+export function ContractsSection({ player }: ContractsSectionProps) {
   const { t } = useTranslation()
+  const [busy] = useAtom(busyAtom(player.id))
+  const [contractCatalog, setContractCatalog] = useAtom(contractCatalogAtom(player.id))
+  const [contractCatalogLoaded, setContractCatalogLoaded] = useAtom(contractCatalogLoadedAtom(player.id))
+  const [contractCatalogError, setContractCatalogError] = useAtom(contractCatalogErrorAtom(player.id))
+  const setNodesLoaded = useSetAtom(nodesLoadedAtom(player.id))
+  const run = useRun(player.id)
+
+  const [contractSearch, setContractSearch] = useState('')
+  const [selectedContracts, setSelectedContracts] = useState<string[]>([])
+
+  useEffect(() => {
+    if (contractCatalogLoaded) return
+    api.contracts.list()
+      .then((c) => {
+        setContractCatalog(c)
+        setContractCatalogLoaded(true)
+        setContractCatalogError('')
+      })
+      .catch((e: unknown) => {
+        setContractCatalogError(e instanceof Error ? e.message : String(e))
+        setContractCatalogLoaded(true)
+      })
+  }, [contractCatalogLoaded, setContractCatalog, setContractCatalogLoaded, setContractCatalogError])
+
+  const handleCompleteContracts = () => {
+    run(() => api.players.completeContracts(player.account_id, selectedContracts),
+      `Completed ${selectedContracts.length} contract(s) for ${player.name}`)
+      .then(() => {
+        setSelectedContracts([])
+        setNodesLoaded(false)
+      })
+  }
+
+  const handleReverseContracts = () => {
+    run(() => api.players.reverseContracts(player.account_id, selectedContracts),
+      `Reversed ${selectedContracts.length} contract(s) for ${player.name}`)
+      .then(() => {
+        setSelectedContracts([])
+        setNodesLoaded(false)
+      })
+  }
+
+  const handleContractToggle = (id: string, picked: boolean) => {
+    setSelectedContracts((prev) =>
+      picked ? prev.filter((x) => x !== id) : [...prev, id])
+  }
 
   return (
     <div className="flex-1 min-h-0 overflow-hidden flex flex-col gap-3">
@@ -41,7 +67,8 @@ export function ContractsSection({
           {contractCatalogError
             ? (
                 <span className="text-danger">
-                  {t('players.actions.contracts.loadFailed', { error: contractCatalogError })}
+                  {t('players.actions.contracts.loadFailed',
+                    { error: contractCatalogError })}
                 </span>
               )
             : contractCatalogLoaded
@@ -58,7 +85,8 @@ export function ContractsSection({
               <span className="font-mono">{id}</span>
               <CloseButton
                 aria-label={`Remove ${id}`}
-                onPress={() => setSelectedContracts((prev) => prev.filter((x) => x !== id))}
+                onPress={() => setSelectedContracts((prev) =>
+                  prev.filter((x) => x !== id))}
                 className="ml-1"
               />
             </Chip>
@@ -91,14 +119,7 @@ export function ContractsSection({
           size="sm"
           variant="secondary"
           isDisabled={busy || selectedContracts.length === 0}
-          onPress={() =>
-            run(
-              () => api.players.completeContracts(player.account_id, selectedContracts),
-              `Completed ${selectedContracts.length} contract(s) for ${player.name}`,
-            ).then(() => {
-              setSelectedContracts([])
-              onNodesInvalidate()
-            })}
+          onPress={handleCompleteContracts}
         >
           {t('players.actions.contracts.applyContracts', { count: selectedContracts.length })}
         </Button>
@@ -106,14 +127,7 @@ export function ContractsSection({
           size="sm"
           variant="danger-soft"
           isDisabled={busy || selectedContracts.length === 0}
-          onPress={() =>
-            run(
-              () => api.players.reverseContracts(player.account_id, selectedContracts),
-              `Reversed ${selectedContracts.length} contract(s) for ${player.name}`,
-            ).then(() => {
-              setSelectedContracts([])
-              onNodesInvalidate()
-            })}
+          onPress={handleReverseContracts}
         >
           {t('players.actions.contracts.reverseContracts', { count: selectedContracts.length })}
         </Button>
@@ -123,11 +137,15 @@ export function ContractsSection({
         <div className="flex-1 min-h-0 overflow-y-auto rounded border border-border bg-surface-alt">
           {(() => {
             const q = contractSearch.trim().toLowerCase()
-            const matches = contractCatalog.filter(
-              (c) => q === '' || c.id.toLowerCase().includes(q) || (c.alias && c.alias.toLowerCase().includes(q)),
-            )
+            const matches = contractCatalog.filter((c) =>
+              q === '' || c.id.toLowerCase().includes(q)
+              || (c.alias && c.alias.toLowerCase().includes(q)))
             if (matches.length === 0) {
-              return <div className="px-2 py-3 text-xs text-center text-muted">{t('players.actions.contracts.noMatching')}</div>
+              return (
+                <div className="px-2 py-3 text-xs text-center text-muted">
+                  {t('players.actions.contracts.noMatching')}
+                </div>
+              )
             }
             return matches.map((c) => {
               const id = c.alias || c.id
@@ -136,11 +154,10 @@ export function ContractsSection({
                 <button
                   key={c.id}
                   type="button"
-                  onClick={() => setSelectedContracts((prev) => picked ? prev.filter((x) => x !== id) : [...prev, id])}
-                  className={
-                    'flex w-full items-center justify-between px-2 py-1 text-xs font-mono hover:bg-surface '
-                    + (picked ? 'bg-surface text-accent' : 'bg-transparent text-foreground')
-                  }
+                  onClick={() => handleContractToggle(id, picked)}
+                  className={'flex w-full items-center justify-between px-2 py-1 '
+                    + 'text-xs font-mono hover:bg-surface '
+                    + (picked ? 'bg-surface text-accent' : 'bg-transparent text-foreground')}
                 >
                   <span>
                     {picked ? '✓ ' : '  '}
@@ -149,7 +166,8 @@ export function ContractsSection({
                   <span className="text-muted">
                     {c.tag_count === 1
                       ? t('players.actions.contracts.tagCount', { count: c.tag_count })
-                      : t('players.actions.contracts.tagCountPlural', { count: c.tag_count })}
+                      : t('players.actions.contracts.tagCountPlural',
+                          { count: c.tag_count })}
                   </span>
                 </button>
               )

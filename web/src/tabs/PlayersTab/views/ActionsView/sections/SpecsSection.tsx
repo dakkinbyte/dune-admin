@@ -1,57 +1,111 @@
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useAtom } from 'jotai'
 import { Button, Spinner } from '@heroui/react'
 import { DataTable, Icon, SectionLabel } from '../../../../../dune-ui'
 import { KeystonesToggle } from '../components/KeystonesToggle'
 import { XP_TRACKS } from '../../../types'
+import { api } from '../../../../../api/client'
 import type { Player, SpecTrack, KeystoneRow } from '../../../../../api/client'
+import { busyAtom } from '../store'
+import { useRun, useGate } from '../hooks/useActions'
 
-interface SpecsSectionProps {
-  player: Player
-  playerSpecs: SpecTrack[]
-  playerKeystones: KeystoneRow[]
-  specsLoading: boolean
-  busy: boolean
-  run: (fn: () => Promise<unknown>, label: string) => Promise<void>
-  gate: (title: string, description: string, confirmLabel: string, action: () => void) => void
-  onRefresh: () => void
-  onSpecsUpdate: (specs: SpecTrack[]) => void
-}
+interface SpecsSectionProps { player: Player }
 
-export function SpecsSection({
-  player,
-  playerSpecs,
-  playerKeystones,
-  specsLoading,
-  busy,
-  run,
-  gate,
-  onRefresh,
-  onSpecsUpdate,
-}: SpecsSectionProps) {
+export function SpecsSection({ player }: SpecsSectionProps) {
   const { t } = useTranslation()
+  const [busy] = useAtom(busyAtom(player.id))
+  const run = useRun(player.id)
+  const gate = useGate(player.id)
 
-  const onlineWarning = (
-    <div className="text-xs px-3 py-2 rounded mb-3 bg-warning/10 border border-warning text-warning">
-      {t('players.actions.specs.onlineWarning')}
-    </div>
-  )
+  const [playerSpecs, setPlayerSpecs] = useState<SpecTrack[]>([])
+  const [playerKeystones, setPlayerKeystones] = useState<KeystoneRow[]>([])
+  const [specsLoaded, setSpecsLoaded] = useState(false)
+  const [specsLoading, setSpecsLoading] = useState(false)
+
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      setSpecsLoaded(false)
+      setPlayerSpecs([])
+      setPlayerKeystones([])
+    })
+  }, [player.id])
+
+  useEffect(() => {
+    if (specsLoaded) return
+    Promise.resolve()
+      .then(() => setSpecsLoading(true))
+      .then(() =>
+        Promise.all([
+          api.players.specs_for(player.controller_id),
+          api.players.keystones(player.controller_id),
+        ]),
+      )
+      .then(([s, k]) => {
+        setPlayerSpecs(s)
+        setPlayerKeystones(k)
+        setSpecsLoaded(true)
+      })
+      .catch(() => {})
+      .finally(() => setSpecsLoading(false))
+  }, [specsLoaded, player.controller_id])
+
+  const handleGrantMaxKeystones = () => {
+    run(() => api.players.grantAllKeystones(player.controller_id),
+      `Grant all keystones to ${player.name}`)
+      .then(() => setSpecsLoaded(false))
+  }
+
+  const handleResetAllKeystones = () => {
+    gate(
+      t('players.actions.specs.resetKeystonesTitle'),
+      t('players.actions.specs.resetKeystonesDesc', { player: player.name }),
+      t('players.actions.specs.resetAllKeystones'),
+      () => run(() => api.players.resetAllKeystones(player.controller_id),
+        `Reset all keystones for ${player.name}`)
+        .then(() => setSpecsLoaded(false)),
+    )
+  }
+
+  const handleGrantMaxSpec = (track: string) => {
+    run(() => api.players.grantMaxSpec(player.controller_id, track),
+      `Grant max ${track} spec to ${player.name}`)
+      .then(() => setPlayerSpecs((prev) => {
+        const exists = prev.find((s) => s.track_type === track)
+        if (exists) {
+          return prev.map((s) =>
+            s.track_type === track ? { ...s, xp: 44182, level: 100 } : s)
+        }
+        return [...prev,
+          { player_id: player.controller_id, track_type: track, xp: 44182,
+            level: 100 }]
+      }))
+  }
+
+  const handleResetSpec = (track: string) => {
+    gate(
+      t('players.actions.specs.resetSpecTitle', { track }),
+      t('players.actions.specs.resetSpecDesc', { track }),
+      t('players.actions.specs.resetSpec'),
+      () => run(() => api.players.resetSpec(player.controller_id, track),
+        `Reset ${track} spec for ${player.name}`)
+        .then(() => setPlayerSpecs((prev) =>
+          prev.filter((s) => s.track_type !== track))),
+    )
+  }
 
   return (
     <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-hidden">
       <div className="flex items-center gap-3 min-h-8">
         <div className="flex-1"><SectionLabel>{t('players.actions.specs.specializations')}</SectionLabel></div>
-        <Button size="sm" variant="ghost" isDisabled={specsLoading} onPress={onRefresh}>
+        <Button size="sm" variant="ghost" isDisabled={specsLoading} onPress={() => setSpecsLoaded(false)}>
           {specsLoading ? <Spinner size="sm" color="current" /> : <Icon name="refresh-cw" />}
         </Button>
         <Button
           size="sm"
           variant="outline"
           isDisabled={busy || player.online_status === 'Online'}
-          onPress={() =>
-            run(
-              () => import('../../../../../api/client').then((m) => m.api.players.grantAllKeystones(player.controller_id)),
-              `Grant all keystones to ${player.name}`,
-            ).then(onRefresh)}
+          onPress={handleGrantMaxKeystones}
         >
           {t('players.actions.specs.grantMaxKeystones')}
         </Button>
@@ -59,22 +113,16 @@ export function SpecsSection({
           size="sm"
           variant="danger-soft"
           isDisabled={busy || player.online_status === 'Online'}
-          onPress={() =>
-            gate(
-              t('players.actions.specs.resetKeystonesTitle'),
-              t('players.actions.specs.resetKeystonesDesc', { player: player.name }),
-              t('players.actions.specs.resetAllKeystones'),
-              () =>
-                run(
-                  () => import('../../../../../api/client').then((m) => m.api.players.resetAllKeystones(player.controller_id)),
-                  `Reset all keystones for ${player.name}`,
-                ).then(onRefresh),
-            )}
+          onPress={handleResetAllKeystones}
         >
           {t('players.actions.specs.resetAllKeystones')}
         </Button>
       </div>
-      {player.online_status === 'Online' && onlineWarning}
+      {player.online_status === 'Online' && (
+        <div className="text-xs px-3 py-2 rounded mb-3 bg-warning/10 border border-warning text-warning">
+          {t('players.actions.specs.onlineWarning')}
+        </div>
+      )}
       <DataTable<string, 'track' | 'xp' | 'level' | 'grant' | 'reset'>
         aria-label={t('players.actions.specs.specsLabel')}
         className="min-h-0 max-h-full"
@@ -87,16 +135,16 @@ export function SpecsSection({
           { key: 'reset', label: ' ', sortable: false },
         ]}
         rows={XP_TRACKS}
-        rowId={(t) => t}
+        rowId={(tr) => tr}
         initialSort={{ column: 'track', direction: 'ascending' }}
-        sortValue={(t, k) => {
-          const found = playerSpecs.find((s) => s.track_type === t)
-          if (k === 'track') return t
+        sortValue={(tr, k) => {
+          const found = playerSpecs.find((s) => s.track_type === tr)
+          if (k === 'track') return tr
           if (k === 'xp') return found?.xp ?? 0
           if (k === 'level') return found?.level ?? 0
           return ''
         }}
-        renderCell={(track: string, key: string) => {
+        renderCell={(track, key) => {
           const found = playerSpecs.find((s) => s.track_type === track)
           const trackKeystones = playerKeystones.filter((k) => k.track === track)
           switch (key) {
@@ -104,31 +152,18 @@ export function SpecsSection({
               return (
                 <span className="inline-flex flex-col font-semibold align-top">
                   <span>{track}</span>
-                  {trackKeystones.length > 0 && (
-                    <KeystonesToggle keystones={trackKeystones} />
-                  )}
+                  {trackKeystones.length > 0 && <KeystonesToggle keystones={trackKeystones} />}
                 </span>
               )
-            case 'xp':
-              return <span className="font-mono text-muted">{(found?.xp ?? 0).toLocaleString()}</span>
-            case 'level':
-              return <span className="font-mono text-muted">{found?.level ?? 0}</span>
+            case 'xp': return <span className="font-mono text-muted">{(found?.xp ?? 0).toLocaleString()}</span>
+            case 'level': return <span className="font-mono text-muted">{found?.level ?? 0}</span>
             case 'grant':
               return (
                 <Button
                   size="sm"
                   variant="ghost"
                   isDisabled={busy || player.online_status === 'Online'}
-                  onPress={() =>
-                    run(
-                      () => import('../../../../../api/client').then((m) => m.api.players.grantMaxSpec(player.controller_id, track)),
-                      `Grant max ${track} spec to ${player.name}`,
-                    ).then(() => {
-                      onSpecsUpdate([
-                        ...playerSpecs.filter((s) => s.track_type !== track),
-                        { player_id: player.controller_id, track_type: track, xp: 44182, level: 100 },
-                      ])
-                    })}
+                  onPress={() => handleGrantMaxSpec(track)}
                 >
                   {t('players.actions.specs.grantMax')}
                 </Button>
@@ -139,19 +174,7 @@ export function SpecsSection({
                   size="sm"
                   variant="danger-soft"
                   isDisabled={busy}
-                  onPress={() =>
-                    gate(
-                      t('players.actions.specs.resetSpecTitle', { track }),
-                      t('players.actions.specs.resetSpecDesc', { track }),
-                      t('players.actions.specs.resetSpec'),
-                      () =>
-                        run(
-                          () => import('../../../../../api/client').then((m) => m.api.players.resetSpec(player.controller_id, track)),
-                          `Reset ${track} spec for ${player.name}`,
-                        ).then(() =>
-                          onSpecsUpdate(playerSpecs.filter((s) => s.track_type !== track)),
-                        ),
-                    )}
+                  onPress={() => handleResetSpec(track)}
                 >
                   {t('players.actions.specs.resetSpec')}
                 </Button>

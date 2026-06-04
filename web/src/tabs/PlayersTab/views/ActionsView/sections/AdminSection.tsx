@@ -1,99 +1,225 @@
-import type { ReactNode } from 'react'
+import { useState, type Key, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useAtom } from 'jotai'
 import { Button, Input, ListBox, SearchField, Select, toast } from '@heroui/react'
 import { Panel, SectionLabel } from '../../../../../dune-ui'
 import allVehicles from '../../../../../data/vehicles.json'
 import { api } from '../../../../../api/client'
-import type { Player, TeleportLocation } from '../../../../../api/client'
+import type { Player } from '../../../../../api/client'
+import { busyAtom, partitionsAtom, allPlayersAtom } from '../store'
+import { useRun, useGate } from '../hooks/useActions'
 
 interface AdminSectionProps {
   player: Player
-  busy: boolean
-  partitions: TeleportLocation[]
-  selectedPartition: string
-  setSelectedPartition: (v: string) => void
-  teleportX: string
-  setTeleportX: (v: string) => void
-  teleportY: string
-  setTeleportY: (v: string) => void
-  teleportZ: string
-  setTeleportZ: (v: string) => void
-  setShowManageLocations: (v: boolean) => void
-  setShowTeleportMapPicker: (v: boolean) => void
-  allPlayers: Player[]
-  selectedTeleportTarget: number | null
-  setSelectedTeleportTarget: (v: number | null) => void
-  targetSearch: string
-  setTargetSearch: (v: string) => void
-  targetDropdownOpen: boolean
-  setTargetDropdownOpen: (v: boolean) => void
-  whisperText: string
-  setWhisperText: (v: string) => void
-  whisperSenderName: string
-  setWhisperSenderName: (v: string) => void
-  spawnVehicleId: string
-  setSpawnVehicleId: (v: string) => void
-  spawnVehicleTemplate: string
-  setSpawnVehicleTemplate: (v: string) => void
-  spawnVehiclePartition: string
-  setSpawnVehiclePartition: (v: string) => void
-  spawnVehiclePersistent: boolean
-  setSpawnVehiclePersistent: (v: boolean) => void
-  spawnX: string
-  setSpawnX: (v: string) => void
-  spawnY: string
-  setSpawnY: (v: string) => void
-  spawnZ: string
-  setSpawnZ: (v: string) => void
-  setShowSpawnMapPicker: (v: boolean) => void
-  run: (fn: () => Promise<unknown>, label: string) => Promise<void>
-  gate: (title: string, description: string, confirmLabel: string, action: () => void) => void
+  onManageLocations: () => void
+  onTeleportPicker: (cb: (x: number, y: number, z: number) => void) => void
+  onSpawnPicker: (cb: (x: number, y: number, z: number) => void) => void
 }
 
-export function AdminSection({
-  player,
-  busy,
-  partitions,
-  selectedPartition,
-  setSelectedPartition,
-  teleportX,
-  setTeleportX,
-  teleportY,
-  setTeleportY,
-  teleportZ,
-  setTeleportZ,
-  setShowManageLocations,
-  setShowTeleportMapPicker,
-  allPlayers,
-  selectedTeleportTarget,
-  setSelectedTeleportTarget,
-  targetSearch,
-  setTargetSearch,
-  targetDropdownOpen,
-  setTargetDropdownOpen,
-  whisperText,
-  setWhisperText,
-  whisperSenderName,
-  setWhisperSenderName,
-  spawnVehicleId,
-  setSpawnVehicleId,
-  spawnVehicleTemplate,
-  setSpawnVehicleTemplate,
-  spawnVehiclePartition,
-  setSpawnVehiclePartition,
-  spawnVehiclePersistent,
-  setSpawnVehiclePersistent,
-  spawnX,
-  setSpawnX,
-  spawnY,
-  setSpawnY,
-  spawnZ,
-  setSpawnZ,
-  setShowSpawnMapPicker,
-  run,
-  gate,
-}: AdminSectionProps) {
+export function AdminSection({ player, onManageLocations, onTeleportPicker, onSpawnPicker }: AdminSectionProps) {
   const { t } = useTranslation()
+  const [busy] = useAtom(busyAtom(player.id))
+  const [partitions] = useAtom(partitionsAtom(player.id))
+  const [allPlayers] = useAtom(allPlayersAtom(player.id))
+  const run = useRun(player.id)
+  const gate = useGate(player.id)
+
+  const [selectedPartition, setSelectedPartition] = useState('')
+  const [teleportX, setTeleportX] = useState('')
+  const [teleportY, setTeleportY] = useState('')
+  const [teleportZ, setTeleportZ] = useState('')
+  const [selectedTeleportTarget, setSelectedTeleportTarget] = useState<number | null>(null)
+  const [targetSearch, setTargetSearch] = useState('')
+  const [targetDropdownOpen, setTargetDropdownOpen] = useState(false)
+  const [whisperText, setWhisperText] = useState('')
+  const [whisperSenderName, setWhisperSenderName] = useState('GM')
+  const [spawnVehicleId, setSpawnVehicleId] = useState('')
+  const [spawnVehicleTemplate, setSpawnVehicleTemplate] = useState('')
+  const [spawnVehiclePartition, setSpawnVehiclePartition] = useState('')
+  const [spawnVehiclePersistent, setSpawnVehiclePersistent] = useState(true)
+  const [spawnX, setSpawnX] = useState('')
+  const [spawnY, setSpawnY] = useState('')
+  const [spawnZ, setSpawnZ] = useState('')
+
+  const handleKick = () =>
+    run(() => api.players.kick(player.fls_id), `Kick command sent for ${player.name}`)
+
+  const handleWipeInventory = () => gate(
+    t('players.actions.admin.wipeInventoryTitle'),
+    t('players.actions.admin.wipeInventoryConfirmDesc', { player: player.name }),
+    t('players.actions.admin.confirmWipe'),
+    () =>
+      run(
+        () => api.players.cleanInventory(player.fls_id),
+        `Inventory wiped for ${player.name}`,
+      ),
+  )
+
+  const handleResetProgression = () => gate(
+    t('players.actions.admin.resetProgressionTitle'),
+    t('players.actions.admin.resetProgressionConfirmDesc', { player: player.name }),
+    t('players.actions.admin.confirmReset'),
+    () =>
+      run(
+        () => api.players.resetProgression(player.fls_id),
+        `Progression reset for ${player.name}`,
+      ),
+  )
+
+  const handleDeleteTutorials = () => gate(
+    t('players.actions.admin.deleteTutorialsTitle'),
+    t('players.actions.admin.deleteTutorialsConfirmDesc', { player: player.name }),
+    t('players.actions.admin.delete'),
+    () =>
+      run(
+        () => api.players.deleteTutorials(player.id),
+        `Deleted tutorials for ${player.name}`,
+      ),
+  )
+
+  const handleWipeCodex = () => gate(
+    t('players.actions.admin.wipeCodexTitle'),
+    t('players.actions.admin.wipeCodexConfirmDesc', { player: player.name }),
+    t('players.actions.admin.wipe'),
+    () =>
+      run(
+        () => api.players.wipeCodex(player.account_id),
+        `Wiped codex for ${player.name}`,
+      ),
+  )
+
+  const handleDismissReturning = () =>
+    run(
+      () => api.players.dismissReturningPlayerAward(player.account_id),
+      `Dismissed returning player popup for ${player.name}`,
+    )
+
+  const handleExportPlayer = () =>
+    run(() => api.players.exportPlayer(player.account_id), t('players.actions.admin.exportDownloaded'))
+
+  const handleTeleportToPartition = () =>
+    run(
+      () => api.players.teleport(player.fls_id, selectedPartition),
+      `Teleported ${player.name} to ${selectedPartition}`,
+    )
+
+  const handleGetCurrentPosition = async () => {
+    try {
+      const pos = await api.players.position(player.id)
+      setTeleportX(String(Math.round(pos.x)))
+      setTeleportY(String(Math.round(pos.y)))
+      setTeleportZ(String(Math.round(pos.z)))
+    }
+    catch {
+      toast.danger(t('players.actions.admin.positionReadFailed'))
+    }
+  }
+
+  const handleTeleportPickerClick = () =>
+    onTeleportPicker((x, y, z) => {
+      setTeleportX(String(Math.round(x)))
+      setTeleportY(String(Math.round(y)))
+      setTeleportZ(String(Math.round(z)))
+    })
+
+  const handleTeleportToCoords = () =>
+    run(
+      () =>
+        api.players.teleportCoords(
+          player.fls_id,
+          Number(teleportX) || 0,
+          Number(teleportY) || 0,
+          Number(teleportZ) || 0,
+        ),
+      `Teleported ${player.name} to (${teleportX}, ${teleportY}, ${teleportZ})`,
+    )
+
+  const handleTargetSearch = (v: string) => {
+    setTargetSearch(v)
+    setSelectedTeleportTarget(null)
+    setTargetDropdownOpen(true)
+  }
+
+  const handleTargetPlayerClick = (targetPlayer: typeof allPlayers[0]) => {
+    setTargetSearch(targetPlayer.name)
+    setSelectedTeleportTarget(targetPlayer.id)
+    setTargetDropdownOpen(false)
+  }
+
+  const handleTeleportToPlayer = () => {
+    const target = allPlayers.find((p) => p.id === selectedTeleportTarget)
+    if (!target) return
+    run(
+      () => api.players.teleportToPlayer(player.fls_id, target.id),
+      `Teleported ${player.name} to ${target.name}`,
+    )
+  }
+
+  const handleWhisperSend = () =>
+    run(
+      () => api.chat.whisper(player.account_id, whisperText.trim()),
+      t('players.actions.admin.whisperSent', { player: player.name }),
+    ).then(() => setWhisperText(''))
+
+  const handleVehicleSelect = (k: Key | null) => {
+    const id = k ? String(k) : ''
+    setSpawnVehicleId(id)
+    const v = (allVehicles as { id: string, templates: string[] }[]).find(
+      (x) => x.id === id,
+    )
+    setSpawnVehicleTemplate(v?.templates[0] ?? '')
+  }
+
+  const handleSpawnPartitionSelect = (k: Key | null) => {
+    setSpawnVehiclePartition(k ? String(k) : '')
+    const p = partitions.find((x) => x.name === String(k))
+    if (p) {
+      setSpawnX(String(Math.round(p.x)))
+      setSpawnY(String(Math.round(p.y)))
+      setSpawnZ(String(Math.round(p.z)))
+    }
+  }
+
+  const handleGetSpawnPosition = async () => {
+    try {
+      const pos = await api.players.position(player.id)
+      setSpawnX(String(Math.round(pos.x)))
+      setSpawnY(String(Math.round(pos.y)))
+      setSpawnZ(String(Math.round(pos.z)))
+    }
+    catch {
+      toast.danger(t('players.actions.admin.positionReadFailed'))
+    }
+  }
+
+  const handleSpawnPickerClick = () =>
+    onSpawnPicker((x, y, z) => {
+      setSpawnX(String(Math.round(x)))
+      setSpawnY(String(Math.round(y)))
+      setSpawnZ(String(Math.round(z)))
+    })
+
+  const handleSpawnVehicle = () => {
+    const v = (allVehicles as { id: string, actor_class: string }[]).find(
+      (x) => x.id === spawnVehicleId,
+    )
+    if (!v) return
+    run(
+      () =>
+        api.players.spawnVehicle(
+          player.fls_id,
+          v.actor_class,
+          Number(spawnX) || 0,
+          Number(spawnY) || 0,
+          Number(spawnZ) || 0,
+          {
+            template_name: spawnVehicleTemplate || undefined,
+            persistent: spawnVehiclePersistent,
+          },
+        ),
+      `Spawn ${spawnVehicleId} command sent for ${player.name}`,
+    )
+  }
 
   const actionRow = (
     label: string,
@@ -124,9 +250,11 @@ export function AdminSection({
         <div className="text-xs text-muted mb-2">{t('players.actions.admin.liveActionsDesc')}</div>
         {actionRow(
           t('players.actions.admin.kickPlayer'),
-          <span className="text-xs text-muted">{t('players.actions.admin.kickDesc')}</span>,
+          <span className="text-xs text-muted">
+            {t('players.actions.admin.kickDesc')}
+          </span>,
           t('players.actions.admin.kick'),
-          () => run(() => api.players.kick(player.fls_id), `Kick command sent for ${player.name}`),
+          handleKick,
         )}
       </Panel>
 
@@ -140,13 +268,7 @@ export function AdminSection({
             size="sm"
             variant="danger-soft"
             isDisabled={busy}
-            onPress={() =>
-              gate(
-                t('players.actions.admin.wipeInventoryTitle'),
-                t('players.actions.admin.wipeInventoryConfirmDesc', { player: player.name }),
-                t('players.actions.admin.confirmWipe'),
-                () => run(() => api.players.cleanInventory(player.fls_id), `Inventory wiped for ${player.name}`),
-              )}
+            onPress={handleWipeInventory}
           >
             {t('players.actions.admin.wipe')}
           </Button>
@@ -158,13 +280,7 @@ export function AdminSection({
             size="sm"
             variant="danger-soft"
             isDisabled={busy}
-            onPress={() =>
-              gate(
-                t('players.actions.admin.resetProgressionTitle'),
-                t('players.actions.admin.resetProgressionConfirmDesc', { player: player.name }),
-                t('players.actions.admin.confirmReset'),
-                () => run(() => api.players.resetProgression(player.fls_id), `Progression reset for ${player.name}`),
-              )}
+            onPress={handleResetProgression}
           >
             {t('players.actions.admin.confirmReset')}
           </Button>
@@ -175,25 +291,29 @@ export function AdminSection({
         <SectionLabel>{t('players.actions.admin.resetActions')}</SectionLabel>
         {actionRow(
           t('players.actions.admin.deleteTutorials'),
-          <span className="text-xs text-muted">{t('players.actions.admin.deleteTutorialsDesc')}</span>,
+          <span className="text-xs text-muted">
+            {t('players.actions.admin.deleteTutorialsDesc')}
+          </span>,
           t('players.actions.admin.delete'),
-          () => run(() => api.players.deleteTutorials(player.id), `Deleted tutorials for ${player.name}`),
+          handleDeleteTutorials,
           true,
-          { title: t('players.actions.admin.deleteTutorialsTitle'), description: t('players.actions.admin.deleteTutorialsConfirmDesc', { player: player.name }) },
         )}
         {actionRow(
           t('players.actions.admin.wipeCodex'),
-          <span className="text-xs text-muted">{t('players.actions.admin.wipeCodexDesc')}</span>,
+          <span className="text-xs text-muted">
+            {t('players.actions.admin.wipeCodexDesc')}
+          </span>,
           t('players.actions.admin.wipe'),
-          () => run(() => api.players.wipeCodex(player.account_id), `Wiped codex for ${player.name}`),
+          handleWipeCodex,
           true,
-          { title: t('players.actions.admin.wipeCodexTitle'), description: t('players.actions.admin.wipeCodexConfirmDesc', { player: player.name }) },
         )}
         {actionRow(
           t('players.actions.admin.dismissReturning'),
-          <span className="text-xs text-muted">{t('players.actions.admin.dismissReturningDesc')}</span>,
+          <span className="text-xs text-muted">
+            {t('players.actions.admin.dismissReturningDesc')}
+          </span>,
           t('players.actions.admin.dismiss'),
-          () => run(() => api.players.dismissReturningPlayerAward(player.account_id), `Dismissed returning player popup for ${player.name}`),
+          handleDismissReturning,
           true,
         )}
       </Panel>
@@ -206,7 +326,7 @@ export function AdminSection({
             size="sm"
             variant="ghost"
             isDisabled={busy}
-            onPress={() => run(() => api.players.exportPlayer(player.account_id), t('players.actions.admin.exportDownloaded'))}
+            onPress={handleExportPlayer}
           >
             {t('players.actions.admin.downloadExport')}
           </Button>
@@ -216,9 +336,7 @@ export function AdminSection({
       <Panel>
         <div className="flex items-center justify-between mb-1">
           <SectionLabel>{t('players.actions.admin.teleport')}</SectionLabel>
-          <Button size="sm" variant="ghost" onPress={() => setShowManageLocations(true)}>
-            {t('players.actions.admin.manageLocations')}
-          </Button>
+          <Button size="sm" variant="ghost" onPress={onManageLocations}>{t('players.actions.admin.manageLocations')}</Button>
         </div>
         <div className="flex items-end gap-3 py-1">
           <Select
@@ -247,7 +365,7 @@ export function AdminSection({
             size="sm"
             variant="ghost"
             isDisabled={busy || !selectedPartition}
-            onPress={() => run(() => api.players.teleport(player.fls_id, selectedPartition), `Teleported ${player.name} to ${selectedPartition}`)}
+            onPress={handleTeleportToPartition}
           >
             {t('players.actions.admin.move')}
           </Button>
@@ -260,37 +378,23 @@ export function AdminSection({
             size="sm"
             variant="ghost"
             isDisabled={busy}
-            onPress={async () => {
-              try {
-                const pos = await api.players.position(player.id)
-                setTeleportX(String(Math.round(pos.x)))
-                setTeleportY(String(Math.round(pos.y)))
-                setTeleportZ(String(Math.round(pos.z)))
-              }
-              catch {
-                toast.danger(t('players.actions.admin.positionReadFailed'))
-              }
-            }}
+            onPress={handleGetCurrentPosition}
           >
             {t('players.actions.admin.useCurrent')}
           </Button>
-          <Button size="sm" variant="ghost" isDisabled={busy} onPress={() => setShowTeleportMapPicker(true)}>
+          <Button
+            size="sm"
+            variant="ghost"
+            isDisabled={busy}
+            onPress={handleTeleportPickerClick}
+          >
             {t('players.actions.admin.pickOnMap')}
           </Button>
           <Button
             size="sm"
             variant="ghost"
             isDisabled={busy || (!teleportX && !teleportY)}
-            onPress={() =>
-              run(
-                () => api.players.teleportCoords(
-                  player.fls_id,
-                  Number(teleportX) || 0,
-                  Number(teleportY) || 0,
-                  Number(teleportZ) || 0,
-                ),
-                `Teleported ${player.name} to (${teleportX}, ${teleportY}, ${teleportZ})`,
-              )}
+            onPress={handleTeleportToCoords}
           >
             {t('players.actions.admin.moveToXyz')}
           </Button>
@@ -302,27 +406,15 @@ export function AdminSection({
         <SectionLabel>{t('players.actions.admin.teleportToPlayer')}</SectionLabel>
         <div className="text-xs text-muted mb-2">
           Drop
-          {' '}
           {player.name}
           {' '}
           exactly on another character&apos;s current position.
         </div>
         <div className="flex items-center gap-3">
-          <div
-            className="relative flex-1"
-            onBlur={(e) => {
-              if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-                setTargetDropdownOpen(false)
-              }
-            }}
-          >
+          <div className="relative flex-1" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setTargetDropdownOpen(false) }}>
             <SearchField
               value={targetSearch}
-              onChange={(v) => {
-                setTargetSearch(v)
-                setSelectedTeleportTarget(null)
-                setTargetDropdownOpen(true)
-              }}
+              onChange={handleTargetSearch}
               onFocus={() => setTargetDropdownOpen(true)}
               className="w-full"
             >
@@ -339,7 +431,11 @@ export function AdminSection({
             {targetDropdownOpen && (
               <div className="absolute z-50 w-full mt-1 rounded-[var(--radius)] border border-border bg-surface overflow-y-auto max-h-52 shadow-lg">
                 {allPlayers
-                  .filter((p) => !targetSearch || p.name.toLowerCase().includes(targetSearch.toLowerCase()))
+                  .filter(
+                    (p) =>
+                      !targetSearch
+                      || p.name.toLowerCase().includes(targetSearch.toLowerCase()),
+                  )
                   .slice(0, 50)
                   .map((p) => (
                     <button
@@ -348,15 +444,13 @@ export function AdminSection({
                       className="w-full text-left px-3 py-1.5 text-xs cursor-pointer hover:bg-surface-hover flex items-center justify-between gap-2"
                       onMouseDown={(e) => {
                         e.preventDefault()
-                        setTargetSearch(p.name)
-                        setSelectedTeleportTarget(p.id)
-                        setTargetDropdownOpen(false)
+                        handleTargetPlayerClick(p)
                       }}
                     >
                       <span className="font-medium">{p.name}</span>
                       <span className="text-muted">
                         {p.map || '—'}
-                        {' · '}
+                        {' \u00b7 '}
                         {p.online_status}
                       </span>
                     </button>
@@ -367,11 +461,7 @@ export function AdminSection({
           <Button
             size="sm"
             isDisabled={busy || selectedTeleportTarget == null}
-            onPress={() => {
-              const target = allPlayers.find((p) => p.id === selectedTeleportTarget)
-              if (!target) return
-              run(() => api.players.teleportToPlayer(player.fls_id, target.id), `Teleported ${player.name} to ${target.name}`)
-            }}
+            onPress={handleTeleportToPlayer}
           >
             {t('players.actions.admin.move')}
           </Button>
@@ -418,11 +508,7 @@ export function AdminSection({
               size="sm"
               variant="ghost"
               isDisabled={busy || !whisperText.trim()}
-              onPress={() =>
-                run(
-                  () => api.chat.whisper(player.account_id, whisperText.trim()),
-                  t('players.actions.admin.whisperSent', { player: player.name }),
-                ).then(() => setWhisperText(''))}
+              onPress={handleWhisperSend}
             >
               Send
             </Button>
@@ -439,12 +525,7 @@ export function AdminSection({
               aria-label={t('players.actions.admin.vehicleLabel')}
               placeholder={t('players.actions.admin.selectVehicle')}
               selectedKey={spawnVehicleId || null}
-              onSelectionChange={(k) => {
-                const id = k ? String(k) : ''
-                setSpawnVehicleId(id)
-                const v = (allVehicles as { id: string, templates: string[] }[]).find((x) => x.id === id)
-                setSpawnVehicleTemplate(v?.templates[0] ?? '')
-              }}
+              onSelectionChange={handleVehicleSelect}
               className="flex-1"
             >
               <Select.Trigger>
@@ -497,15 +578,7 @@ export function AdminSection({
               aria-label={t('players.actions.admin.spawnLocationLabel')}
               placeholder={t('players.actions.admin.selectSpawnLocation')}
               selectedKey={spawnVehiclePartition || null}
-              onSelectionChange={(k) => {
-                setSpawnVehiclePartition(k ? String(k) : '')
-                const p = partitions.find((x) => x.name === String(k))
-                if (p) {
-                  setSpawnX(String(Math.round(p.x)))
-                  setSpawnY(String(Math.round(p.y)))
-                  setSpawnZ(String(Math.round(p.z)))
-                }
-              }}
+              onSelectionChange={handleSpawnPartitionSelect}
               className="flex-1"
             >
               <Select.Trigger>
@@ -532,21 +605,16 @@ export function AdminSection({
               size="sm"
               variant="ghost"
               isDisabled={busy}
-              onPress={async () => {
-                try {
-                  const pos = await api.players.position(player.id)
-                  setSpawnX(String(Math.round(pos.x)))
-                  setSpawnY(String(Math.round(pos.y)))
-                  setSpawnZ(String(Math.round(pos.z)))
-                }
-                catch {
-                  toast.danger(t('players.actions.admin.positionReadFailed'))
-                }
-              }}
+              onPress={handleGetSpawnPosition}
             >
               {t('players.actions.admin.useCurrent')}
             </Button>
-            <Button size="sm" variant="ghost" isDisabled={busy} onPress={() => setShowSpawnMapPicker(true)}>
+            <Button
+              size="sm"
+              variant="ghost"
+              isDisabled={busy}
+              onPress={handleSpawnPickerClick}
+            >
               {t('players.actions.admin.pickOnMap')}
             </Button>
             <label className="flex items-center gap-1.5 cursor-pointer select-none">
@@ -557,21 +625,7 @@ export function AdminSection({
               size="sm"
               variant="ghost"
               isDisabled={busy || !spawnVehicleId || (!spawnX && !spawnY)}
-              onPress={() => {
-                const v = (allVehicles as { id: string, actor_class: string }[]).find((x) => x.id === spawnVehicleId)
-                if (!v) return
-                run(
-                  () => api.players.spawnVehicle(
-                    player.fls_id,
-                    v.actor_class,
-                    Number(spawnX) || 0,
-                    Number(spawnY) || 0,
-                    Number(spawnZ) || 0,
-                    { template_name: spawnVehicleTemplate || undefined, persistent: spawnVehiclePersistent },
-                  ),
-                  `Spawn ${spawnVehicleId} command sent for ${player.name}`,
-                )
-              }}
+              onPress={handleSpawnVehicle}
             >
               {t('players.actions.admin.spawn')}
             </Button>

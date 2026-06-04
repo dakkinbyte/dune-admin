@@ -494,6 +494,12 @@ export type ProgressionPreset = {
   nodes: string[]
 }
 
+export type ContractEntry = {
+  id: string
+  alias: string
+  tag_count: number
+}
+
 export interface UpdateCheckResult {
   current: string
   latest: string
@@ -751,7 +757,7 @@ export const api = {
   },
 
   contracts: {
-    list: () => req<{ id: string, alias: string, tag_count: number }[]>('GET', '/contracts'),
+    list: () => req<ContractEntry[]>('GET', '/contracts'),
   },
 
   database: {
