@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Tabs, toast } from '@heroui/react'
 import { useAtom, useSetAtom } from 'jotai'
-import { ConfirmDialog } from '../../../../dune-ui'
+import { ConfirmDialog, Panel } from '../../../../dune-ui'
 import { ManageLocationsModal } from '../../modals/ManageLocationsModal'
 import { MapCoordPickerModal } from '../../modals/MapCoordPickerModal'
 import { ACTION_SECTIONS, type ActionSection } from '../../types'
@@ -68,22 +68,24 @@ export const ActionsView: React.FC<ActionsViewProps> = ({ player }) => {
   return (
     <>
       <div className="flex flex-row h-full min-h-0 gap-3">
-        <Tabs
-          orientation="vertical"
-          selectedKey={section}
-          onSelectionChange={(k) => setSection(k as ActionSection)}
-        >
-          <Tabs.ListContainer className="shrink-0">
-            <Tabs.List aria-label="Actions sections">
-              {ACTION_SECTIONS.map((s) => (
-                <Tabs.Tab key={s.key} id={s.key}>
-                  {t(s.label as never)}
-                  <Tabs.Indicator />
-                </Tabs.Tab>
-              ))}
-            </Tabs.List>
-          </Tabs.ListContainer>
-        </Tabs>
+        <Panel className="shrink-0 p-0 overflow-hidden">
+          <Tabs
+            orientation="vertical"
+            selectedKey={section}
+            onSelectionChange={(k) => setSection(k as ActionSection)}
+          >
+            <Tabs.ListContainer>
+              <Tabs.List aria-label="Actions sections">
+                {ACTION_SECTIONS.map((s) => (
+                  <Tabs.Tab key={s.key} id={s.key}>
+                    {t(s.label as never)}
+                    <Tabs.Indicator />
+                  </Tabs.Tab>
+                ))}
+              </Tabs.List>
+            </Tabs.ListContainer>
+          </Tabs>
+        </Panel>
 
         <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">
           {section === 'resources' && <ResourcesSection player={player} />}
