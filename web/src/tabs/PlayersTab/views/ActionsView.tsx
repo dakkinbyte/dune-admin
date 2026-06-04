@@ -38,7 +38,7 @@ type TrainerKey = (typeof TRAINERS)[number]
 
 const MAIN_QUESTS = [
   { id: 'DA_MQ_ANewBeginning', label: '1. A New Beginning', nodes: 132 },
-  { id: 'DA_MQ_AssassinsHandbook', label: '2. Assassinâs Handbook', nodes: 91 },
+  { id: 'DA_MQ_AssassinsHandbook', label: '2. Assassin’s Handbook', nodes: 91 },
   { id: 'DA_MQ_FindTheFremen', label: '3. Find the Fremen', nodes: 46 },
   { id: 'DA_MQ_TheGreatConvention', label: '4. The Great Convention', nodes: 90 },
   { id: 'DA_MQ_TheGreatConventionPt2', label: '5. Great Convention Pt 2', nodes: 109 },
@@ -94,7 +94,7 @@ function KeystonesToggle({ keystones }: KeystonesToggleProps) {
         onClick={() => setOpen((v) => !v)}
         className="text-xs text-muted/70 hover:text-muted flex items-center gap-0.5"
       >
-        <span>{open ? 'â¾' : 'â¸'}</span>
+        <span>{open ? '▾' : '▸'}</span>
         {keystones.length}
         {' '}
         keystone
@@ -104,7 +104,7 @@ function KeystonesToggle({ keystones }: KeystonesToggleProps) {
         <div className="flex flex-col gap-0.5 mt-0.5">
           {keystones.map((k) => (
             <span key={k.id} className="text-xs font-mono text-muted">
-              â³
+              ↳
               {' '}
               {k.name.replace(/^DA_\w+Keystone_/, '').replace(/_/g, ' ')}
               {k.cost > 0 && (
@@ -1172,7 +1172,7 @@ export const ActionsView: React.FC<ActionsViewProps> = ({ player }) => {
                           }
                         >
                           <span>
-                            {picked ? 'â ' : '  '}
+                            {picked ? '✓ ' : '  '}
                             {id}
                           </span>
                           <span className="text-muted">
@@ -1248,9 +1248,9 @@ export const ActionsView: React.FC<ActionsViewProps> = ({ player }) => {
                 renderCell={(n, key) => {
                   switch (key) {
                     case 'node': return <span className="font-mono">{n.node_id}</span>
-                    case 'done': return n.is_complete ? 'â' : 'â'
-                    case 'revealed': return n.is_revealed ? 'â' : 'â'
-                    case 'reward': return n.has_pending_reward ? 'â' : 'â'
+                    case 'done': return n.is_complete ? '✓' : '—'
+                    case 'revealed': return n.is_revealed ? '✓' : '—'
+                    case 'reward': return n.has_pending_reward ? '✓' : '—'
                     case 'actions':
                       return (
                         <div className="grid grid-cols-2 gap-1 w-full">
@@ -1334,7 +1334,7 @@ export const ActionsView: React.FC<ActionsViewProps> = ({ player }) => {
                       onPress={
                         danger
                           ? () =>
-                              gate(t('players.actions.experimental.runTitle', { label }), desc.replace(/^â {2}DESTRUCTIVE â /, ''), t('players.actions.experimental.confirmRun'), () =>
+                              gate(t('players.actions.experimental.runTitle', { label }), desc.replace(/^⚠ {2}DESTRUCTIVE — /, ''), t('players.actions.experimental.confirmRun'), () =>
                                 run(
                                   () => api.players.cheatScript(player.fls_id, name),
                                   `CheatScript ${name} sent for ${player.name}`,
@@ -1666,8 +1666,8 @@ export const ActionsView: React.FC<ActionsViewProps> = ({ player }) => {
                             >
                               <span className="font-medium">{p.name}</span>
                               <span className="text-muted">
-                                {p.map || 'â'}
-                                {' Â· '}
+                                {p.map || '—'}
+                                {' · '}
                                 {p.online_status}
                               </span>
                             </button>
@@ -1717,7 +1717,7 @@ export const ActionsView: React.FC<ActionsViewProps> = ({ player }) => {
                   <textarea
                     value={whisperText}
                     onChange={(e) => setWhisperText(e.target.value)}
-                    placeholder={`Message to ${player.name}â¦`}
+                    placeholder={`Message to ${player.name}…`}
                     rows={2}
                     maxLength={500}
                     className="w-full bg-surface border border-border rounded px-2 py-1.5 text-sm text-foreground focus:outline-none focus:border-accent/60 resize-y"
@@ -1954,7 +1954,7 @@ export const ActionsView: React.FC<ActionsViewProps> = ({ player }) => {
                             onPress={() => setPendingTags((prev) => prev.filter((t) => t !== tag))}
                             aria-label={`Unstage ${tag}`}
                           >
-                            â
+                            ✕
                           </Button>
                         </div>
                       ))}
@@ -2012,7 +2012,7 @@ export const ActionsView: React.FC<ActionsViewProps> = ({ player }) => {
                               }}
                               aria-label={`Remove ${tag}`}
                             >
-                              â
+                              ✕
                             </Button>
                           )
                         }}

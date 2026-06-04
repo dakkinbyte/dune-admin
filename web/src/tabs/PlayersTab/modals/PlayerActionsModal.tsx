@@ -15,7 +15,7 @@ import {
   toast,
 } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
-import { ConfirmDialog, DataTable, LoadingState, NumberInput, Panel, SectionLabel } from '../../../dune-ui'
+import { ConfirmDialog, DataTable, Icon, LoadingState, NumberInput, Panel, SectionLabel } from '../../../dune-ui'
 import allGameplayTags from '../../../data/gameplayTags.json'
 import allSkillModules from '../../../data/skillModules.json'
 import allVehicles from '../../../data/vehicles.json'
@@ -1994,7 +1994,7 @@ export const PlayerActionsModal: React.FC<PlayerActionsModalProps> = ({ player, 
                                       }}
                                       aria-label={`Remove ${tag}`}
                                     >
-                                      ✕
+                                      <Icon name="x" className="size-3" />
                                     </Button>
                                   )
                                 }}

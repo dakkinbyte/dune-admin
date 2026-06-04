@@ -37,12 +37,12 @@ export type ActionDef = {
 export function getServerColumns(t: TFunction): Column<ServerSortKey>[] {
   return [
     { key: 'map', label: t('battlegroup.columns.map'), isRowHeader: true },
-    { key: 'phase', label: t('battlegroup.columns.phase') },
-    { key: 'players', label: t('battlegroup.columns.players') },
-    { key: 'queue', label: t('battlegroup.columns.queue') },
-    { key: 'ready', label: t('battlegroup.columns.ready') },
-    { key: 'dimension', label: t('battlegroup.columns.dim') },
-    { key: 'partition', label: t('battlegroup.columns.part') },
+    { key: 'phase', label: t('battlegroup.columns.phase'), width: 100 },
+    { key: 'players', label: t('battlegroup.columns.players'), width: 80 },
+    { key: 'queue', label: t('battlegroup.columns.queue'), width: 70 },
+    { key: 'ready', label: t('battlegroup.columns.ready'), width: 70 },
+    { key: 'dimension', label: t('battlegroup.columns.dim'), width: 60 },
+    { key: 'partition', label: t('battlegroup.columns.part'), width: 60 },
   ]
 }
 

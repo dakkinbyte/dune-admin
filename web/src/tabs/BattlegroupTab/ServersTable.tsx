@@ -1,6 +1,6 @@
 import type React from 'react'
 import { useTranslation } from 'react-i18next'
-import { DataTable } from '../../dune-ui'
+import { DataTable, Icon } from '../../dune-ui'
 import { phaseColor } from './helpers'
 import { getServerColumns, type ServerRow, type ServerSortKey } from './types'
 
@@ -52,9 +52,10 @@ export const ServersTable: React.FC<ServersTableProps> = ({ servers, isInitializ
             )
           case 'ready':
             return (
-              <span style={{ color: s.ready ? 'var(--success)' : 'var(--danger)' }}>
-                {s.ready ? '✓' : '✗'}
-              </span>
+              <Icon
+                name={s.ready ? 'check' : 'x'}
+                className={`size-4 ${s.ready ? 'text-success' : 'text-danger'}`}
+              />
             )
           case 'dimension': return <span className="text-muted">{s.dimension}</span>
           case 'partition': return <span className="text-muted">{s.partition}</span>

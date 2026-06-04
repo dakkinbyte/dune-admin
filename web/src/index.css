@@ -1,11 +1,14 @@
 @import "tailwindcss";
 @import "@heroui/styles";
 
-@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
-@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-Medium.ttf') format('truetype'); font-weight: 400 500; font-style: normal; font-display: swap; }
-@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-ExtraLight.ttf') format('truetype'); font-weight: 200; font-style: normal; font-display: swap; }
-@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-Bold-Italic_MonoNumbers_Kommafix_Cyrfix.ttf') format('truetype'); font-weight: 700; font-style: italic; font-display: swap; }
-@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-Italic_MonoNumbers_Kommafix_Cyrfix.ttf') format('truetype'); font-weight: 400; font-style: italic; font-display: swap; }
+/* unicode-range restricts Duneway to the Latin/Cyrillic blocks it actually covers.
+   Symbols, arrows, dingbats (U+2000+) fall through to the system font immediately,
+   preventing garbled â□□ rendering for ✓ ✗ ✕ — ¾ ³ → ↑ ● etc. */
+@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; unicode-range: U+0000-024F, U+0400-04FF, U+1E00-1EFF; }
+@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-Medium.ttf') format('truetype'); font-weight: 400 500; font-style: normal; font-display: swap; unicode-range: U+0000-024F, U+0400-04FF, U+1E00-1EFF; }
+@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-ExtraLight.ttf') format('truetype'); font-weight: 200; font-style: normal; font-display: swap; unicode-range: U+0000-024F, U+0400-04FF, U+1E00-1EFF; }
+@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-Bold-Italic_MonoNumbers_Kommafix_Cyrfix.ttf') format('truetype'); font-weight: 700; font-style: italic; font-display: swap; unicode-range: U+0000-024F, U+0400-04FF, U+1E00-1EFF; }
+@font-face { font-family: 'Duneway'; src: url('/fonts/Duneway-Italic_MonoNumbers_Kommafix_Cyrfix.ttf') format('truetype'); font-weight: 400; font-style: italic; font-display: swap; unicode-range: U+0000-024F, U+0400-04FF, U+1E00-1EFF; }
 @font-face { font-family: 'ImperialFont'; src: url('/fonts/ImperialFont.ttf') format('truetype'); font-weight: normal; font-style: normal; font-display: swap; }
 
 /* ── Dune desert dark theme ──────────────────────────────────────────────────
