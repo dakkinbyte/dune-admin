@@ -187,6 +187,20 @@
     }
   },
   "players": {
+    "dashboard": {
+      "navLabel": "Sunucu Genel Bakışı",
+      "title": "Sunucu Genel Bakışı",
+      "subtitle": "Sunucu genelinde oyuncu istatistikleri ve eğilimleri",
+      "totalPlayers": "Toplam oyuncu",
+      "online": "Şu an çevrimiçi",
+      "totalPlaytime": "Toplam oynama süresi",
+      "totalSolaris": "Toplam Solaris",
+      "totalScrip": "Toplam Scrip",
+      "activityTrend": "Etkinlik — son {{days}} gün",
+      "sessions": "Oturumlar",
+      "byMap": "Haritaya göre oyuncular",
+      "noPlayers": "Henüz oyuncu yok"
+    },
     "title": "Oyuncular",
     "onlineCount": "{{count}} çevrimiçi",
     "searchLabel": "Oyuncu ara",

@@ -1,0 +1,120 @@
+import type React from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { Spinner, toast } from '@heroui/react'
+import { api } from '../../../api/client'
+import type { ServerSummary } from '../../../api/client'
+import { InfoCard, PageHeader, Panel, SectionLabel } from '../../../dune-ui'
+
+function fmtDate(d: string): string {
+  return new Date(d + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+function fmtPlaytime(secs: number): string {
+  const h = Math.floor(secs / 3600)
+  const m = Math.floor((secs % 3600) / 60)
+  return h > 0 ? `${h}h ${m}m` : `${m}m`
+}
+
+// ServerDashboard is the Players-tab landing (#130): server-wide aggregates and
+// trends across all players, shown when no individual player is selected. The
+// 1:1 detail view is unchanged — picking a player replaces this.
+export const ServerDashboard: React.FC = () => {
+  const { t } = useTranslation()
+  const [summary, setSummary] = useState<ServerSummary | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  // Mirror PlayersTab.loadPlayers: defer setLoading into a microtask so it is
+  // not a synchronous setState inside the effect (react-hooks/set-state-in-effect).
+  const load = useCallback(() => {
+    Promise.resolve()
+      .then(() => setLoading(true))
+      .then(() => api.players.summary())
+      .then(setSummary)
+      .catch((e: unknown) => toast.danger(e instanceof Error ? e.message : String(e)))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  return (
+    <div className="flex h-full flex-col gap-4 overflow-y-auto pr-3">
+      <PageHeader
+        title={t('players.dashboard.title')}
+        subtitle={t('players.dashboard.subtitle')}
+        onRefresh={load}
+        loading={loading}
+      />
+
+      {!summary
+        ? (
+            <div className="flex flex-1 items-center justify-center">
+              {loading ? <Spinner /> : <p className="text-muted text-sm">{t('common.noResults')}</p>}
+            </div>
+          )
+        : (
+            <>
+              <InfoCard className="flex-wrap">
+                <InfoCard.Item label={t('players.dashboard.totalPlayers')} value={summary.total_players} />
+                <InfoCard.Item label={t('players.dashboard.online')} value={summary.online_players} />
+                <InfoCard.Item label={t('players.dashboard.totalPlaytime')} value={fmtPlaytime(summary.total_playtime_secs)} />
+                <InfoCard.Item label={t('players.dashboard.totalSolaris')} value={summary.total_solaris.toLocaleString()} />
+                <InfoCard.Item label={t('players.dashboard.totalScrip')} value={summary.total_scrip.toLocaleString()} />
+              </InfoCard>
+
+              <Panel>
+                <SectionLabel>{t('players.dashboard.activityTrend', { days: summary.trend_days })}</SectionLabel>
+                <div className="mt-3 h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={summary.activity_trend} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
+                      <XAxis
+                        dataKey="day"
+                        tickFormatter={fmtDate}
+                        tick={{ fontSize: 11, fill: 'var(--muted)' }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        tick={{ fontSize: 11, fill: 'var(--muted)' }}
+                        tickLine={false}
+                        axisLine={false}
+                        width={32}
+                      />
+                      <Tooltip
+                        formatter={(val) => [String(val as number), t('players.dashboard.sessions')]}
+                        labelFormatter={(d) => fmtDate(String(d))}
+                        contentStyle={{
+                          background: 'var(--surface)',
+                          border: '1px solid var(--border)',
+                          borderRadius: 'var(--radius)',
+                          fontSize: 12,
+                        }}
+                      />
+                      <Bar dataKey="count" fill="var(--accent)" radius={[3, 3, 0, 0]} maxBarSize={28} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Panel>
+
+              <Panel>
+                <SectionLabel>{t('players.dashboard.byMap')}</SectionLabel>
+                <div className="mt-3 flex flex-col gap-1">
+                  {summary.by_map.length === 0
+                    ? <p className="text-muted text-sm">{t('players.dashboard.noPlayers')}</p>
+                    : summary.by_map.map((m) => (
+                        <div key={m.label} className="flex items-center justify-between text-sm">
+                          <span className="text-foreground">{m.label}</span>
+                          <span className="text-muted tabular-nums">{m.count}</span>
+                        </div>
+                      ))}
+                </div>
+              </Panel>
+            </>
+          )}
+    </div>
+  )
+}

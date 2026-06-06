@@ -187,6 +187,20 @@
     }
   },
   "players": {
+    "dashboard": {
+      "navLabel": "Przegląd serwera",
+      "title": "Przegląd serwera",
+      "subtitle": "Statystyki i trendy graczy w całym serwerze",
+      "totalPlayers": "Łącznie graczy",
+      "online": "Teraz online",
+      "totalPlaytime": "Łączny czas gry",
+      "totalSolaris": "Łącznie Solaris",
+      "totalScrip": "Łącznie Scrip",
+      "activityTrend": "Aktywność — ostatnie {{days}} dni",
+      "sessions": "Sesje",
+      "byMap": "Gracze według mapy",
+      "noPlayers": "Brak graczy"
+    },
     "title": "Gracze",
     "onlineCount": "{{count}} online",
     "searchLabel": "Szukaj graczy",

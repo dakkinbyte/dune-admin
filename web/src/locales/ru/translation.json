@@ -187,6 +187,20 @@
     }
   },
   "players": {
+    "dashboard": {
+      "navLabel": "Обзор сервера",
+      "title": "Обзор сервера",
+      "subtitle": "Статистика и тренды игроков по всему серверу",
+      "totalPlayers": "Всего игроков",
+      "online": "Сейчас онлайн",
+      "totalPlaytime": "Общее игровое время",
+      "totalSolaris": "Всего Solaris",
+      "totalScrip": "Всего Scrip",
+      "activityTrend": "Активность — последние {{days}} дн.",
+      "sessions": "Сессии",
+      "byMap": "Игроки по картам",
+      "noPlayers": "Пока нет игроков"
+    },
     "title": "Игроки",
     "onlineCount": "{{count}} онлайн",
     "searchLabel": "Поиск игроков",

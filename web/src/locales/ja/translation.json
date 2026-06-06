@@ -187,6 +187,20 @@
     }
   },
   "players": {
+    "dashboard": {
+      "navLabel": "サーバー概要",
+      "title": "サーバー概要",
+      "subtitle": "サーバー全体のプレイヤー統計と傾向",
+      "totalPlayers": "プレイヤー総数",
+      "online": "オンライン",
+      "totalPlaytime": "合計プレイ時間",
+      "totalSolaris": "Solaris 合計",
+      "totalScrip": "Scrip 合計",
+      "activityTrend": "アクティビティ — 直近 {{days}} 日",
+      "sessions": "セッション",
+      "byMap": "マップ別プレイヤー",
+      "noPlayers": "プレイヤーがいません"
+    },
     "title": "プレイヤー",
     "onlineCount": "{{count}} 人オンライン",
     "searchLabel": "プレイヤーを検索",

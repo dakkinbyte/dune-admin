@@ -187,6 +187,20 @@
     }
   },
   "players": {
+    "dashboard": {
+      "navLabel": "服务器概览",
+      "title": "服务器概览",
+      "subtitle": "全服玩家统计与趋势",
+      "totalPlayers": "玩家总数",
+      "online": "当前在线",
+      "totalPlaytime": "总游戏时长",
+      "totalSolaris": "Solaris 总量",
+      "totalScrip": "Scrip 总量",
+      "activityTrend": "活动 — 最近 {{days}} 天",
+      "sessions": "会话",
+      "byMap": "按地图划分的玩家",
+      "noPlayers": "暂无玩家"
+    },
     "title": "玩家",
     "onlineCount": "{{count}} 在线",
     "searchLabel": "搜索玩家",
