@@ -194,6 +194,8 @@
       "playersCol": "Oyuncular",
       "solarisCol": "Solaris",
       "scripCol": "Scrip",
+      "avgLevelCol": "Ort. sv.",
+      "econPctCol": "% ekon.",
       "navLabel": "Sunucu Genel Bakışı",
       "title": "Sunucu Genel Bakışı",
       "subtitle": "Sunucu genelinde oyuncu istatistikleri ve eğilimleri",

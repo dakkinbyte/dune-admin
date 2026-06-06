@@ -126,8 +126,10 @@ export const ServerDashboard: React.FC = () => {
                             <tr className="text-left text-muted">
                               <th className="pb-1 font-normal">{t('players.dashboard.factionCol')}</th>
                               <th className="pb-1 text-right font-normal">{t('players.dashboard.playersCol')}</th>
+                              <th className="pb-1 text-right font-normal">{t('players.dashboard.avgLevelCol')}</th>
                               <th className="pb-1 text-right font-normal">{t('players.dashboard.solarisCol')}</th>
                               <th className="pb-1 text-right font-normal">{t('players.dashboard.scripCol')}</th>
+                              <th className="pb-1 text-right font-normal">{t('players.dashboard.econPctCol')}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -135,8 +137,13 @@ export const ServerDashboard: React.FC = () => {
                               <tr key={f.faction} className="border-t border-border/40">
                                 <td className="py-1 text-foreground">{f.faction}</td>
                                 <td className="py-1 text-right tabular-nums">{f.players.toLocaleString()}</td>
+                                <td className="py-1 text-right tabular-nums">{f.avg_level.toFixed(1)}</td>
                                 <td className="py-1 text-right tabular-nums">{f.solaris.toLocaleString()}</td>
                                 <td className="py-1 text-right tabular-nums">{f.scrip.toLocaleString()}</td>
+                                <td className="py-1 text-right tabular-nums">
+                                  {summary.total_solaris > 0 ? (f.solaris / summary.total_solaris * 100).toFixed(1) : '0.0'}
+                                  %
+                                </td>
                               </tr>
                             ))}
                           </tbody>

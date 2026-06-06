@@ -194,6 +194,8 @@
       "playersCol": "Joueurs",
       "solarisCol": "Solaris",
       "scripCol": "Scrip",
+      "avgLevelCol": "Niv. moy.",
+      "econPctCol": "% éco.",
       "navLabel": "Vue du serveur",
       "title": "Vue du serveur",
       "subtitle": "Statistiques et tendances des joueurs à l'échelle du serveur",

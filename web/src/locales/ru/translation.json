@@ -194,6 +194,8 @@
       "playersCol": "Игроки",
       "solarisCol": "Solaris",
       "scripCol": "Scrip",
+      "avgLevelCol": "Ср. ур.",
+      "econPctCol": "% эконом.",
       "navLabel": "Обзор сервера",
       "title": "Обзор сервера",
       "subtitle": "Статистика и тренды игроков по всему серверу",

@@ -217,6 +217,7 @@ export type FactionStat = {
   players: number
   solaris: number
   scrip: number
+  avg_level: number
 }
 export type ServerSummary = {
   total_players: number

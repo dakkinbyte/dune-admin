@@ -194,6 +194,8 @@
       "playersCol": "プレイヤー",
       "solarisCol": "Solaris",
       "scripCol": "Scrip",
+      "avgLevelCol": "平均Lv",
+      "econPctCol": "経済割合",
       "navLabel": "サーバー概要",
       "title": "サーバー概要",
       "subtitle": "サーバー全体のプレイヤー統計と傾向",

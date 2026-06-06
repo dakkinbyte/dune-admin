@@ -194,6 +194,8 @@
       "playersCol": "玩家",
       "solarisCol": "Solaris",
       "scripCol": "Scrip",
+      "avgLevelCol": "平均等级",
+      "econPctCol": "经济占比",
       "navLabel": "服务器概览",
       "title": "服务器概览",
       "subtitle": "全服玩家统计与趋势",
