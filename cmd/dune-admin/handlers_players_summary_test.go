@@ -70,3 +70,28 @@ func TestFillActivityTrend(t *testing.T) {
 		}
 	})
 }
+
+// averageLevel is the dashboard's "avg character level" (#130) — the mean of
+// per-character levels via xpToLevel (NOT the level of the mean XP, since the
+// XP→level curve is non-linear). 344440 XP = level 200 (the cap).
+func TestAverageLevel(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		xps  []int64
+		want float64
+	}{
+		{name: "empty is zero", xps: nil, want: 0},
+		{name: "single max-level char", xps: []int64{344440}, want: 200},
+		{name: "averages levels not raw xp", xps: []int64{0, 344440}, want: 100},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := averageLevel(tt.xps); got != tt.want {
+				t.Fatalf("averageLevel(%v) = %v, want %v", tt.xps, got, tt.want)
+			}
+		})
+	}
+}

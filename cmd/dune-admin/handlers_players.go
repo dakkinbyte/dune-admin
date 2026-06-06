@@ -56,12 +56,20 @@ func handleGetPlayerSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	playtime, trend := sessionSummary(r.Context(), globalSessionDB, summaryTrendDays)
+	// Average character level is best-effort: a query failure degrades to 0
+	// (averageLevel(nil)) rather than failing the whole dashboard.
+	xps, err := cmdFetchCharXPList(r.Context(), globalDB)
+	if err != nil {
+		log.Printf("handleGetPlayerSummary: char xp: %v", err)
+	}
 	jsonOK(w, serverSummary{
 		TotalPlayers:      stats.TotalPlayers,
 		OnlinePlayers:     stats.OnlinePlayers,
 		ByMap:             stats.ByMap,
+		ByFaction:         stats.ByFaction,
 		TotalSolaris:      stats.TotalSolaris,
 		TotalScrip:        stats.TotalScrip,
+		AvgCharLevel:      averageLevel(xps),
 		TotalPlaytimeSecs: playtime,
 		ActivityTrend:     trend,
 		TrendDays:         summaryTrendDays,

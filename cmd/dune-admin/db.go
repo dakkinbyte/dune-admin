@@ -101,12 +101,23 @@ type labeledCount struct {
 	Count int64  `json:"count"`
 }
 
+// factionStat is one faction's player count + economy totals on the Players
+// dashboard (#130). "Unaligned" buckets characters with no dune.player_faction
+// row (i.e. players who never picked a faction).
+type factionStat struct {
+	Faction string `json:"faction"`
+	Players int64  `json:"players"`
+	Solaris int64  `json:"solaris"`
+	Scrip   int64  `json:"scrip"`
+}
+
 // serverStats is the Postgres-derived half of the Players dashboard summary
 // (#130): population counts, a per-map distribution, and economy totals.
 type serverStats struct {
 	TotalPlayers  int64          `json:"total_players"`
 	OnlinePlayers int64          `json:"online_players"`
 	ByMap         []labeledCount `json:"by_map"`
+	ByFaction     []factionStat  `json:"by_faction"`
 	TotalSolaris  int64          `json:"total_solaris"`
 	TotalScrip    int64          `json:"total_scrip"`
 }
@@ -117,8 +128,10 @@ type serverSummary struct {
 	TotalPlayers      int64           `json:"total_players"`
 	OnlinePlayers     int64           `json:"online_players"`
 	ByMap             []labeledCount  `json:"by_map"`
+	ByFaction         []factionStat   `json:"by_faction"`
 	TotalSolaris      int64           `json:"total_solaris"`
 	TotalScrip        int64           `json:"total_scrip"`
+	AvgCharLevel      float64         `json:"avg_char_level"`
 	TotalPlaytimeSecs int64           `json:"total_playtime_secs"`
 	ActivityTrend     []activityPoint `json:"activity_trend"`
 	TrendDays         int             `json:"trend_days"`
@@ -150,6 +163,34 @@ const (
 			COALESCE(SUM(CASE WHEN currency_id =  dune.get_solaris_id() THEN balance ELSE 0 END), 0) AS solaris,
 			COALESCE(SUM(CASE WHEN currency_id <> dune.get_solaris_id() THEN balance ELSE 0 END), 0) AS scrip
 		FROM dune.player_virtual_currency_balances`
+
+	// Players + economy grouped by faction. LEFT JOINs so characters with no
+	// dune.player_faction row fall into "Unaligned"; COUNT(DISTINCT a.id) stays
+	// correct despite the currency-row fan-out from the balances join. Verified
+	// read-only against the test VM before shipping.
+	serverByFactionSQL = `
+		SELECT
+			COALESCE(f.name, 'Unaligned') AS faction,
+			COUNT(DISTINCT a.id) AS players,
+			COALESCE(SUM(CASE WHEN vcb.currency_id =  dune.get_solaris_id() THEN vcb.balance ELSE 0 END), 0) AS solaris,
+			COALESCE(SUM(CASE WHEN vcb.currency_id <> dune.get_solaris_id() THEN vcb.balance ELSE 0 END), 0) AS scrip
+		FROM dune.actors a
+		LEFT JOIN dune.player_faction pf ON pf.actor_id = a.id
+		LEFT JOIN dune.factions f ON f.id = pf.faction_id
+		LEFT JOIN dune.player_state ps ON ps.account_id = a.owner_account_id
+		LEFT JOIN dune.player_virtual_currency_balances vcb ON vcb.player_controller_id = ps.player_controller_id
+		WHERE a.class ILIKE '%PlayerCharacter%' AND a.owner_account_id <> $1
+		GROUP BY faction
+		ORDER BY players DESC, faction`
+
+	// Cumulative character XP per player (DuneCharacter FLevelComponent), fed
+	// through xpToLevel to compute the server's average character level.
+	serverCharXPSQL = `
+		SELECT COALESCE((fe.components->'FLevelComponent'->1->>'TotalXPEarned')::bigint, 0) AS xp
+		FROM dune.actors a
+		JOIN dune.actor_fgl_entities afe ON afe.actor_id = a.id AND afe.slot_name = 'DuneCharacter'
+		JOIN dune.fgl_entities fe ON fe.entity_id = afe.entity_id
+		WHERE a.class ILIKE '%PlayerCharacter%' AND a.owner_account_id <> $1`
 )
 
 // cmdFetchServerStats computes the Postgres-derived dashboard aggregates (#130):
@@ -169,6 +210,12 @@ func cmdFetchServerStats(ctx context.Context, pool *pgxpool.Pool) (serverStats, 
 	if err := pool.QueryRow(ctx, serverEconomySQL).Scan(&s.TotalSolaris, &s.TotalScrip); err != nil {
 		return serverStats{}, fmt.Errorf("server economy: %w", err)
 	}
+
+	byFaction, err := scanFactionStats(ctx, pool, serverByFactionSQL, gmIdentityAccountID)
+	if err != nil {
+		return serverStats{}, fmt.Errorf("server by-faction: %w", err)
+	}
+	s.ByFaction = byFaction
 	return s, nil
 }
 
@@ -190,6 +237,61 @@ func scanLabeledCounts(ctx context.Context, pool *pgxpool.Pool, query string, ar
 		out = append(out, c)
 	}
 	return out, rows.Err()
+}
+
+// scanFactionStats runs the per-faction (faction, players, solaris, scrip) query
+// and returns a never-nil slice. NUMERIC balance sums scan cleanly into int64.
+func scanFactionStats(ctx context.Context, pool *pgxpool.Pool, query string, args ...any) ([]factionStat, error) {
+	rows, err := pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := []factionStat{}
+	for rows.Next() {
+		var fs factionStat
+		if err := rows.Scan(&fs.Faction, &fs.Players, &fs.Solaris, &fs.Scrip); err != nil {
+			return nil, err
+		}
+		out = append(out, fs)
+	}
+	return out, rows.Err()
+}
+
+// cmdFetchCharXPList returns every player character's cumulative character XP,
+// for the server-wide average character level (#130).
+func cmdFetchCharXPList(ctx context.Context, pool *pgxpool.Pool) ([]int64, error) {
+	rows, err := pool.Query(ctx, serverCharXPSQL, gmIdentityAccountID)
+	if err != nil {
+		return nil, fmt.Errorf("server char xp: %w", err)
+	}
+	defer rows.Close()
+
+	var xps []int64
+	for rows.Next() {
+		var xp int64
+		if err := rows.Scan(&xp); err != nil {
+			return nil, fmt.Errorf("scan char xp: %w", err)
+		}
+		xps = append(xps, xp)
+	}
+	return xps, rows.Err()
+}
+
+// averageLevel is the mean character level across the given cumulative-XP values
+// (via xpToLevel). Averaging per-character levels — not raw XP — is the intent,
+// since the XP→level curve is non-linear. Empty input → 0. Rounding is left to
+// the client.
+func averageLevel(xps []int64) float64 {
+	if len(xps) == 0 {
+		return 0
+	}
+	sum := 0
+	for _, xp := range xps {
+		sum += xpToLevel(xp)
+	}
+	return float64(sum) / float64(len(xps))
 }
 
 func cmdFetchInventory(playerID int64) Cmd {
