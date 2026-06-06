@@ -76,6 +76,43 @@ func handleGetPlayerSummary(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// factionTrendDays is the look-back window for the faction-growth chart (#130 ext).
+const factionTrendDays = 30
+
+// @Summary Faction-growth time series (Solaris or avg level per faction)
+// @Tags players
+// @Produce json
+// @Param metric query string false "solaris (default) | level"
+// @Success 200 {object} factionTrends
+// @Failure 500 {object} map[string]string
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/players/faction-trends [get]
+func handleGetFactionTrends(w http.ResponseWriter, r *http.Request) {
+	if globalDB == nil {
+		jsonErr(w, fmt.Errorf("database not connected"), http.StatusServiceUnavailable)
+		return
+	}
+	metric := r.URL.Query().Get("metric")
+	if metric != "level" {
+		metric = "solaris"
+	}
+	acctFaction, err := cmdFetchAccountFactions(r.Context(), globalDB)
+	if err != nil {
+		log.Printf("handleGetFactionTrends: %v", err)
+		jsonErr(w, fmt.Errorf("internal error"), http.StatusInternalServerError)
+		return
+	}
+	// Snapshots are best-effort: a missing/failed session DB yields an empty
+	// series rather than failing the request.
+	var snaps []daySnap
+	if globalSessionDB != nil {
+		if snaps, err = getDailySnapshots(r.Context(), globalSessionDB, factionTrendDays); err != nil {
+			log.Printf("handleGetFactionTrends: snapshots: %v", err)
+		}
+	}
+	jsonOK(w, bucketFactionTrends(snaps, acctFaction, metric))
+}
+
 // @Summary Get online state for all players
 // @Tags players
 // @Produce json

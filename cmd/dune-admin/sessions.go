@@ -306,6 +306,50 @@ func getStatSnapshotHistory(ctx context.Context, sdb *sql.DB, accountID int64, l
 	return out, nil
 }
 
+// daySnap is one account's latest stat snapshot on a given UTC day, used by the
+// faction-growth trend (#130 ext). Solaris/XP default to 0 when NULL.
+type daySnap struct {
+	AccountID int64
+	Day       string
+	Solaris   int64
+	CharXP    int64
+}
+
+// getDailySnapshots returns the latest snapshot per (account, UTC day) within
+// the last `days` days — one row per account per day, so a day's total isn't
+// inflated by the 5-minute poll cadence.
+func getDailySnapshots(ctx context.Context, db *sql.DB, days int) ([]daySnap, error) {
+	if days < 1 {
+		days = 1
+	}
+	since := time.Now().UTC().AddDate(0, 0, -(days - 1)).Format("2006-01-02")
+	rows, err := db.QueryContext(ctx, `
+		SELECT account_id, day, solaris, xp FROM (
+			SELECT account_id,
+			       substr(snapped_at, 1, 10) AS day,
+			       COALESCE(solaris_balance, 0) AS solaris,
+			       COALESCE(char_xp, 0) AS xp,
+			       ROW_NUMBER() OVER (PARTITION BY account_id, substr(snapped_at, 1, 10) ORDER BY snapped_at DESC) AS rn
+			FROM stat_snapshots
+			WHERE substr(snapped_at, 1, 10) >= ?
+		) WHERE rn = 1
+		ORDER BY day`, since)
+	if err != nil {
+		return nil, fmt.Errorf("query daily snapshots: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var out []daySnap
+	for rows.Next() {
+		var d daySnap
+		if err := rows.Scan(&d.AccountID, &d.Day, &d.Solaris, &d.CharXP); err != nil {
+			return nil, fmt.Errorf("scan daily snapshot: %w", err)
+		}
+		out = append(out, d)
+	}
+	return out, rows.Err()
+}
+
 func pollOnce(ctx context.Context, pool *pgxpool.Pool, db *sql.DB) {
 	onlineIDs, err := cmdFetchOnlineAccountIDs(ctx, pool)
 	if err != nil {

@@ -115,3 +115,55 @@ func TestAvgLevelsByFaction(t *testing.T) {
 		t.Errorf("nil input: want empty map, got %v", avgLevelsByFaction(nil))
 	}
 }
+
+// bucketFactionTrends (#130 ext v2c) aggregates per-account daily snapshots into
+// a per-day, per-faction series: Solaris summed, level averaged. Pure + testable.
+func TestBucketFactionTrends(t *testing.T) {
+	t.Parallel()
+	snaps := []daySnap{
+		{AccountID: 1, Day: "2026-06-01", Solaris: 100, CharXP: 344440}, // Atreides, lvl 200
+		{AccountID: 2, Day: "2026-06-01", Solaris: 50, CharXP: 0},       // Atreides, lvl 0
+		{AccountID: 3, Day: "2026-06-01", Solaris: 30, CharXP: 344440},  // Unaligned, lvl 200
+		{AccountID: 1, Day: "2026-06-02", Solaris: 200, CharXP: 344440}, // Atreides
+	}
+	acct := map[int64]string{1: "Atreides", 2: "Atreides", 3: "Unaligned"}
+
+	t.Run("solaris sums per day+faction, factions sorted", func(t *testing.T) {
+		t.Parallel()
+		tr := bucketFactionTrends(snaps, acct, "solaris")
+		if tr.Metric != "solaris" {
+			t.Fatalf("metric = %q", tr.Metric)
+		}
+		if len(tr.Factions) != 2 || tr.Factions[0] != "Atreides" || tr.Factions[1] != "Unaligned" {
+			t.Fatalf("factions = %v, want [Atreides Unaligned]", tr.Factions)
+		}
+		if len(tr.Points) != 2 {
+			t.Fatalf("points = %d, want 2", len(tr.Points))
+		}
+		if tr.Points[0].Day != "2026-06-01" || tr.Points[0].Values["Atreides"] != 150 || tr.Points[0].Values["Unaligned"] != 30 {
+			t.Fatalf("day1 = %+v, want Atreides 150 / Unaligned 30", tr.Points[0])
+		}
+		if tr.Points[1].Values["Atreides"] != 200 {
+			t.Fatalf("day2 Atreides = %v, want 200", tr.Points[1].Values["Atreides"])
+		}
+	})
+
+	t.Run("level averages per day+faction", func(t *testing.T) {
+		t.Parallel()
+		tr := bucketFactionTrends(snaps, acct, "level")
+		if tr.Points[0].Values["Atreides"] != 100 { // avg(200, 0)
+			t.Fatalf("day1 Atreides level = %v, want 100", tr.Points[0].Values["Atreides"])
+		}
+		if tr.Points[0].Values["Unaligned"] != 200 {
+			t.Fatalf("day1 Unaligned level = %v, want 200", tr.Points[0].Values["Unaligned"])
+		}
+	})
+
+	t.Run("empty input yields empty series", func(t *testing.T) {
+		t.Parallel()
+		tr := bucketFactionTrends(nil, acct, "solaris")
+		if len(tr.Points) != 0 || len(tr.Factions) != 0 {
+			t.Fatalf("empty: %+v", tr)
+		}
+	})
+}

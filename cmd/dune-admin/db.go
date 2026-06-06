@@ -287,6 +287,105 @@ func factionAvgLevels(ctx context.Context, pool *pgxpool.Pool) (map[string]float
 	return avgLevelsByFaction(pairs), nil
 }
 
+// serverAccountFactionSQL maps each player account to its current faction name
+// for the faction-growth trend (#130 ext). "Unaligned" when no faction row.
+const serverAccountFactionSQL = `
+	SELECT a.owner_account_id, COALESCE(f.name, 'Unaligned')
+	FROM dune.actors a
+	LEFT JOIN dune.player_faction pf ON pf.actor_id = a.id
+	LEFT JOIN dune.factions f ON f.id = pf.faction_id
+	WHERE a.class ILIKE '%PlayerCharacter%' AND a.owner_account_id <> $1`
+
+// cmdFetchAccountFactions returns account_id -> current faction name.
+func cmdFetchAccountFactions(ctx context.Context, pool *pgxpool.Pool) (map[int64]string, error) {
+	rows, err := pool.Query(ctx, serverAccountFactionSQL, gmIdentityAccountID)
+	if err != nil {
+		return nil, fmt.Errorf("account factions: %w", err)
+	}
+	defer rows.Close()
+
+	out := map[int64]string{}
+	for rows.Next() {
+		var acct int64
+		var fac string
+		if err := rows.Scan(&acct, &fac); err != nil {
+			return nil, fmt.Errorf("scan account faction: %w", err)
+		}
+		out[acct] = fac
+	}
+	return out, rows.Err()
+}
+
+// factionTrendPoint is one day's per-faction value (faction name -> value).
+type factionTrendPoint struct {
+	Day    string             `json:"day"`
+	Values map[string]float64 `json:"values"`
+}
+
+// factionTrends is the faction-growth time series (#130 ext): a sorted faction
+// list (the chart's lines) + per-day values. The data is approximate — it comes
+// from stat_snapshots, which only capture players who were online during a poll,
+// and uses each account's CURRENT faction.
+type factionTrends struct {
+	Metric   string              `json:"metric"`
+	Factions []string            `json:"factions"`
+	Points   []factionTrendPoint `json:"points"`
+}
+
+// bucketFactionTrends aggregates per-account daily snapshots into a per-day,
+// per-faction series. Pure + testable (xpToLevel is its only dependency).
+// metric "level" → average character level per faction; otherwise → summed Solaris.
+func bucketFactionTrends(snaps []daySnap, acctFaction map[int64]string, metric string) factionTrends {
+	type acc struct {
+		sum float64
+		n   int
+	}
+	byDay := map[string]map[string]*acc{}
+	order := []string{}
+	factionSet := map[string]bool{}
+	for _, s := range snaps {
+		fac := acctFaction[s.AccountID]
+		if fac == "" {
+			fac = "Unaligned"
+		}
+		factionSet[fac] = true
+		if byDay[s.Day] == nil {
+			byDay[s.Day] = map[string]*acc{}
+			order = append(order, s.Day)
+		}
+		a := byDay[s.Day][fac]
+		if a == nil {
+			a = &acc{}
+			byDay[s.Day][fac] = a
+		}
+		if metric == "level" {
+			a.sum += float64(xpToLevel(s.CharXP))
+		} else {
+			a.sum += float64(s.Solaris)
+		}
+		a.n++
+	}
+	sort.Strings(order)
+	factions := make([]string, 0, len(factionSet))
+	for f := range factionSet {
+		factions = append(factions, f)
+	}
+	sort.Strings(factions)
+	points := make([]factionTrendPoint, 0, len(order))
+	for _, day := range order {
+		vals := make(map[string]float64, len(byDay[day]))
+		for fac, a := range byDay[day] {
+			if metric == "level" {
+				vals[fac] = a.sum / float64(a.n)
+			} else {
+				vals[fac] = a.sum
+			}
+		}
+		points = append(points, factionTrendPoint{Day: day, Values: vals})
+	}
+	return factionTrends{Metric: metric, Factions: factions, Points: points}
+}
+
 // scanLabeledCounts runs a (label text, count bigint) query and returns the
 // rows as a never-nil slice (empty → [], so the JSON is [] not null).
 func scanLabeledCounts(ctx context.Context, pool *pgxpool.Pool, query string, args ...any) ([]labeledCount, error) {
