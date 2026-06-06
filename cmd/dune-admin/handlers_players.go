@@ -34,6 +34,40 @@ func handleGetPlayers(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, rows)
 }
 
+// summaryTrendDays is the activity-trend window for the Players dashboard (#130).
+const summaryTrendDays = 14
+
+// @Summary Server-wide player summary dashboard
+// @Tags players
+// @Produce json
+// @Success 200 {object} serverSummary
+// @Failure 500 {object} map[string]string
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/players/summary [get]
+func handleGetPlayerSummary(w http.ResponseWriter, r *http.Request) {
+	if globalDB == nil {
+		jsonErr(w, fmt.Errorf("database not connected"), http.StatusServiceUnavailable)
+		return
+	}
+	stats, err := cmdFetchServerStats(r.Context(), globalDB)
+	if err != nil {
+		log.Printf("handleGetPlayerSummary: %v", err)
+		jsonErr(w, fmt.Errorf("internal error"), http.StatusInternalServerError)
+		return
+	}
+	playtime, trend := sessionSummary(r.Context(), globalSessionDB, summaryTrendDays)
+	jsonOK(w, serverSummary{
+		TotalPlayers:      stats.TotalPlayers,
+		OnlinePlayers:     stats.OnlinePlayers,
+		ByMap:             stats.ByMap,
+		TotalSolaris:      stats.TotalSolaris,
+		TotalScrip:        stats.TotalScrip,
+		TotalPlaytimeSecs: playtime,
+		ActivityTrend:     trend,
+		TrendDays:         summaryTrendDays,
+	})
+}
+
 // @Summary Get online state for all players
 // @Tags players
 // @Produce json

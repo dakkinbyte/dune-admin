@@ -94,6 +94,104 @@ func cmdFetchPlayers() Msg {
 	return msgPlayers{rows: players}
 }
 
+// labeledCount is one (label, count) row of a server-wide distribution on the
+// Players dashboard (#130) — e.g. players per map.
+type labeledCount struct {
+	Label string `json:"label"`
+	Count int64  `json:"count"`
+}
+
+// serverStats is the Postgres-derived half of the Players dashboard summary
+// (#130): population counts, a per-map distribution, and economy totals.
+type serverStats struct {
+	TotalPlayers  int64          `json:"total_players"`
+	OnlinePlayers int64          `json:"online_players"`
+	ByMap         []labeledCount `json:"by_map"`
+	TotalSolaris  int64          `json:"total_solaris"`
+	TotalScrip    int64          `json:"total_scrip"`
+}
+
+// serverSummary is the full Players-dashboard payload: serverStats plus the
+// session-derived playtime + activity trend (from sessions.db).
+type serverSummary struct {
+	TotalPlayers      int64           `json:"total_players"`
+	OnlinePlayers     int64           `json:"online_players"`
+	ByMap             []labeledCount  `json:"by_map"`
+	TotalSolaris      int64           `json:"total_solaris"`
+	TotalScrip        int64           `json:"total_scrip"`
+	TotalPlaytimeSecs int64           `json:"total_playtime_secs"`
+	ActivityTrend     []activityPoint `json:"activity_trend"`
+	TrendDays         int             `json:"trend_days"`
+}
+
+const (
+	// Population counts. The seeded GM identity ($1) is excluded — it is not a
+	// real player. online_status compares against the enum literal (see
+	// cmdFetchOnlineAccountIDs), summed via CASE to match existing query style.
+	serverCountsSQL = `
+		SELECT
+			COUNT(*) AS total,
+			COALESCE(SUM(CASE WHEN ps.online_status = 'Online' THEN 1 ELSE 0 END), 0) AS online
+		FROM dune.actors a
+		LEFT JOIN dune.player_state ps ON ps.account_id = a.owner_account_id
+		WHERE a.class ILIKE '%PlayerCharacter%' AND a.owner_account_id <> $1`
+
+	serverByMapSQL = `
+		SELECT COALESCE(NULLIF(a.map, ''), 'Unknown') AS label, COUNT(*) AS count
+		FROM dune.actors a
+		WHERE a.class ILIKE '%PlayerCharacter%' AND a.owner_account_id <> $1
+		GROUP BY label
+		ORDER BY count DESC, label`
+
+	// Economy totals across all balances. Solaris is identified by the game's
+	// own dune.get_solaris_id(); everything else is treated as scrip.
+	serverEconomySQL = `
+		SELECT
+			COALESCE(SUM(CASE WHEN currency_id =  dune.get_solaris_id() THEN balance ELSE 0 END), 0) AS solaris,
+			COALESCE(SUM(CASE WHEN currency_id <> dune.get_solaris_id() THEN balance ELSE 0 END), 0) AS scrip
+		FROM dune.player_virtual_currency_balances`
+)
+
+// cmdFetchServerStats computes the Postgres-derived dashboard aggregates (#130):
+// player counts, the per-map distribution, and economy totals.
+func cmdFetchServerStats(ctx context.Context, pool *pgxpool.Pool) (serverStats, error) {
+	var s serverStats
+	if err := pool.QueryRow(ctx, serverCountsSQL, gmIdentityAccountID).Scan(&s.TotalPlayers, &s.OnlinePlayers); err != nil {
+		return serverStats{}, fmt.Errorf("server counts: %w", err)
+	}
+
+	byMap, err := scanLabeledCounts(ctx, pool, serverByMapSQL, gmIdentityAccountID)
+	if err != nil {
+		return serverStats{}, fmt.Errorf("server by-map: %w", err)
+	}
+	s.ByMap = byMap
+
+	if err := pool.QueryRow(ctx, serverEconomySQL).Scan(&s.TotalSolaris, &s.TotalScrip); err != nil {
+		return serverStats{}, fmt.Errorf("server economy: %w", err)
+	}
+	return s, nil
+}
+
+// scanLabeledCounts runs a (label text, count bigint) query and returns the
+// rows as a never-nil slice (empty → [], so the JSON is [] not null).
+func scanLabeledCounts(ctx context.Context, pool *pgxpool.Pool, query string, args ...any) ([]labeledCount, error) {
+	rows, err := pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := []labeledCount{}
+	for rows.Next() {
+		var c labeledCount
+		if err := rows.Scan(&c.Label, &c.Count); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
 func cmdFetchInventory(playerID int64) Cmd {
 	return func() Msg {
 		if globalDB == nil {

@@ -126,6 +126,7 @@ func startServer(addr string) {
 	mux.HandleFunc("GET /api/v1/players/currency", handleGetCurrency)
 	mux.HandleFunc("GET /api/v1/players/factions", handleGetFactions)
 	mux.HandleFunc("GET /api/v1/players/specs", handleGetSpecs)
+	mux.HandleFunc("GET /api/v1/players/summary", handleGetPlayerSummary)
 	mux.HandleFunc("GET /api/v1/players/templates", handleGetTemplates)
 	mux.HandleFunc("GET /api/v1/players/{id}/inventory", handleGetInventory)
 	mux.HandleFunc("GET /api/v1/players/{id}/journey", handleGetJourney)
