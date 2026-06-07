@@ -1,9 +1,10 @@
 import { useState, type Key, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAtom } from 'jotai'
+import { loadable } from 'jotai/utils'
 import { Button, Input, ListBox, SearchField, Select, toast } from '@heroui/react'
 import { Panel, SectionLabel } from '../../../../../dune-ui'
-import allVehicles from '../../../../../data/vehicles.json'
+import { vehiclesAtom } from '../../../../../data/store'
 import { api } from '../../../../../api/client'
 import type { Player } from '../../../../../api/client'
 import { busyAtom, partitionsAtom, allPlayersAtom } from '../store'
@@ -23,6 +24,8 @@ export function AdminSection({ player, onManageLocations, onTeleportPicker, onSp
   const [allPlayers] = useAtom(allPlayersAtom(player.id))
   const run = useRun(player.id)
   const gate = useGate(player.id)
+  const [vehiclesState] = useAtom(loadable(vehiclesAtom))
+  const allVehicles = vehiclesState.state === 'hasData' ? vehiclesState.data : []
 
   const [selectedPartition, setSelectedPartition] = useState('')
   const [teleportX, setTeleportX] = useState('')
@@ -164,9 +167,7 @@ export function AdminSection({ player, onManageLocations, onTeleportPicker, onSp
   const handleVehicleSelect = (k: Key | null) => {
     const id = k ? String(k) : ''
     setSpawnVehicleId(id)
-    const v = (allVehicles as { id: string, templates: string[] }[]).find(
-      (x) => x.id === id,
-    )
+    const v = allVehicles.find((x) => x.id === id)
     setSpawnVehicleTemplate(v?.templates[0] ?? '')
   }
 
@@ -200,9 +201,7 @@ export function AdminSection({ player, onManageLocations, onTeleportPicker, onSp
     })
 
   const handleSpawnVehicle = () => {
-    const v = (allVehicles as { id: string, actor_class: string }[]).find(
-      (x) => x.id === spawnVehicleId,
-    )
+    const v = allVehicles.find((x) => x.id === spawnVehicleId)
     if (!v) return
     run(
       () =>
@@ -534,7 +533,7 @@ export function AdminSection({ player, onManageLocations, onTeleportPicker, onSp
               </Select.Trigger>
               <Select.Popover>
                 <ListBox>
-                  {(allVehicles as { id: string, label: string }[]).map((v) => (
+                  {allVehicles.map((v) => (
                     <ListBox.Item key={v.id} id={v.id} textValue={v.label}>
                       {v.label}
                       <ListBox.ItemIndicator />
@@ -544,8 +543,7 @@ export function AdminSection({ player, onManageLocations, onTeleportPicker, onSp
               </Select.Popover>
             </Select>
             {spawnVehicleId && (() => {
-              const veh = allVehicles as { id: string, templates: string[] }[]
-              const templates = veh.find((v) => v.id === spawnVehicleId)?.templates ?? []
+              const templates = allVehicles.find((v) => v.id === spawnVehicleId)?.templates ?? []
               return templates.length > 1
                 ? (
                     <Select

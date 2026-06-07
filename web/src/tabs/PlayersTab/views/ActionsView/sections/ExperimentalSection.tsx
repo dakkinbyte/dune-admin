@@ -1,23 +1,16 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAtom } from 'jotai'
+import { loadable } from 'jotai/utils'
 import { Button, Input } from '@heroui/react'
 import { Panel, SectionLabel } from '../../../../../dune-ui'
 import { api } from '../../../../../api/client'
 import type { Player } from '../../../../../api/client'
 import { busyAtom } from '../store'
+import { cheatScriptsAtom } from '../../../../../data/store'
 import { useRun, useGate } from '../hooks/useActions'
 
 interface ExperimentalSectionProps { player: Player }
-
-const SCRIPTS = [
-  { name: 'LeaveMeAlone', danger: false },
-  { name: 'AwardPlayerXP', danger: false },
-  { name: 'UnlockAllSkills', danger: false },
-  { name: 'UnlockAllAbilities', danger: false },
-  { name: 'PlaytestSetup', danger: true },
-  { name: 'PlaytestSetupAdmin', danger: true },
-] as const
 
 export function ExperimentalSection({ player }: ExperimentalSectionProps) {
   const { t } = useTranslation()
@@ -25,6 +18,8 @@ export function ExperimentalSection({ player }: ExperimentalSectionProps) {
   const run = useRun(player.id)
   const gate = useGate(player.id)
   const [customScriptName, setCustomScriptName] = useState('')
+  const [scriptsState] = useAtom(loadable(cheatScriptsAtom))
+  const scripts = scriptsState.state === 'hasData' ? scriptsState.data : []
 
   const handleRunScript = (name: string, danger: boolean) => {
     const label = t(`players.actions.experimental.scripts.${name}` as never)
@@ -57,7 +52,7 @@ export function ExperimentalSection({ player }: ExperimentalSectionProps) {
       <Panel>
         <SectionLabel>{t('players.actions.experimental.knownScripts')}</SectionLabel>
         <div className="text-xs text-muted mb-2">{t('players.actions.experimental.knownScriptsDesc')}</div>
-        {SCRIPTS.map(({ name, danger }) => {
+        {scripts.map(({ name, danger }) => {
           const label = t(`players.actions.experimental.scripts.${name}` as never)
           const desc = t(`players.actions.experimental.scripts.${name}Desc` as never)
           return (

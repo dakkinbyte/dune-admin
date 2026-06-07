@@ -407,19 +407,10 @@ func resolveKeyPath() string {
 	return filepath.Join(home, ".dune-admin", "sshKey")
 }
 
-func resolveItemDataPath() string {
-	if itemDataPath != "" {
-		return itemDataPath
-	}
-	home, _ := os.UserHomeDir()
-	exe, _ := os.Executable()
-	exeDir := filepath.Dir(exe)
-	candidates := []string{
-		filepath.Join(home, ".dune-admin", "item-data.json"),
-		filepath.Join(exeDir, "item-data.json"),
-		filepath.Join(exeDir, "..", "share", "dune-admin", "item-data.json"), // Homebrew pkgshare
-		"./item-data.json",
-	}
+// firstExistingPath returns the first path from candidates where os.Stat
+// succeeds, or "" if none exist. It is the shared search-order primitive
+// for all data-file resolvers.
+func firstExistingPath(candidates []string) string {
 	for _, p := range candidates {
 		if _, err := os.Stat(p); err == nil {
 			return p
@@ -428,22 +419,33 @@ func resolveItemDataPath() string {
 	return ""
 }
 
-func resolveTagsDataPath() string {
+// resolveDataFilePath returns the path to the named data file by searching
+// the standard candidate locations in priority order:
+//  1. ~/.dune-admin/<name>   — user override
+//  2. <exeDir>/<name>        — next to the binary (release zip / /app/)
+//  3. <exeDir>/../share/dune-admin/<name> — Homebrew pkgshare
+//  4. ./<name>               — cwd (dev / make dev)
+func resolveDataFilePath(name string) string {
 	home, _ := os.UserHomeDir()
 	exe, _ := os.Executable()
 	exeDir := filepath.Dir(exe)
-	candidates := []string{
-		filepath.Join(home, ".dune-admin", "tags-data.json"),
-		filepath.Join(exeDir, "tags-data.json"),
-		filepath.Join(exeDir, "..", "share", "dune-admin", "tags-data.json"), // Homebrew pkgshare
-		"./tags-data.json",
+	return firstExistingPath([]string{
+		filepath.Join(home, ".dune-admin", name),
+		filepath.Join(exeDir, name),
+		filepath.Join(exeDir, "..", "share", "dune-admin", name), // Homebrew pkgshare
+		"./" + name,
+	})
+}
+
+func resolveItemDataPath() string {
+	if itemDataPath != "" {
+		return itemDataPath
 	}
-	for _, p := range candidates {
-		if _, err := os.Stat(p); err == nil {
-			return p
-		}
-	}
-	return ""
+	return resolveDataFilePath("item-data.json")
+}
+
+func resolveTagsDataPath() string {
+	return resolveDataFilePath("tags-data.json")
 }
 
 var tagsData tagsDataFile

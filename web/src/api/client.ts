@@ -15,22 +15,17 @@ function sanitizeBackendBase(raw: string): string | null {
   }
 }
 
+// isCdnDeploy is true on Cloudflare Pages builds (VITE_CDN_BASE_URL set at
+// build time). On CDN deploys the SPA and the Go backend are on different
+// origins, so we must not use window.location.origin as the API base.
+export const isCdnDeploy = !!(import.meta.env.VITE_CDN_BASE_URL as string | undefined)
+
 function getApiBase(): string {
   const stored = localStorage.getItem('dune_admin_backend')
   if (stored) {
     const safeBase = sanitizeBackendBase(stored)
     if (safeBase) return safeBase + '/api/v1'
   }
-
-  // CDN-hosted deploy detection: VITE_CDN_BASE_URL is set at build time by
-  // the Cloudflare Pages workflow and unset for single-binary Go builds
-  // (AMP / local make build / GoReleaser). On a CDN deploy the SPA and the
-  // backend are on different origins, so defaulting to window.location.origin
-  // would hit Cloudflare's SPA fallback (index.html) instead of the API,
-  // producing the "Unexpected token '<', '<!DOCTYPE'" JSON parse error on
-  // every tab. Fall through to the localhost dev default and require k8s
-  // users to set localStorage('dune_admin_backend') to their SSH tunnel.
-  const isCdnDeploy = !!(import.meta.env.VITE_CDN_BASE_URL as string | undefined)
 
   // Single-binary deploys (AMP, local Go, k8s port-forward): SPA and API are
   // same-origin unless we're on the Vite dev server.
@@ -46,7 +41,9 @@ export function getWsBase(): string {
   return getApiBase().replace(/^http/, 'ws')
 }
 
-const BASE = getApiBase()
+// apiBase is the resolved /api/v1 URL for this deployment. Exported so the
+// data store can derive the /api/v1/data/{file} URL without duplicating logic.
+export const apiBase = getApiBase()
 
 export class ApiError extends Error {
   status: number
@@ -62,7 +59,7 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
   const headers: Record<string, string> = {}
   if (body) headers['Content-Type'] = 'application/json'
   if (token) headers['Authorization'] = `Bearer ${token}`
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(`${apiBase}${path}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
@@ -626,14 +623,14 @@ export const api = {
     exec: (cmd: string) => req<BGOutput>('POST', '/battlegroup/exec', { cmd }),
     pods: () => req<{ pods: string[], namespace: string }>('GET', '/battlegroup/pods'),
     backupFiles: () => req<BackupFile[]>('GET', '/battlegroup/backup-files'),
-    backupDownloadUrl: (file: string) => `${BASE}/battlegroup/backup-files/download?file=${encodeURIComponent(file)}`,
+    backupDownloadUrl: (file: string) => `${apiBase}/battlegroup/backup-files/download?file=${encodeURIComponent(file)}`,
     backupUpload: async (file: File): Promise<{ name: string }> => {
       const form = new FormData()
       form.append('backup', file)
       const token = await window.Clerk?.session?.getToken()
       const headers: Record<string, string> = {}
       if (token) headers['Authorization'] = `Bearer ${token}`
-      const res = await fetch(`${BASE}/battlegroup/backup-files/upload`, { method: 'POST', headers, body: form })
+      const res = await fetch(`${apiBase}/battlegroup/backup-files/upload`, { method: 'POST', headers, body: form })
       if (!res.ok) {
         const e = await res.json().catch(() => ({ error: res.statusText }))
         throw new ApiError(res.status, e.error)
@@ -678,12 +675,12 @@ export const api = {
     updateTags: (account_id: number, add: string[], remove: string[]) => req<MutateResult>('POST', '/players/update-tags', { account_id, add, remove }),
     returningPlayerAward: (account_id: number) => req<MutateResult>('POST', '/players/returning-player-award', { account_id }),
     dismissReturningPlayerAward: (account_id: number) => req<MutateResult>('POST', '/players/dismiss-returning-player-award', { account_id }),
-    exportUrl: (account_id: number) => `${BASE}/players/${account_id}/export`,
+    exportUrl: (account_id: number) => `${apiBase}/players/${account_id}/export`,
     exportPlayer: async (account_id: number): Promise<void> => {
       const token = await window.Clerk?.session?.getToken()
       const headers: Record<string, string> = {}
       if (token) headers['Authorization'] = `Bearer ${token}`
-      const res = await fetch(`${BASE}/players/${account_id}/export`, { headers })
+      const res = await fetch(`${apiBase}/players/${account_id}/export`, { headers })
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: res.statusText }))
         throw new ApiError(res.status, err.error ?? res.statusText)
@@ -845,7 +842,7 @@ export const api = {
 
   blueprints: {
     list: () => req<BlueprintRow[]>('GET', '/blueprints'),
-    exportUrl: (id: number) => `${BASE}/blueprints/${id}/export`,
+    exportUrl: (id: number) => `${apiBase}/blueprints/${id}/export`,
     import: async (file: File, player_id: number) => {
       const token = await window.Clerk?.session?.getToken()
       const headers: Record<string, string> = {}
@@ -853,14 +850,14 @@ export const api = {
       const fd = new FormData()
       fd.append('file', file)
       fd.append('player_id', String(player_id))
-      return fetch(`${BASE}/blueprints/import`, { method: 'POST', headers, body: fd })
+      return fetch(`${apiBase}/blueprints/import`, { method: 'POST', headers, body: fd })
         .then((r) => r.json())
     },
   },
 
   bases: {
     list: () => req<BaseRow[]>('GET', '/bases'),
-    exportUrl: (id: number) => `${BASE}/bases/${id}/export`,
+    exportUrl: (id: number) => `${apiBase}/bases/${id}/export`,
   },
 
   market: {

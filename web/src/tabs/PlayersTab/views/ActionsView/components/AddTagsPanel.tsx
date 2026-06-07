@@ -1,7 +1,9 @@
 import { memo, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SearchField } from '@heroui/react'
-import allGameplayTags from '../../../../../data/gameplayTags.json'
+import { useAtom } from 'jotai'
+import { loadable } from 'jotai/utils'
+import { gameplayTagsAtom } from '../../../../../data/store'
 import { useDebounce } from '../hooks/useDebounce'
 
 interface AddTagsPanelProps {
@@ -18,16 +20,18 @@ export const AddTagsPanel = memo(function AddTagsPanel({
   const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const debouncedQuery = useDebounce(query)
+  const [tagsState] = useAtom(loadable(gameplayTagsAtom))
 
   const matches = useMemo(() => {
     if (!debouncedQuery) return []
+    const allTags = tagsState.state === 'hasData' ? tagsState.data : []
     const tagsSet = new Set(tags)
     const pendingSet = new Set(pendingTags)
     const q = debouncedQuery.toLowerCase()
-    return (allGameplayTags as string[])
+    return allTags
       .filter((t) => !tagsSet.has(t) && !pendingSet.has(t) && t.toLowerCase().includes(q))
       .slice(0, 100)
-  }, [debouncedQuery, tags, pendingTags])
+  }, [debouncedQuery, tags, pendingTags, tagsState])
 
   return (
     <div className="relative">

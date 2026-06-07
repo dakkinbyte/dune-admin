@@ -1,9 +1,10 @@
 import { useState, useEffect, type Key } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAtom } from 'jotai'
+import { loadable } from 'jotai/utils'
 import { Button, ListBox, ListLayout, Select, Virtualizer } from '@heroui/react'
 import { NumberInput, Panel, SectionLabel } from '../../../../../dune-ui'
-import allSkillModules from '../../../../../data/skillModules.json'
+import { skillModulesAtom } from '../../../../../data/store'
 import { api } from '../../../../../api/client'
 import { FACTIONS } from '../../../types'
 import type { Player } from '../../../../../api/client'
@@ -17,6 +18,8 @@ export function ResourcesSection({ player }: ResourcesSectionProps) {
   const [busy] = useAtom(busyAtom(player.id))
   const [charXPCurrent, setCharXPCurrent] = useAtom(charXPCurrentAtom(player.id))
   const run = useRun(player.id)
+  const [modulesState] = useAtom(loadable(skillModulesAtom))
+  const allSkillModules = modulesState.state === 'hasData' ? modulesState.data : []
 
   const [currency, setCurrency] = useState(100)
   const [scrip, setScrip] = useState(100)
@@ -180,12 +183,7 @@ export function ResourcesSection({ player }: ResourcesSectionProps) {
                   <ListBox
                     aria-label={t('players.actions.resources.skillModules')}
                     className="h-[300px] overflow-y-auto"
-                    items={(
-                      allSkillModules as {
-                        id: string
-                        label: string
-                      }[]
-                    ).map((m) => ({ id: m.id, label: m.label }))}
+                    items={allSkillModules.map((m) => ({ id: m.id, label: m.label }))}
                   >
                     {(item: { id: string, label: string }) => (
                       <ListBox.Item key={item.id} id={item.id} textValue={item.label}>

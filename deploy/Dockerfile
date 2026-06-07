@@ -53,7 +53,15 @@ ENV IMAGE_BUILD_TIME=${BUILD_TIME}
 WORKDIR /app
 
 COPY --from=go-builder /build/dune-admin .
-COPY --from=go-builder /build/tags-data.json /build/item-data.json ./
+COPY --from=go-builder \
+    /build/tags-data.json \
+    /build/item-data.json \
+    /build/quality-data.json \
+    /build/gameplayTags.json \
+    /build/skillModules.json \
+    /build/vehicles.json \
+    /build/cheatScripts.json \
+    ./
 COPY --from=web-builder /build/web/dist ./dist
 
 # Seed directory for the K8s host-mount pattern. Lives outside /app so that a
@@ -61,7 +69,10 @@ COPY --from=web-builder /build/web/dist ./dist
 # image version differs from the stamp in the PVC, so new image deploys always
 # update the binary while pod restarts after a self-update keep the newer binary.
 RUN mkdir -p /usr/local/share/dune-admin-seed && \
-    cp dune-admin tags-data.json item-data.json /usr/local/share/dune-admin-seed/ && \
+    cp dune-admin \
+       tags-data.json item-data.json quality-data.json \
+       gameplayTags.json skillModules.json vehicles.json cheatScripts.json \
+       /usr/local/share/dune-admin-seed/ && \
     cp -r dist /usr/local/share/dune-admin-seed/dist
 
 EXPOSE 8080

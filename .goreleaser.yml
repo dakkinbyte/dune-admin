@@ -70,6 +70,10 @@ archives:
       - item-data.json
       - quality-data.json
       - tags-data.json
+      - gameplayTags.json
+      - skillModules.json
+      - vehicles.json
+      - cheatScripts.json
       - README.md
       - .env.example
 
@@ -149,6 +153,10 @@ brews:
       pkgshare.install "item-data.json"
       pkgshare.install "quality-data.json"
       pkgshare.install "tags-data.json"
+      pkgshare.install "gameplayTags.json"
+      pkgshare.install "skillModules.json"
+      pkgshare.install "vehicles.json"
+      pkgshare.install "cheatScripts.json"
 
 # Scoop bucket. Requires RELEASE_TOKEN secret (PAT with `repo` scope on
 # Icehunter/scoop-bucket). Windows-only; goreleaser uses the windows

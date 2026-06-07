@@ -5,11 +5,13 @@ import {
   SearchField, Select, Separator, Spinner, TextField, toast,
 } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
+import { useAtom } from 'jotai'
+import { loadable } from 'jotai/utils'
 import { api } from '../../../api/client'
 import type { Player } from '../../../api/client'
 import { Icon, LoadingState, NumberInput } from '../../../dune-ui'
+import { packsAtom } from '../../../data/store'
 import type { PacksData } from '../types'
-import { cdnBase } from '../../../data/itemData'
 
 interface GiveItemsModalProps {
   player: Player
@@ -24,7 +26,6 @@ type StagedItem = { template: string, qty: number, quality: number }
 export const GiveItemsModal: React.FC<GiveItemsModalProps> = ({ player, open, onClose }) => {
   const { t } = useTranslation()
   const [templates, setTemplates] = useState<{ id: string, name: string }[]>([])
-  const [packsData, setPacksData] = useState<PacksData>({ packs: {} })
   const [loading, setLoading] = useState(false)
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState('')
@@ -33,6 +34,11 @@ export const GiveItemsModal: React.FC<GiveItemsModalProps> = ({ player, open, on
   const [staged, setStaged] = useState<StagedItem[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<GiveResult>(null)
+  const [packsState] = useAtom(loadable(packsAtom))
+  const packsData: PacksData = useMemo(
+    () => packsState.state === 'hasData' ? packsState.data : { packs: {} },
+    [packsState],
+  )
 
   useEffect(() => {
     if (!open) return
@@ -46,14 +52,8 @@ export const GiveItemsModal: React.FC<GiveItemsModalProps> = ({ player, open, on
         setStaged([])
         setResult(null)
       })
-      .then(() => Promise.all([
-        api.players.templates(),
-        fetch(`${cdnBase()}/packs.json`).then((r) => r.json() as Promise<PacksData>).catch(() => ({ packs: {} } as PacksData)),
-      ]))
-      .then(([tmpls, packs]) => {
-        setTemplates(tmpls)
-        setPacksData(packs)
-      })
+      .then(() => api.players.templates())
+      .then((tmpls) => { setTemplates(tmpls) })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [open])

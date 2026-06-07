@@ -216,7 +216,7 @@ spec:
               STORED=$(cat /app/.image-build-time 2>/dev/null || echo "")
               if [ ! -f /app/dune-admin ] || [ "$IMAGE_BUILD_TIME" != "$STORED" ]; then
                 echo "Seeding dune-admin binary and assets (built: $IMAGE_BUILD_TIME)..."
-                cp /usr/local/share/dune-admin-seed/tags-data.json /usr/local/share/dune-admin-seed/item-data.json /app/
+                cp /usr/local/share/dune-admin-seed/tags-data.json /usr/local/share/dune-admin-seed/item-data.json /usr/local/share/dune-admin-seed/quality-data.json /usr/local/share/dune-admin-seed/gameplayTags.json /usr/local/share/dune-admin-seed/skillModules.json /usr/local/share/dune-admin-seed/vehicles.json /usr/local/share/dune-admin-seed/cheatScripts.json /app/
                 rm -rf /app/dist && cp -r /usr/local/share/dune-admin-seed/dist /app/dist
                 cp /usr/local/share/dune-admin-seed/dune-admin /app/.dune-admin.new
                 chmod 0755 /app/.dune-admin.new

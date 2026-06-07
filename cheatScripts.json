@@ -1,0 +1,8 @@
+[
+  { "name": "LeaveMeAlone", "danger": false },
+  { "name": "AwardPlayerXP", "danger": false },
+  { "name": "UnlockAllSkills", "danger": false },
+  { "name": "UnlockAllAbilities", "danger": false },
+  { "name": "PlaytestSetup", "danger": true },
+  { "name": "PlaytestSetupAdmin", "danger": true }
+]

@@ -2,12 +2,14 @@ import type React from 'react'
 import { useEffect, useState } from 'react'
 import { Drawer, Spinner } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
+import { useAtom } from 'jotai'
+import { loadable } from 'jotai/utils'
 import { api } from '../../api/client'
 import type { MarketItem, MarketListing } from '../../api/client'
 import { Panel, SectionLabel } from '../../dune-ui'
 import { iconUrl, qualityLabel } from '../../utils/icons'
 import { getItemEntry } from '../../data/itemData'
-import qualityData from '../../data/quality-data.json'
+import { qualityDataAtom } from '../../data/store'
 
 type ItemEntry = {
   is_gradeable?: boolean
@@ -48,6 +50,8 @@ export const ItemDetail: React.FC<ItemDetailProps> = ({ item, onClose }) => {
   const [listings, setListings] = useState<MarketListing[]>([])
   const [loading, setLoading] = useState(false)
   const [entry, setEntry] = useState<ItemEntry | null>(null)
+  const [qualityState] = useAtom(loadable(qualityDataAtom))
+  const qualityData = qualityState.state === 'hasData' ? qualityState.data : null
 
   useEffect(() => {
     if (!item) return
@@ -133,7 +137,7 @@ export const ItemDetail: React.FC<ItemDetailProps> = ({ item, onClose }) => {
                                 </thead>
                                 <tbody>
                                   <tr>
-                                    {qualityData.armor.map((mult, i) => (
+                                    {(qualityData?.armor ?? []).map((mult, i) => (
                                       <td key={i} className="text-center font-mono text-foreground">
                                         {Math.round(entry!.armor_value! * mult)}
                                       </td>
@@ -175,7 +179,7 @@ export const ItemDetail: React.FC<ItemDetailProps> = ({ item, onClose }) => {
                         </thead>
                         <tbody>
                           <tr>
-                            {qualityData.weapon_damage.map((mult, i) => (
+                            {(qualityData?.weapon_damage ?? []).map((mult, i) => (
                               <td key={i} className="text-center font-mono text-foreground">
                                 {mult.toFixed(2)}
                                 ×
