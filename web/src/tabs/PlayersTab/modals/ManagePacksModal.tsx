@@ -13,6 +13,26 @@ interface ManagePacksModalProps {
   templates: { id: string, name: string }[]
 }
 
+type PackDiff = { added: number, updated: number, removed: number, isDirty: boolean }
+
+function DiffStatus({ diff }: { diff: PackDiff }) {
+  const parts: { key: string, text: string, cls: string }[] = []
+  if (diff.added > 0) parts.push({ key: 'added', text: `${diff.added} added`, cls: 'text-success' })
+  if (diff.updated > 0) parts.push({ key: 'updated', text: `${diff.updated} updated`, cls: 'text-warning' })
+  if (diff.removed > 0) parts.push({ key: 'removed', text: `${diff.removed} removed`, cls: 'text-danger' })
+  if (parts.length === 0) return null
+  return (
+    <span className="text-xs flex items-center gap-1">
+      {parts.map((p, i) => (
+        <span key={p.key} className="flex items-center gap-1">
+          {i > 0 && <span className="text-muted">·</span>}
+          <span className={p.cls}>{p.text}</span>
+        </span>
+      ))}
+    </span>
+  )
+}
+
 export const ManagePacksModal: React.FC<ManagePacksModalProps> = ({
   isOpen,
   onClose,
@@ -21,6 +41,7 @@ export const ManagePacksModal: React.FC<ManagePacksModalProps> = ({
 }) => {
   const { t } = useTranslation()
   const [packs, setPacks] = useState<GivePack[]>([])
+  const [savedPacks, setSavedPacks] = useState<GivePack[]>([])
   const [selectedID, setSelectedID] = useState('')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -43,6 +64,7 @@ export const ManagePacksModal: React.FC<ManagePacksModalProps> = ({
       .then((cfg) => {
         const loaded = cfg.packs ?? []
         setPacks(loaded)
+        setSavedPacks(loaded)
         setSelectedID(loaded[0]?.id ?? '')
       })
       .catch((e) => toast.danger(e instanceof Error ? e.message : String(e)))
@@ -91,6 +113,19 @@ export const ManagePacksModal: React.FC<ManagePacksModalProps> = ({
     }
     return Object.entries(groups)
   }, [sortedPacks])
+
+  const packDiff = useMemo((): PackDiff => {
+    const savedIds = new Set(savedPacks.map((p) => p.id))
+    const currentIds = new Set(packs.map((p) => p.id))
+    const savedMap = new Map(savedPacks.map((p) => [p.id, p]))
+    const added = packs.filter((p) => !savedIds.has(p.id)).length
+    const removed = savedPacks.filter((p) => !currentIds.has(p.id)).length
+    const updated = packs.filter((p) => {
+      if (!savedIds.has(p.id)) return false
+      return JSON.stringify(p) !== JSON.stringify(savedMap.get(p.id))
+    }).length
+    return { added, updated, removed, isDirty: added + updated + removed > 0 }
+  }, [packs, savedPacks])
 
   const selectedPack = packs.find((p) => p.id === selectedID)
   const items: GivePackItem[] = selectedPack?.items ?? []
@@ -166,6 +201,7 @@ export const ManagePacksModal: React.FC<ManagePacksModalProps> = ({
     setSaving(true)
     try {
       const cfg = await api.givePacks.saveConfig({ packs })
+      setSavedPacks(cfg.packs)
       toast.success(t('players.givePacks.saved'))
       onSaved(cfg.packs)
     }
@@ -192,6 +228,14 @@ export const ManagePacksModal: React.FC<ManagePacksModalProps> = ({
               ? <Spinner size="sm" color="current" />
               : (
                   <div className="flex flex-col h-full min-h-0 gap-3">
+
+                    {/* Unsaved changes banner */}
+                    {packDiff.isDirty && (
+                      <div className="shrink-0 rounded-[var(--radius)] px-4 py-2 text-xs font-medium bg-warning/10 border border-warning/40 text-warning flex items-center gap-2">
+                        <Icon name="triangle-alert" />
+                        <span>You have unsaved changes — click Save Config to persist them.</span>
+                      </div>
+                    )}
 
                     {/* Pack picker + metadata — single row */}
                     <div className="flex flex-wrap items-center gap-2 shrink-0 pb-1 border-b border-border">
@@ -354,8 +398,8 @@ export const ManagePacksModal: React.FC<ManagePacksModalProps> = ({
                                 ))}
                     </div>
 
-                    {/* Save button */}
-                    <div className="pt-3 shrink-0 border-t border-border">
+                    {/* Save button + diff status */}
+                    <div className="pt-3 shrink-0 border-t border-border flex items-center gap-3">
                       <Button size="sm" onPress={save} isDisabled={saving}>
                         {saving
                           ? <Spinner size="sm" color="current" />
@@ -363,6 +407,7 @@ export const ManagePacksModal: React.FC<ManagePacksModalProps> = ({
                         {' '}
                         {t('players.givePacks.save')}
                       </Button>
+                      <DiffStatus diff={packDiff} />
                     </div>
 
                   </div>

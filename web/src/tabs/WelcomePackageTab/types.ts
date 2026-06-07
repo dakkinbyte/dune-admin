@@ -2,6 +2,14 @@ import type { WelcomePackage, WelcomeGrantRecord, WelcomePackageItem } from '../
 
 export type WelcomeSection = 'config' | 'packages' | 'grants'
 
+export interface WelcomeConfigDiff {
+  packageAdded: number
+  packageRemoved: number
+  packageUpdated: number
+  settingsChanged: boolean
+  isDirty: boolean
+}
+
 export interface WelcomeSharedProps {
   // config state
   enabled: boolean
@@ -31,6 +39,8 @@ export interface WelcomeSharedProps {
   retry: (g: WelcomeGrantRecord) => Promise<void>
   // templates (packages view)
   templates: { id: string, name: string }[]
+  // unsaved-changes diff
+  configDiff: WelcomeConfigDiff
 }
 
 export type { WelcomePackageItem }

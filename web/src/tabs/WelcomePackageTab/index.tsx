@@ -1,11 +1,11 @@
 import type React from 'react'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { toast } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../api/client'
 import type { WelcomePackage, WelcomePackageConfig, WelcomeGrantRecord } from '../../api/client'
 import { SideNav } from '../../dune-ui'
-import type { WelcomeSection } from './types'
+import type { WelcomeSection, WelcomeConfigDiff } from './types'
 import { ConfigView } from './views/ConfigView'
 import { PackagesView } from './views/PackagesView'
 import { GrantsView } from './views/GrantsView'
@@ -37,6 +37,9 @@ export const WelcomePackageTab: React.FC<WelcomePackageTabProps> = ({ showSubnav
   const [welcomeWhisperSourcePlayer, setWelcomeWhisperSourcePlayer] = useState('')
   const [templates, setTemplates] = useState<{ id: string, name: string }[]>([])
 
+  // Snapshot of what's persisted on the server; null until first load completes.
+  const [savedConfig, setSavedConfig] = useState<WelcomePackageConfig | null>(null)
+
   const applyConfig = useCallback((c: WelcomePackageConfig) => {
     setEnabled(c.enabled)
     setScanSecs(c.scan_interval_secs)
@@ -54,7 +57,10 @@ export const WelcomePackageTab: React.FC<WelcomePackageTabProps> = ({ showSubnav
     Promise.resolve()
       .then(() => setLoading(true))
       .then(() => api.welcomePackage.config())
-      .then(applyConfig)
+      .then((c) => {
+        applyConfig(c)
+        setSavedConfig(c)
+      })
       .then(() => api.welcomePackage.grants(100))
       .then(setGrants)
       .catch((e: unknown) => {
@@ -85,7 +91,9 @@ export const WelcomePackageTab: React.FC<WelcomePackageTabProps> = ({ showSubnav
         welcome_message: welcomeMessage,
         welcome_whisper_source_player: welcomeWhisperSourcePlayer,
       }
-      applyConfig(await api.welcomePackage.saveConfig(cfg))
+      const saved = await api.welcomePackage.saveConfig(cfg)
+      applyConfig(saved)
+      setSavedConfig(saved)
       toast.success(enabled
         ? t('welcome.savedEnabled', { version: activeVersions.join(', ') })
         : t('welcome.savedDisabled'))
@@ -124,6 +132,43 @@ export const WelcomePackageTab: React.FC<WelcomePackageTabProps> = ({ showSubnav
     }
   }
 
+  const configDiff = useMemo((): WelcomeConfigDiff => {
+    if (!savedConfig) {
+      return { packageAdded: 0, packageRemoved: 0, packageUpdated: 0, settingsChanged: false, isDirty: false }
+    }
+    const savedPkgs = savedConfig.packages ?? []
+    const savedPkgMap = new Map(savedPkgs.map((p) => [p.version, p]))
+    const currentPkgIds = new Set(packages.map((p) => p.version))
+
+    const packageAdded = packages.filter((p) => !savedPkgMap.has(p.version)).length
+    const packageRemoved = savedPkgs.filter((p) => !currentPkgIds.has(p.version)).length
+    const packageUpdated = packages.filter((p) => {
+      if (!savedPkgMap.has(p.version)) return false
+      return JSON.stringify(p) !== JSON.stringify(savedPkgMap.get(p.version))
+    }).length
+
+    const savedVersions = [...(savedConfig.active_versions ?? [])].sort()
+    const settingsChanged
+      = enabled !== savedConfig.enabled
+        || scanSecs !== savedConfig.scan_interval_secs
+        || JSON.stringify([...activeVersions].sort()) !== JSON.stringify(savedVersions)
+        || welcomeMessageEnabled !== (savedConfig.welcome_message_enabled ?? false)
+        || welcomeMessage !== (savedConfig.welcome_message ?? '')
+        || welcomeWhisperSourcePlayer !== (savedConfig.welcome_whisper_source_player ?? '')
+
+    const isDirty = packageAdded + packageRemoved + packageUpdated > 0 || settingsChanged
+    return { packageAdded, packageRemoved, packageUpdated, settingsChanged, isDirty }
+  }, [
+    packages,
+    enabled,
+    scanSecs,
+    activeVersions,
+    welcomeMessageEnabled,
+    welcomeMessage,
+    welcomeWhisperSourcePlayer,
+    savedConfig,
+  ])
+
   const activeView = () => {
     switch (section) {
       case 'config':
@@ -148,6 +193,7 @@ export const WelcomePackageTab: React.FC<WelcomePackageTabProps> = ({ showSubnav
             running={running}
             load={load}
             loading={loading}
+            configDiff={configDiff}
           />
         )
       case 'packages':
@@ -161,6 +207,7 @@ export const WelcomePackageTab: React.FC<WelcomePackageTabProps> = ({ showSubnav
             saving={saving}
             load={load}
             loading={loading}
+            configDiff={configDiff}
           />
         )
       case 'grants':

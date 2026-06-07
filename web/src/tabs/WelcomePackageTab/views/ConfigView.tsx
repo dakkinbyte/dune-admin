@@ -3,6 +3,7 @@ import { Button, ListBox, Spinner } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
 import { Icon, NumberInput, PageHeader, Panel, SectionLabel } from '../../../dune-ui'
 import type { WelcomeSharedProps } from '../types'
+import { DiffStatus } from '../components/DiffStatus'
 
 type ConfigViewProps = Pick<
   WelcomeSharedProps,
@@ -16,6 +17,7 @@ type ConfigViewProps = Pick<
   | 'save' | 'saving'
   | 'runNow' | 'running'
   | 'load' | 'loading'
+  | 'configDiff'
 >
 
 export const ConfigView: React.FC<ConfigViewProps> = ({
@@ -29,6 +31,7 @@ export const ConfigView: React.FC<ConfigViewProps> = ({
   save, saving,
   runNow, running,
   load, loading,
+  configDiff,
 }) => {
   const { t } = useTranslation()
 
@@ -48,6 +51,14 @@ export const ConfigView: React.FC<ConfigViewProps> = ({
               )}
         </Button>
       </PageHeader>
+
+      {/* Unsaved changes banner */}
+      {configDiff.isDirty && (
+        <div className="shrink-0 rounded-[var(--radius)] px-4 py-2 text-xs font-medium bg-warning/10 border border-warning/40 text-warning flex items-center gap-2">
+          <Icon name="triangle-alert" />
+          <span>You have unsaved changes — click Save Config to persist them.</span>
+        </div>
+      )}
 
       {/* Compact one-liner: enabled toggle + scan interval */}
       <div className="flex items-center gap-6 shrink-0">
@@ -139,7 +150,7 @@ export const ConfigView: React.FC<ConfigViewProps> = ({
       </Panel>
 
       {/* Action bar — fixed at bottom */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-3 shrink-0">
         <Button size="sm" variant="secondary" onPress={save} isDisabled={saving}>
           {saving
             ? <Spinner size="sm" color="current" />
@@ -162,6 +173,7 @@ export const ConfigView: React.FC<ConfigViewProps> = ({
                 </>
               )}
         </Button>
+        <DiffStatus diff={configDiff} />
       </div>
     </div>
   )

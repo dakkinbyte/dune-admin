@@ -5,10 +5,11 @@ import { useTranslation } from 'react-i18next'
 import { Icon, NumberInput, PageHeader } from '../../../dune-ui'
 import type { WelcomeSharedProps, WelcomePackageItem } from '../types'
 import type { WelcomePackage } from '../../../api/client'
+import { DiffStatus } from '../components/DiffStatus'
 
 type PackagesViewProps = Pick<
   WelcomeSharedProps,
-  'packages' | 'setPackages' | 'activeVersions' | 'templates' | 'save' | 'saving' | 'load' | 'loading'
+  'packages' | 'setPackages' | 'activeVersions' | 'templates' | 'save' | 'saving' | 'load' | 'loading' | 'configDiff'
 >
 
 export const PackagesView: React.FC<PackagesViewProps> = ({
@@ -20,6 +21,7 @@ export const PackagesView: React.FC<PackagesViewProps> = ({
   saving,
   load,
   loading,
+  configDiff,
 }) => {
   const { t } = useTranslation()
 
@@ -95,6 +97,14 @@ export const PackagesView: React.FC<PackagesViewProps> = ({
               )}
         </Button>
       </PageHeader>
+
+      {/* Unsaved changes banner */}
+      {configDiff.isDirty && (
+        <div className="shrink-0 rounded-[var(--radius)] mb-3 px-4 py-2 text-xs font-medium bg-warning/10 border border-warning/40 text-warning flex items-center gap-2">
+          <Icon name="triangle-alert" />
+          <span>You have unsaved changes — click Save Config to persist them.</span>
+        </div>
+      )}
 
       {/* Fixed: version picker + new version input */}
       <div className="flex flex-wrap items-end gap-3 pb-3 shrink-0">
@@ -234,8 +244,8 @@ export const PackagesView: React.FC<PackagesViewProps> = ({
               ))}
       </div>
 
-      {/* Fixed: save button */}
-      <div className="pt-3 shrink-0">
+      {/* Fixed: save button + diff status */}
+      <div className="pt-3 shrink-0 flex items-center gap-3">
         <Button size="sm" variant="secondary" onPress={save} isDisabled={saving}>
           {saving
             ? <Spinner size="sm" color="current" />
@@ -247,6 +257,7 @@ export const PackagesView: React.FC<PackagesViewProps> = ({
                 </>
               )}
         </Button>
+        <DiffStatus diff={configDiff} />
       </div>
     </div>
   )
