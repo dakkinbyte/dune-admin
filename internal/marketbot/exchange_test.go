@@ -663,6 +663,50 @@ func TestDetectExchangeID(t *testing.T) {
 	}
 }
 
+// TestSellerPaymentExpiry_AlwaysSentinel is the regression test for the
+// "payment purged before collection" bug.
+//
+// When the bot buys a player's listing it hand-rolls the trade: it inserts a
+// synthetic "Take Solari" entry (dune_exchange_orders, is_npc_order=FALSE) with
+// expiration_time = sellerPaymentExpiry(...), then deletes the player's real
+// listing + item in the same transaction. The live game server runs
+// dune_exchange_expire_orders every ~5 min; if that synthetic entry's
+// expiration_time ≤ the game's real current time it is purged before the player
+// collects → item gone, no Solaris, nothing in Completed ("eaten").
+//
+// Fix: sellerPaymentExpiry must always return epochSentinelCutoff (999_999_999)
+// so the entry is never automatically expired by the game server.
+// The orderExpiry argument (gameNow + 24 h) must be ignored entirely — an
+// uncollected payment should not disappear 24 h later.
+//
+// Bonus: sentinel expiry also removes these FALSE-flag rows from Tier-2 epoch
+// detection (SQL uses WHERE expiration_time < epochSentinelCutoff) so they can
+// no longer corrupt the bot's gameNow reconstruction.
+func TestSellerPaymentExpiry_AlwaysSentinel(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name        string
+		orderExpiry int64
+	}{
+		{"normal order expiry (gameNow + 24h)", int64(1_800_000 + 86_400)},
+		{"zero — epoch unknown on first boot", 0},
+		{"sentinel — bot placed with far-future expiry", epochSentinelCutoff},
+		{"very large value", 999_999_998},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := sellerPaymentExpiry(tc.orderExpiry)
+			if got != epochSentinelCutoff {
+				t.Errorf("sellerPaymentExpiry(%d) = %d, want epochSentinelCutoff (%d): "+
+					"seller payment must never auto-expire before the player collects",
+					tc.orderExpiry, got, epochSentinelCutoff)
+			}
+		})
+	}
+}
+
 // TestSellerPaymentItemPrice_IsPerUnit is a regression test for the
 // double-multiplication overpayment bug.
 //

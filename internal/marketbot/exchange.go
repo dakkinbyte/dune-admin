@@ -598,10 +598,14 @@ func (e *Exchange) buyPlayerListings(ctx context.Context, orderExpiry int64, gam
 	//
 	// MUST NOT touch player orders — only the SELECT filter is applied here.
 	cutoff := buyExpiryCutoff(gameNow)
+	log.Printf("buy: tick start gameEpoch=%d gameNow=%d orderExpiry=%d cutoff=%d paymentExpiry=%d",
+		e.gameEpochUnix, gameNow, orderExpiry, cutoff, epochSentinelCutoff)
+
 	rows, err := e.db.Query(ctx, `
 		SELECT o.id, o.template_id, o.item_price, o.item_id, o.owner_id,
 		       COALESCE(i.stack_size, s.initial_stack_size) AS actual_stack,
-		       COALESCE(o.quality_level, 0) AS quality_level
+		       COALESCE(o.quality_level, 0) AS quality_level,
+		       o.expiration_time
 		FROM dune.dune_exchange_orders o
 		JOIN dune.dune_exchange_sell_orders s ON s.order_id = o.id
 		LEFT JOIN dune.items i ON i.id = o.item_id
@@ -623,7 +627,8 @@ func (e *Exchange) buyPlayerListings(ctx context.Context, orderExpiry int64, gam
 
 		var orderID, price, itemID, sellerActorID, stackSize, grade int64
 		var tmpl string
-		if err := rows.Scan(&orderID, &tmpl, &price, &itemID, &sellerActorID, &stackSize, &grade); err != nil {
+		var orderExpiration *int64 // nullable game-time expiry of the player's listing
+		if err := rows.Scan(&orderID, &tmpl, &price, &itemID, &sellerActorID, &stackSize, &grade, &orderExpiration); err != nil {
 			errs++
 			continue
 		}
@@ -655,6 +660,15 @@ func (e *Exchange) buyPlayerListings(ctx context.Context, orderExpiry int64, gam
 
 		totalCost := price * stackSize
 
+		// Diagnostic: log key fields before the transaction so we can confirm
+		// whether a stale epoch would have produced a bad orderExpiry (pre-fix).
+		var listingExpiry int64
+		if orderExpiration != nil {
+			listingExpiry = *orderExpiration
+		}
+		log.Printf("buy: attempt orderID=%d tmpl=%s price=%d stack=%d total=%d seller=%d listing_expiry=%d gameNow=%d",
+			orderID, tmpl, price, stackSize, totalCost, sellerActorID, listingExpiry, gameNow)
+
 		tx, err := e.db.Begin(ctx)
 		if err != nil {
 			errs++
@@ -665,13 +679,18 @@ func (e *Exchange) buyPlayerListings(ctx context.Context, orderExpiry int64, gam
 		// completion_type=4 + item_id=NULL is what the game engine uses for the
 		// seller side of a fulfilled sale, causing the client to show "Take Solari"
 		// in the Completed tab and fire the "X SOLARIS CLAIMED" toast on collection.
+		//
+		// expiration_time is always epochSentinelCutoff (never the order's own expiry):
+		// the game server's dune_exchange_expire_orders proc runs every ~5 min and
+		// would purge a payment entry that lands in the past (stale epoch → item eaten
+		// with no Solaris). See sellerPaymentExpiry for the full explanation.
 		var logOrderID int64
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO dune.dune_exchange_orders
 			  (exchange_id, access_point_id, owner_id, template_id, expiration_time,
 			   durability_cur, durability_max, item_price, category_mask, category_depth, is_npc_order)
 			VALUES ($1,$2,$3,$4,$5,1.0,1.0,$6,0,0,FALSE) RETURNING id`,
-			e.exchangeID, e.accessPointID, sellerActorID, tmpl, orderExpiry, sellerPaymentItemPrice(price),
+			e.exchangeID, e.accessPointID, sellerActorID, tmpl, sellerPaymentExpiry(orderExpiry), sellerPaymentItemPrice(price),
 		).Scan(&logOrderID); err != nil {
 			log.Printf("buy: log order for %s: %v", tmpl, err)
 			_ = tx.Rollback(ctx)
@@ -718,6 +737,8 @@ func (e *Exchange) buyPlayerListings(ctx context.Context, orderExpiry int64, gam
 			errs++
 			continue
 		}
+		log.Printf("buy: committed orderID=%d tmpl=%s total=%d seller=%d payment_order=%d payment_expiry=%d",
+			orderID, tmpl, totalCost, sellerActorID, logOrderID, epochSentinelCutoff)
 		purchased++
 	}
 
@@ -822,6 +843,28 @@ func (e *Exchange) createListingsBatch(ctx context.Context, listings []pendingLi
 // unitPrice×stackSize×stackSize instead of unitPrice×stackSize.
 func sellerPaymentItemPrice(unitPrice int64) int64 {
 	return unitPrice
+}
+
+// sellerPaymentExpiry returns the expiration_time to store in dune_exchange_orders
+// for a seller's "Take Solari" payment log entry. It always returns the sentinel
+// value (999_999_999) regardless of the current orderExpiry.
+//
+// The root cause of the "items eaten without payment" bug: the bot used to store
+// orderExpiry (gameNow + 24 h) as the payment entry's expiration_time. The live game
+// server runs dune_exchange_expire_orders every ~5 min; if the bot's reconstructed
+// gameNow is stale (most acutely after a game-server restart when the cached epoch
+// has not yet been refreshed), the synthetic "Take Solari" entry lands in the past,
+// the server proc purges it before the player collects, and the player's item is
+// gone with no Solaris received.
+//
+// Sentinel expiry also prevents these FALSE-flag rows from poisoning Tier-2 epoch
+// detection: the SQL uses WHERE expiration_time < epochSentinelCutoff, so sentinel
+// entries are excluded and cannot corrupt gameNow reconstruction.
+//
+// An uncollected seller payment must never auto-expire — if a player logs back in
+// a week later they still deserve their Solaris.
+func sellerPaymentExpiry(_ int64) int64 {
+	return epochSentinelCutoff
 }
 
 // BuyTick runs the buy-side operations: learn game epoch and purchase player listings.
