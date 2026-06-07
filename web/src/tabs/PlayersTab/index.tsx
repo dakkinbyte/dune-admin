@@ -7,6 +7,7 @@ import type { Player } from '../../api/client'
 import { Icon, SideNav } from '../../dune-ui'
 import { useAutoRefresh } from '../../hooks/useAutoRefresh'
 import { PlayerDetailPanel } from './components/PlayerDetailPanel'
+import { ServerDashboard } from './components/ServerDashboard'
 import { StatusDot } from './components/StatusDot'
 import { InventoryView } from './views/InventoryView'
 import { VehiclesView } from './views/VehiclesView'
@@ -16,6 +17,8 @@ import { ActionsView } from './views/ActionsView'
 type DetailTab = 'overview' | 'inventory' | 'vehicles' | 'give' | 'actions'
 
 const POLL_MS = 30_000
+// Sentinel SideNav key for the server-wide dashboard landing (#130).
+const OVERVIEW_KEY = '__overview__'
 
 interface PlayersTabProps {
   isActive?: boolean
@@ -44,7 +47,9 @@ export const PlayersTab: React.FC<PlayersTabProps> = ({ isActive = false }) => {
       .then(() => api.players.list())
       .then((list) => {
         setPlayers(list)
-        setSelected((prev) => prev ?? list[0] ?? null)
+        // Land on the server dashboard (selected === null) rather than the first
+        // player (#130); keep the current selection (refreshed) if one is set.
+        setSelected((prev) => (prev ? list.find((p) => p.id === prev.id) ?? prev : null))
       })
       .catch((e: unknown) => toast.danger(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false))
@@ -67,23 +72,38 @@ export const PlayersTab: React.FC<PlayersTabProps> = ({ isActive = false }) => {
       : players
   }, [players, search])
 
-  const navItems = useMemo(() => filtered.map((p) => ({
-    key: String(p.id),
-    label: (
-      <span className="flex items-center gap-2 min-w-0">
-        <StatusDot status={p.online_status} />
-        <span className="truncate">{p.name}</span>
-      </span>
-    ),
-    sublabel: `${p.class} · ${p.map}`,
-  })), [filtered])
+  const navItems = useMemo(() => [
+    {
+      key: OVERVIEW_KEY,
+      label: (
+        <span className="flex items-center gap-2 min-w-0">
+          <Icon name="layout-dashboard" />
+          <span className="truncate">{t('players.dashboard.navLabel')}</span>
+        </span>
+      ),
+    },
+    ...filtered.map((p) => ({
+      key: String(p.id),
+      label: (
+        <span className="flex items-center gap-2 min-w-0">
+          <StatusDot status={p.online_status} />
+          <span className="truncate">{p.name}</span>
+        </span>
+      ),
+      sublabel: `${p.class} · ${p.map}`,
+    })),
+  ], [filtered, t])
 
   return (
     <div className="flex h-full min-h-0 gap-3">
       <SideNav
         items={navItems}
-        active={selected ? String(selected.id) : null}
+        active={selected ? String(selected.id) : OVERVIEW_KEY}
         onSelect={(id) => {
+          if (id === OVERVIEW_KEY) {
+            setSelected(null)
+            return
+          }
           const p = players.find((x) => String(x.id) === id)
           if (p) setSelected(p)
         }}
@@ -175,11 +195,7 @@ export const PlayersTab: React.FC<PlayersTabProps> = ({ isActive = false }) => {
                 </div>
               </>
             )
-          : (
-              <div className="flex flex-1 items-center justify-center">
-                <p className="text-muted text-sm">{t('players.selectPlayer')}</p>
-              </div>
-            )}
+          : <ServerDashboard />}
       </div>
     </div>
   )

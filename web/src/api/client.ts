@@ -204,6 +204,42 @@ export type Player = {
   faction_id: number
   online_status: string
 }
+export type LabeledCount = {
+  label: string
+  count: number
+}
+export type ActivityPoint = {
+  day: string
+  count: number
+}
+export type FactionStat = {
+  faction: string
+  players: number
+  solaris: number
+  scrip: number
+  avg_level: number
+}
+export type FactionTrendPoint = {
+  day: string
+  values: Record<string, number>
+}
+export type FactionTrends = {
+  metric: string
+  factions: string[]
+  points: FactionTrendPoint[]
+}
+export type ServerSummary = {
+  total_players: number
+  online_players: number
+  by_map: LabeledCount[]
+  by_faction: FactionStat[]
+  total_solaris: number
+  total_scrip: number
+  avg_char_level: number
+  total_playtime_secs: number
+  activity_trend: ActivityPoint[]
+  trend_days: number
+}
 export type InventoryItem = {
   id: number
   template_id: string
@@ -591,6 +627,9 @@ export const api = {
 
   players: {
     list: () => req<Player[]>('GET', '/players'),
+    summary: () => req<ServerSummary>('GET', '/players/summary'),
+    factionTrends: (metric: 'solaris' | 'level') =>
+      req<FactionTrends>('GET', `/players/faction-trends?metric=${metric}`),
     online: () => req<OnlineRow[]>('GET', '/players/online'),
     currency: () => req<CurrencyRow[]>('GET', '/players/currency'),
     factions: () => req<FactionRep[]>('GET', '/players/factions'),
