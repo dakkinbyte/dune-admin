@@ -55,6 +55,16 @@
 #   ./install.sh --no-patches
 #   ./install.sh --help
 
+# Re-exec under bash when started by another shell (`sh install.sh`, `sh -c …`,
+# `zsh install.sh`) so the bash-only features below — arrays, [[ … ]],
+# `set -o pipefail`, ${BASH_SOURCE} — work regardless of the caller's shell (#76).
+# POSIX-safe test, and placed after the comment header so it stays out of the
+# `sed -n '2,30p'` range that usage() prints. The README's `curl … | bash`
+# already runs under bash, so the guard is a no-op there.
+if [ -z "${BASH_VERSION:-}" ]; then
+  exec bash "$0" "$@"
+fi
+
 set -euo pipefail
 
 # ── Defaults (override via flags) ─────────────────────────────────────────────
