@@ -221,6 +221,9 @@ const AppCore: React.FC<AppCoreProps> = ({ isSignedIn }) => {
       if (result.updated) {
         toast.success(force ? t('app.reinstalled', { version: result.version ?? 'latest' }) : t('app.updated', { version: result.version ?? 'latest' }))
         setUpdateInfo(null)
+        setTimeout(() => {
+          window.location.reload()
+        }, 1500)
       }
       else {
         toast.info(result.message)
