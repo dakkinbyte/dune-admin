@@ -1,5 +1,6 @@
 {
   "app": {
+    "reportIssue": "Ein Problem auf GitHub melden",
     "changesNote": "Änderungen auf allen Tabs werden gemeinsam gespeichert.",
     "checkUpdates": "Nach Updates suchen",
     "configureBackend": "Backend konfigurieren",

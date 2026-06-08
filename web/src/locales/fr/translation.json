@@ -1,5 +1,6 @@
 {
   "app": {
+    "reportIssue": "Signaler un problème sur GitHub",
     "changesNote": "Les modifications de tous les onglets sont enregistrées ensemble.",
     "checkUpdates": "Vérifier les mises à jour",
     "configureBackend": "Configurer le backend",

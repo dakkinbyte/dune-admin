@@ -1,5 +1,6 @@
 {
   "app": {
+    "reportIssue": "在 GitHub 上报告问题",
     "changesNote": "所有选项卡上的更改将一起保存。",
     "checkUpdates": "检查更新",
     "configureBackend": "配置后端",

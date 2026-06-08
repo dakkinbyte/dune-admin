@@ -1,5 +1,6 @@
 {
   "app": {
+    "reportIssue": "Сообщить о проблеме на GitHub",
     "changesNote": "Изменения на всех вкладках сохраняются вместе.",
     "checkUpdates": "Проверить обновления",
     "configureBackend": "Настроить бэкенд",

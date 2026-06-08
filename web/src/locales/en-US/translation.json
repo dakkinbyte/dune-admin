@@ -1,5 +1,6 @@
 {
   "app": {
+    "reportIssue": "Report an issue on GitHub",
     "changesNote": "Changes on all tabs are saved together.",
     "checkUpdates": "Check for Updates",
     "configureBackend": "Configure backend",
