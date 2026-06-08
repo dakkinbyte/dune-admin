@@ -1,4 +1,35 @@
 {
+  "serverHealth": {
+    "title": "État du serveur",
+    "subtitle": "État en direct de la VM, du groupe de combat et des ports.",
+    "gamePorts": "Jeu (UDP)",
+    "webPort": "Web",
+    "vm": "VM",
+    "bg": "Groupe de combat",
+    "up": "Actif",
+    "down": "Inactif",
+    "bgVm": "Groupe de combat + VM",
+    "upFor": "Actif depuis {{uptime}}",
+    "noUptime": "Durée de fonctionnement indisponible",
+    "components": "Infos du groupe de combat",
+    "bgState": "État GC",
+    "database": "Base de données",
+    "director": "Director",
+    "configured": "Configuré",
+    "notConfigured": "Non configuré",
+    "uptime": "Disponibilité",
+    "readyState": "État de préparation",
+    "ready": "Prêt",
+    "notReady": "Pas prêt",
+    "webInterfaces": "Interfaces web",
+    "noInterfaces": "Aucune interface web configurée.",
+    "copied": "Copié dans le presse-papiers",
+    "copyFailed": "Échec de la copie",
+    "copy": "Copier",
+    "open": "Ouvrir",
+    "gameServers": "Serveurs de jeu",
+    "pods": "{{n}} pods"
+  },
   "restarts": {
     "title": "Redémarrages planifiés",
     "enable": "Activé",
@@ -104,6 +135,7 @@
     "cmdCompleted": "{{label}} terminé",
     "cmdFailed": "{{label}} échoué : {{message}}",
     "columns": {
+      "age": "Âge",
       "dim": "Dim",
       "map": "Carte",
       "part": "Part",
@@ -486,7 +518,7 @@
   "nav": {
     "director": "Director",
     "bases": "Bases",
-    "battlegroup": "Groupe de combat",
+    "battlegroup": "État du serveur",
     "blueprints": "Schémas",
     "database": "Base de données",
     "groups": {

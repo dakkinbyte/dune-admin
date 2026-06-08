@@ -73,6 +73,30 @@ func TestParseAMPGameProcess(t *testing.T) {
 	}
 }
 
+func TestParseProcessAges(t *testing.T) {
+	t.Parallel()
+
+	// `ps -o pid=,etimes=` emits two whitespace-separated columns (pid, elapsed
+	// seconds), typically with leading padding. We only care about a pid→seconds
+	// map; malformed lines are skipped, not fatal.
+	out := "  123     3600\n456 90\nbad line here\n   789  0\n"
+	got := parseProcessAges(out)
+
+	want := map[int]int{123: 3600, 456: 90, 789: 0}
+	if len(got) != len(want) {
+		t.Fatalf("parseProcessAges len = %d, want %d (%+v)", len(got), len(want), got)
+	}
+	for pid, age := range want {
+		if got[pid] != age {
+			t.Fatalf("parseProcessAges[%d] = %d, want %d", pid, got[pid], age)
+		}
+	}
+
+	if len(parseProcessAges("")) != 0 {
+		t.Fatalf("expected empty input to yield empty map")
+	}
+}
+
 func TestListGameProcesses(t *testing.T) {
 	t.Parallel()
 

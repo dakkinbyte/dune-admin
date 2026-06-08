@@ -1,4 +1,35 @@
 {
+  "serverHealth": {
+    "title": "Состояние сервера",
+    "subtitle": "Состояние ВМ, боевой группы и портов в реальном времени.",
+    "gamePorts": "Игра (UDP)",
+    "webPort": "Веб",
+    "vm": "ВМ",
+    "bg": "Боевая группа",
+    "up": "Работает",
+    "down": "Остановлено",
+    "bgVm": "Боевая группа + ВМ",
+    "upFor": "Работает {{uptime}}",
+    "noUptime": "Время работы недоступно",
+    "components": "Сведения о боевой группе",
+    "bgState": "Состояние БГ",
+    "database": "База данных",
+    "director": "Director",
+    "configured": "Настроено",
+    "notConfigured": "Не настроено",
+    "uptime": "Время работы",
+    "readyState": "Готовность игры",
+    "ready": "Готово",
+    "notReady": "Не готово",
+    "webInterfaces": "Веб-интерфейсы",
+    "noInterfaces": "Веб-интерфейсы не настроены.",
+    "copied": "Скопировано в буфер обмена",
+    "copyFailed": "Не удалось скопировать",
+    "copy": "Копировать",
+    "open": "Открыть",
+    "gameServers": "Игровые серверы",
+    "pods": "{{n}} подов"
+  },
   "restarts": {
     "title": "Запланированные перезапуски",
     "enable": "Включено",
@@ -105,6 +136,7 @@
     "cmdCompleted": "{{label}} выполнено",
     "cmdFailed": "{{label}} не выполнено: {{message}}",
     "columns": {
+      "age": "Возраст",
       "dim": "Dim",
       "map": "Карта",
       "part": "Part",
@@ -493,7 +525,7 @@
   "nav": {
     "director": "Director",
     "bases": "Базы",
-    "battlegroup": "Боевая группа",
+    "battlegroup": "Состояние сервера",
     "blueprints": "Чертежи",
     "database": "База данных",
     "groups": {

@@ -1,4 +1,35 @@
 {
+  "serverHealth": {
+    "title": "服务器健康",
+    "subtitle": "VM、战斗群和端口的实时状态。",
+    "gamePorts": "游戏 (UDP)",
+    "webPort": "Web",
+    "vm": "VM",
+    "bg": "战斗群",
+    "up": "运行中",
+    "down": "已停止",
+    "bgVm": "战斗群 + VM",
+    "upFor": "已运行 {{uptime}}",
+    "noUptime": "运行时间不可用",
+    "components": "战斗群信息",
+    "bgState": "战斗群状态",
+    "database": "数据库",
+    "director": "Director",
+    "configured": "已配置",
+    "notConfigured": "未配置",
+    "uptime": "运行时间",
+    "readyState": "游戏就绪状态",
+    "ready": "就绪",
+    "notReady": "未就绪",
+    "webInterfaces": "Web 界面",
+    "noInterfaces": "未配置 Web 界面。",
+    "copied": "已复制到剪贴板",
+    "copyFailed": "复制失败",
+    "copy": "复制",
+    "open": "打开",
+    "gameServers": "游戏服务器",
+    "pods": "{{n}} 个 Pod"
+  },
   "restarts": {
     "title": "计划重启",
     "enable": "启用",
@@ -103,6 +134,7 @@
     "cmdCompleted": "{{label}} 已完成",
     "cmdFailed": "{{label}} 失败：{{message}}",
     "columns": {
+      "age": "运行时长",
       "dim": "维度",
       "map": "地图",
       "part": "分区",
@@ -479,7 +511,7 @@
   "nav": {
     "director": "Director",
     "bases": "基地",
-    "battlegroup": "战斗群",
+    "battlegroup": "服务器健康",
     "blueprints": "蓝图",
     "database": "数据库",
     "groups": {

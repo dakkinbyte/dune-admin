@@ -1,4 +1,35 @@
 {
+  "serverHealth": {
+    "title": "サーバーの状態",
+    "subtitle": "VM・バトルグループ・ポートのライブ状態。",
+    "gamePorts": "ゲーム (UDP)",
+    "webPort": "Web",
+    "vm": "VM",
+    "bg": "バトルグループ",
+    "up": "稼働中",
+    "down": "停止中",
+    "bgVm": "バトルグループ + VM",
+    "upFor": "稼働 {{uptime}}",
+    "noUptime": "稼働時間は利用できません",
+    "components": "バトルグループ情報",
+    "bgState": "BG 状態",
+    "database": "データベース",
+    "director": "ディレクター",
+    "configured": "設定済み",
+    "notConfigured": "未設定",
+    "uptime": "稼働時間",
+    "readyState": "ゲーム準備状態",
+    "ready": "準備完了",
+    "notReady": "準備未完了",
+    "webInterfaces": "Web インターフェース",
+    "noInterfaces": "Web インターフェースは設定されていません。",
+    "copied": "クリップボードにコピーしました",
+    "copyFailed": "コピーに失敗しました",
+    "copy": "コピー",
+    "open": "開く",
+    "gameServers": "ゲームサーバー",
+    "pods": "{{n}} ポッド"
+  },
   "restarts": {
     "title": "スケジュール再起動",
     "enable": "有効",
@@ -103,6 +134,7 @@
     "cmdCompleted": "{{label}} が完了しました",
     "cmdFailed": "{{label}} に失敗しました：{{message}}",
     "columns": {
+      "age": "経過時間",
       "dim": "次元",
       "map": "マップ",
       "part": "パーティション",
@@ -479,7 +511,7 @@
   "nav": {
     "director": "Director",
     "bases": "拠点",
-    "battlegroup": "バトルグループ",
+    "battlegroup": "サーバーの状態",
     "blueprints": "ブループリント",
     "database": "データベース",
     "groups": {

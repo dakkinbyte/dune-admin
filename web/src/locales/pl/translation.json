@@ -1,4 +1,35 @@
 {
+  "serverHealth": {
+    "title": "Stan serwera",
+    "subtitle": "Stan na żywo VM, grupy bojowej i portów.",
+    "gamePorts": "Gra (UDP)",
+    "webPort": "Web",
+    "vm": "VM",
+    "bg": "Grupa bojowa",
+    "up": "Działa",
+    "down": "Nie działa",
+    "bgVm": "Grupa bojowa + VM",
+    "upFor": "Działa od {{uptime}}",
+    "noUptime": "Czas działania niedostępny",
+    "components": "Informacje o grupie bojowej",
+    "bgState": "Stan GB",
+    "database": "Baza danych",
+    "director": "Director",
+    "configured": "Skonfigurowano",
+    "notConfigured": "Nieskonfigurowano",
+    "uptime": "Czas działania",
+    "readyState": "Gotowość gry",
+    "ready": "Gotowe",
+    "notReady": "Niegotowe",
+    "webInterfaces": "Interfejsy webowe",
+    "noInterfaces": "Brak skonfigurowanych interfejsów webowych.",
+    "copied": "Skopiowano do schowka",
+    "copyFailed": "Kopiowanie nie powiodło się",
+    "copy": "Kopiuj",
+    "open": "Otwórz",
+    "gameServers": "Serwery gry",
+    "pods": "{{n}} podów"
+  },
   "restarts": {
     "title": "Zaplanowane restarty",
     "enable": "Włączone",
@@ -105,6 +136,7 @@
     "cmdCompleted": "{{label}} zakończono",
     "cmdFailed": "{{label}} nie powiodło się: {{message}}",
     "columns": {
+      "age": "Wiek",
       "dim": "Dim",
       "map": "Mapa",
       "part": "Part",
@@ -493,7 +525,7 @@
   "nav": {
     "director": "Director",
     "bases": "Bazy",
-    "battlegroup": "Grupa bojowa",
+    "battlegroup": "Stan serwera",
     "blueprints": "Plany",
     "database": "Baza danych",
     "groups": {

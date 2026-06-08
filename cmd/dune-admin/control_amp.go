@@ -69,14 +69,21 @@ func (c *ampControl) GetStatus(ctx context.Context, exec Executor) (*Battlegroup
 	if err != nil {
 		log.Printf("ampControl.GetStatus: director enrichment unavailable: %v", err)
 	}
+	pids := make([]int, 0, len(procs))
+	for _, p := range procs {
+		pids = append(pids, p.pid)
+	}
+	ages := c.fetchProcessAges(exec, pids)
 	servers := make([]ServerRow, 0, len(procs))
 	for _, p := range procs {
 		row := ServerRow{
-			Map:       p.mapName,
-			Partition: p.partition,
-			Phase:     "Running",
-			Ready:     true,
-			Players:   0,
+			Map:        p.mapName,
+			Partition:  p.partition,
+			Phase:      "Running",
+			Ready:      true,
+			Players:    0,
+			Port:       p.port,
+			AgeSeconds: ages[p.pid],
 		}
 		if meta, ok := dirMeta[p.partition]; ok {
 			row.Dimension = meta.dimension
@@ -294,6 +301,55 @@ func parseAMPGameProcess(line string) (ampGameProcess, bool) {
 		port:      parseAMPArgInt(ampPortRe, args),
 		partition: parseAMPArgInt(ampPartRe, args),
 	}, true
+}
+
+// parseProcessAges parses the output of `ps -o pid=,etimes=` into a pid→elapsed
+// seconds map. Each non-empty line has two whitespace-separated columns; lines
+// that don't parse cleanly are skipped rather than failing the whole map.
+func parseProcessAges(out string) map[int]int {
+	ages := map[int]int{}
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		pid, err := strconv.Atoi(fields[0])
+		if err != nil {
+			continue
+		}
+		age, err := strconv.Atoi(fields[1])
+		if err != nil {
+			continue
+		}
+		ages[pid] = age
+	}
+	return ages
+}
+
+// fetchProcessAges returns a best-effort pid→uptime-seconds map for the given
+// pids. It is deliberately separate from listGameProcesses so a `ps` that lacks
+// the etimes field (or any error) degrades to "no ages" rather than breaking the
+// core process listing that the status table and lifecycle commands depend on.
+func (c *ampControl) fetchProcessAges(exec Executor, pids []int) map[int]int {
+	if len(pids) == 0 {
+		return map[int]int{}
+	}
+	ids := make([]string, len(pids))
+	for i, p := range pids {
+		ids[i] = strconv.Itoa(p)
+	}
+	cmd := "ps -o pid=,etimes= -p " + strings.Join(ids, ",") + " 2>/dev/null"
+	if c.useContainer {
+		if c.container == "" {
+			return map[int]int{}
+		}
+		cmd = c.wrapInContainer(cmd)
+	}
+	out, err := exec.Exec(cmd)
+	if err != nil && strings.TrimSpace(out) == "" {
+		return map[int]int{}
+	}
+	return parseProcessAges(out)
 }
 
 func (c *ampControl) listGameProcesses(exec Executor) ([]ampGameProcess, error) {

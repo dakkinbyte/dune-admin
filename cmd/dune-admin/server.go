@@ -425,6 +425,8 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 		"version":       AppVersion,
 		"commit":        GitCommit,
 		"build_time":    BuildTime,
+		"director_url":  loadedConfig.DirectorURL,
+		"listen_addr":   loadedConfig.ListenAddr,
 	})
 }
 

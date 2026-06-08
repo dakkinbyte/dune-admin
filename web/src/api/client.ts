@@ -196,6 +196,8 @@ export type Status = {
   version?: string
   commit?: string
   build_time?: string
+  director_url?: string
+  listen_addr?: string
 }
 export type Player = {
   id: number

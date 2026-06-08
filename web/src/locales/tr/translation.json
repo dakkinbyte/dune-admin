@@ -1,4 +1,35 @@
 {
+  "serverHealth": {
+    "title": "Sunucu Durumu",
+    "subtitle": "Canlı VM, savaş grubu ve port durumu.",
+    "gamePorts": "Oyun (UDP)",
+    "webPort": "Web",
+    "vm": "VM",
+    "bg": "Savaş Grubu",
+    "up": "Çalışıyor",
+    "down": "Durdu",
+    "bgVm": "Savaş Grubu + VM",
+    "upFor": "{{uptime}} süredir çalışıyor",
+    "noUptime": "Çalışma süresi kullanılamıyor",
+    "components": "Savaş Grubu Bilgisi",
+    "bgState": "SG durumu",
+    "database": "Veritabanı",
+    "director": "Director",
+    "configured": "Yapılandırıldı",
+    "notConfigured": "Yapılandırılmadı",
+    "uptime": "Çalışma süresi",
+    "readyState": "Oyun Hazırlık Durumu",
+    "ready": "Hazır",
+    "notReady": "Hazır değil",
+    "webInterfaces": "Web Arayüzleri",
+    "noInterfaces": "Yapılandırılmış web arayüzü yok.",
+    "copied": "Panoya kopyalandı",
+    "copyFailed": "Kopyalama başarısız",
+    "copy": "Kopyala",
+    "open": "Aç",
+    "gameServers": "Oyun Sunucuları",
+    "pods": "{{n}} pod"
+  },
   "restarts": {
     "title": "Zamanlanmış yeniden başlatmalar",
     "enable": "Etkin",
@@ -103,6 +134,7 @@
     "cmdCompleted": "{{label}} tamamlandı",
     "cmdFailed": "{{label}} başarısız: {{message}}",
     "columns": {
+      "age": "Yaş",
       "dim": "Boyut",
       "map": "Harita",
       "part": "Bölüm",
@@ -479,7 +511,7 @@
   "nav": {
     "director": "Director",
     "bases": "Üsler",
-    "battlegroup": "Savaş Grubu",
+    "battlegroup": "Sunucu Durumu",
     "blueprints": "Planlar",
     "database": "Veritabanı",
     "groups": {

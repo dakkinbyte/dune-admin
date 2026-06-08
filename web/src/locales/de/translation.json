@@ -1,4 +1,35 @@
 {
+  "serverHealth": {
+    "title": "Serverzustand",
+    "subtitle": "Live-Status von VM, Kampfgruppe und Ports.",
+    "gamePorts": "Spiel (UDP)",
+    "webPort": "Web",
+    "vm": "VM",
+    "bg": "Kampfgruppe",
+    "up": "Aktiv",
+    "down": "Inaktiv",
+    "bgVm": "Kampfgruppe + VM",
+    "upFor": "Aktiv seit {{uptime}}",
+    "noUptime": "Laufzeit nicht verfügbar",
+    "components": "Kampfgruppen-Info",
+    "bgState": "KG-Status",
+    "database": "Datenbank",
+    "director": "Director",
+    "configured": "Konfiguriert",
+    "notConfigured": "Nicht konfiguriert",
+    "uptime": "Laufzeit",
+    "readyState": "Spielbereitschaft",
+    "ready": "Bereit",
+    "notReady": "Nicht bereit",
+    "webInterfaces": "Web-Oberflächen",
+    "noInterfaces": "Keine Web-Oberflächen konfiguriert.",
+    "copied": "In die Zwischenablage kopiert",
+    "copyFailed": "Kopieren fehlgeschlagen",
+    "copy": "Kopieren",
+    "open": "Öffnen",
+    "gameServers": "Spielserver",
+    "pods": "{{n}} Pods"
+  },
   "restarts": {
     "title": "Geplante Neustarts",
     "enable": "Aktiviert",
@@ -103,6 +134,7 @@
     "cmdCompleted": "{{label}} abgeschlossen",
     "cmdFailed": "{{label}} fehlgeschlagen: {{message}}",
     "columns": {
+      "age": "Alter",
       "dim": "Dim",
       "map": "Karte",
       "part": "Teil",
@@ -479,7 +511,7 @@
   "nav": {
     "director": "Director",
     "bases": "Basen",
-    "battlegroup": "Kampfgruppe",
+    "battlegroup": "Serverzustand",
     "blueprints": "Baupläne",
     "database": "Datenbank",
     "groups": {

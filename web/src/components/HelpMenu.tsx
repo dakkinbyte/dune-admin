@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { ListBox, toast } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
 import { Icon } from '../dune-ui'
+import { copyText } from '../utils/clipboard'
 import type { Status } from '../api/client'
 
 const REPO = 'https://github.com/Icehunter/dune-admin'
@@ -21,35 +22,6 @@ function buildDiagnostics(status?: Status | null): string {
     `- ssh connected: ${status?.ssh_connected ?? false}`,
     `- browser: ${typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'}`,
   ].join('\n')
-}
-
-// copyText copies to the clipboard. navigator.clipboard only exists in a secure
-// context (HTTPS or localhost); dune-admin is commonly served over plain HTTP on
-// a LAN IP, where it's undefined — so fall back to a hidden textarea +
-// document.execCommand('copy'), which works in insecure contexts.
-async function copyText(text: string): Promise<boolean> {
-  if (window.isSecureContext && navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(text)
-      return true
-    }
-    catch { /* fall through to the legacy path */ }
-  }
-  try {
-    const ta = document.createElement('textarea')
-    ta.value = text
-    ta.setAttribute('readonly', '')
-    ta.style.position = 'fixed'
-    ta.style.top = '-9999px'
-    document.body.appendChild(ta)
-    ta.select()
-    const ok = document.execCommand('copy')
-    document.body.removeChild(ta)
-    return ok
-  }
-  catch {
-    return false
-  }
 }
 
 // HelpMenu (#143): a header dropdown that makes it easy to file a GitHub issue
