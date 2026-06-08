@@ -45,6 +45,14 @@
     }
   },
   "serverHealth": {
+    "ifaceLoadFailed": "Не удалось загрузить веб-интерфейсы: {{message}}",
+    "ifaceSaveFailed": "Не удалось сохранить: {{message}}",
+    "ifaceLabel": "Метка",
+    "ifaceUrl": "URL (http:// или /путь)",
+    "editInterfaces": "Редактировать веб-интерфейсы",
+    "removeInterface": "Удалить",
+    "addInterface": "Добавить интерфейс",
+    "saveInterfaces": "Сохранить",
     "title": "Состояние сервера",
     "subtitle": "Состояние ВМ, боевой группы и портов в реальном времени.",
     "gamePorts": "Игра (UDP)",
@@ -331,6 +339,8 @@
     "title_other": "Чертежи ({{count}})"
   },
   "common": {
+    "timezone": "Часовой пояс",
+    "tzHostLocal": "Локальное хоста",
     "add": "Добавить",
     "cancel": "Отмена",
     "checking": "Проверка…",

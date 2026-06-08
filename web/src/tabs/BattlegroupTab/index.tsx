@@ -158,7 +158,7 @@ export const BattlegroupTab: React.FC<BattlegroupTabProps> = ({ isActive = false
           <BgVmCard bg={bg} servers={servers} />
           <GameReadyCard bg={bg} servers={servers} />
           <ComponentHealthCard bg={bg} servers={servers} status={connStatus} />
-          <WebInterfacesCard status={connStatus} />
+          <WebInterfacesCard />
         </div>
 
         {/* Game servers */}

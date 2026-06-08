@@ -357,6 +357,10 @@ export type ScheduledBackups = {
   last_fired: number
   next_backup?: string
 }
+export type WebInterface = {
+  label: string
+  url: string
+}
 export type GuildSummary = {
   guild_id: number
   name: string
@@ -993,6 +997,10 @@ export const api = {
     get: () => req<ScheduledBackups>('GET', '/scheduled-backups'),
     update: (body: { enabled: boolean, timezone: string, rules: BackupRule[], keep_n: number }) =>
       req<MutateResult>('PUT', '/scheduled-backups', body),
+  },
+  webInterfaces: {
+    get: () => req<{ interfaces: WebInterface[] }>('GET', '/web-interfaces'),
+    update: (interfaces: WebInterface[]) => req<MutateResult>('PUT', '/web-interfaces', { interfaces }),
   },
   guilds: {
     list: () => req<GuildSummary[]>('GET', '/guilds'),

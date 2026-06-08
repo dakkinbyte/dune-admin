@@ -45,6 +45,14 @@
     }
   },
   "serverHealth": {
+    "ifaceLoadFailed": "Web インターフェースの読み込みに失敗しました: {{message}}",
+    "ifaceSaveFailed": "保存に失敗しました: {{message}}",
+    "ifaceLabel": "ラベル",
+    "ifaceUrl": "URL (http:// または /path)",
+    "editInterfaces": "Web インターフェースを編集",
+    "removeInterface": "削除",
+    "addInterface": "インターフェースを追加",
+    "saveInterfaces": "保存",
     "title": "サーバーの状態",
     "subtitle": "VM・バトルグループ・ポートのライブ状態。",
     "gamePorts": "ゲーム (UDP)",
@@ -327,6 +335,8 @@
     "title_other": "ブループリント ({{count}})"
   },
   "common": {
+    "timezone": "タイムゾーン",
+    "tzHostLocal": "ホストのローカル",
     "add": "追加",
     "cancel": "キャンセル",
     "checking": "確認中…",

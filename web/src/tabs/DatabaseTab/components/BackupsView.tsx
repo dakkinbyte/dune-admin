@@ -5,6 +5,7 @@ import { Button, Spinner, toast } from '@heroui/react'
 import { api } from '../../../api/client'
 import type { DBBackupFile, ScheduledBackups, BackupRule } from '../../../api/client'
 import { Panel, SectionLabel, PageHeader, Icon, ConfirmDialog } from '../../../dune-ui'
+import { TimezoneSelect } from '../../../components/TimezoneSelect'
 
 const DOW = [0, 1, 2, 3, 4, 5, 6] // Sun..Sat
 
@@ -158,12 +159,7 @@ const ScheduleCard: React.FC = () => {
                 </label>
                 <label className="flex items-center gap-2 flex-1 min-w-[160px]">
                   {t('backups.schedule.timezone')}
-                  <input
-                    value={timezone}
-                    placeholder={t('backups.schedule.tzPlaceholder')}
-                    onChange={(e) => setTimezone(e.target.value)}
-                    className={`${inputCls} flex-1`}
-                  />
+                  <TimezoneSelect value={timezone} onChange={setTimezone} className="flex-1" />
                 </label>
               </div>
 

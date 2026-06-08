@@ -45,6 +45,14 @@
     }
   },
   "serverHealth": {
+    "ifaceLoadFailed": "Nie udało się załadować interfejsów webowych: {{message}}",
+    "ifaceSaveFailed": "Zapis nie powiódł się: {{message}}",
+    "ifaceLabel": "Etykieta",
+    "ifaceUrl": "URL (http:// lub /ścieżka)",
+    "editInterfaces": "Edytuj interfejsy webowe",
+    "removeInterface": "Usuń",
+    "addInterface": "Dodaj interfejs",
+    "saveInterfaces": "Zapisz",
     "title": "Stan serwera",
     "subtitle": "Stan na żywo VM, grupy bojowej i portów.",
     "gamePorts": "Gra (UDP)",
@@ -331,6 +339,8 @@
     "title_other": "Plany ({{count}})"
   },
   "common": {
+    "timezone": "Strefa czasowa",
+    "tzHostLocal": "Lokalna hosta",
     "add": "Dodaj",
     "cancel": "Anuluj",
     "checking": "Sprawdzanie…",

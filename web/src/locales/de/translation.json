@@ -45,6 +45,14 @@
     }
   },
   "serverHealth": {
+    "ifaceLoadFailed": "Web-Oberflächen konnten nicht geladen werden: {{message}}",
+    "ifaceSaveFailed": "Speichern fehlgeschlagen: {{message}}",
+    "ifaceLabel": "Bezeichnung",
+    "ifaceUrl": "URL (http:// oder /Pfad)",
+    "editInterfaces": "Web-Oberflächen bearbeiten",
+    "removeInterface": "Entfernen",
+    "addInterface": "Oberfläche hinzufügen",
+    "saveInterfaces": "Speichern",
     "title": "Serverzustand",
     "subtitle": "Live-Status von VM, Kampfgruppe und Ports.",
     "gamePorts": "Spiel (UDP)",
@@ -327,6 +335,8 @@
     "title_other": "Baupläne ({{count}})"
   },
   "common": {
+    "timezone": "Zeitzone",
+    "tzHostLocal": "Host-lokal",
     "add": "Hinzufügen",
     "cancel": "Abbrechen",
     "checking": "Wird geprüft…",
