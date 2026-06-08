@@ -904,7 +904,7 @@
     }
   },
   "server": {
-    "advancedCategories": "高级 — 所有类别",
+    "advancedCategories": "高级",
     "advancedCategoriesDesc": "点击类别在原位展开。再次点击或选择另一个类别来切换。",
     "collapse": "取消",
     "collapseCategory": "收起类别",
@@ -938,7 +938,9 @@
     "showUserAriaLabel": "仅显示用户设置 — 点击显示全部",
     "title": "服务器设置",
     "unsaved": "未保存",
-    "userOverride": "· 用户覆盖"
+    "userOverride": "· 用户覆盖",
+    "expertCategories": "专家",
+    "expertCategoriesDesc": "引擎和系统内部设置。仅在你确切了解其作用时才更改。"
   },
   "settings": {
     "adv": {
@@ -966,7 +968,11 @@
       "logPath": "日志路径",
       "useContainer": "使用容器（podman exec）",
       "useContainerHint": "禁用以直接以 AMP 用户身份在主机上运行。",
-      "user": "AMP 用户"
+      "user": "AMP 用户",
+      "apiUser": "AMP API 用户",
+      "apiPassword": "AMP API 密码",
+      "apiPort": "AMP API 端口",
+      "apiHint": "AMP Web API 登录。让 dune-admin 在 AMP 下管理服务器设置，使其在重启后保留。默认端口 8081。"
     },
     "broker": {
       "adminAddr": "管理员地址",

@@ -10,10 +10,13 @@ interface SettingRowProps {
   pending: string | undefined
   onChange: (value: string) => void
   onDelete: () => Promise<void>
+  // True when the active control plane is AMP and this is a curated, AMP-managed
+  // setting (written through the AMP API rather than the INI files).
+  ampManaged?: boolean
 }
 
 export const SettingRow: React.FC<SettingRowProps> = ({
-  item, pending, onChange, onDelete,
+  item, pending, onChange, onDelete, ampManaged,
 }) => {
   const { t } = useTranslation()
   const rawDisplay = pending !== undefined ? pending : item.current
@@ -28,6 +31,14 @@ export const SettingRow: React.FC<SettingRowProps> = ({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium text-foreground">{item.label}</span>
+          {ampManaged && (
+            <span
+              title="Managed via the AMP API — applied on the next server restart"
+              className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-accent/15 text-accent border border-accent/30"
+            >
+              AMP
+            </span>
+          )}
           {src && <span className={`text-xs ${src.cls}`}>{src.text}</span>}
           {dirty && <span className="text-xs text-warning">{t('server.unsaved')}</span>}
         </div>

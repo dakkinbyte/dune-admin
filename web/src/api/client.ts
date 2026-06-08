@@ -88,6 +88,9 @@ export type ServerSetting = {
   is_overridden: boolean
   source: 'userGame' | 'userGameOverrides' | 'userEngine' | 'defaultGame' | 'defaultEngine' | ''
   layers: SettingLayer[]
+  // Present for curated settings only — its presence marks the setting as
+  // AMP-managed (written via the AMP API under the AMP control plane).
+  field_name?: string
 }
 
 export type ServerSettingUpdate = {
@@ -111,6 +114,7 @@ export type RawSection = {
 export type ServerSettingsResponse = {
   settings: ServerSetting[]
   raw: RawSection[]
+  control?: string // active control plane: 'amp' | 'docker' | 'kubectl' | 'local'
 }
 
 export const MASKED = '••••••••'
@@ -160,6 +164,9 @@ export type AppConfig = {
   amp_log_path: string
   amp_use_container: boolean
   amp_data_root: string
+  amp_api_user: string
+  amp_api_pass: string // masked when non-empty
+  amp_api_port: number
   director_url: string
   // Market bot (startup config — tuning is managed in the Bot Control panel)
   market_bot_enabled: boolean

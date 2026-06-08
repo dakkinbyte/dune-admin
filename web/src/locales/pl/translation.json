@@ -938,7 +938,7 @@
     }
   },
   "server": {
-    "advancedCategories": "Zaawansowane — Wszystkie kategorie",
+    "advancedCategories": "Zaawansowane",
     "advancedCategoriesDesc": "Kliknij kategorię, aby ją rozwinąć. Kliknij ponownie lub wybierz inną, aby przełączyć.",
     "collapse": "Anuluj",
     "collapseCategory": "Zwiń kategorię",
@@ -980,7 +980,9 @@
     "showUserAriaLabel": "Wyświetlanie tylko ustawień użytkownika — kliknij, aby wyświetlić wszystko",
     "title": "Ustawienia serwera",
     "unsaved": "niezapisane",
-    "userOverride": "· nadpisanie użytkownika"
+    "userOverride": "· nadpisanie użytkownika",
+    "expertCategories": "Eksperckie",
+    "expertCategoriesDesc": "Wewnętrzne ustawienia silnika i systemu. Zmieniaj je tylko, jeśli dokładnie wiesz, co robisz."
   },
   "settings": {
     "adv": {
@@ -1008,7 +1010,11 @@
       "logPath": "Ścieżka logów",
       "useContainer": "Użyj kontenera (podman exec)",
       "useContainerHint": "Wyłącz, aby uruchamiać bezpośrednio na hoście jako użytkownik AMP.",
-      "user": "Użytkownik AMP"
+      "user": "Użytkownik AMP",
+      "apiUser": "Użytkownik API AMP",
+      "apiPassword": "Hasło API AMP",
+      "apiPort": "Port API AMP",
+      "apiHint": "Logowanie do interfejsu Web API AMP. Pozwala dune-admin zarządzać ustawieniami serwera w AMP, aby przetrwały ponowne uruchomienia. Domyślny port 8081."
     },
     "broker": {
       "adminAddr": "Adres administracyjny",

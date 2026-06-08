@@ -921,7 +921,7 @@
     }
   },
   "server": {
-    "advancedCategories": "Avanzado — Todas las categorías",
+    "advancedCategories": "Avanzado",
     "advancedCategoriesDesc": "Haz clic en una categoría para expandirla en su lugar. Haz clic de nuevo o elige otra para cambiar.",
     "collapse": "Cancelar",
     "collapseCategory": "Contraer categoría",
@@ -959,7 +959,9 @@
     "showUserAriaLabel": "Mostrando solo la configuración de usuario — haz clic para mostrar todo",
     "title": "Configuración del servidor",
     "unsaved": "sin guardar",
-    "userOverride": "· anulación de usuario"
+    "userOverride": "· anulación de usuario",
+    "expertCategories": "Experto",
+    "expertCategoriesDesc": "Componentes internos del motor y del sistema. Cámbialos solo si sabes exactamente lo que haces."
   },
   "settings": {
     "adv": {
@@ -987,7 +989,11 @@
       "logPath": "Ruta de registros",
       "useContainer": "Usar contenedor (podman exec)",
       "useContainerHint": "Desactiva para ejecutar directamente en el host como el usuario AMP.",
-      "user": "Usuario AMP"
+      "user": "Usuario AMP",
+      "apiUser": "Usuario de la API de AMP",
+      "apiPassword": "Contraseña de la API de AMP",
+      "apiPort": "Puerto de la API de AMP",
+      "apiHint": "Inicio de sesión de la API web de AMP. Permite a dune-admin gestionar la configuración del servidor en AMP para que sobreviva a los reinicios. Puerto predeterminado 8081."
     },
     "broker": {
       "adminAddr": "Dirección de admin",

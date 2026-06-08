@@ -904,7 +904,7 @@
     }
   },
   "server": {
-    "advancedCategories": "詳細設定 — すべてのカテゴリ",
+    "advancedCategories": "高度な設定",
     "advancedCategoriesDesc": "カテゴリをクリックして展開します。もう一度クリックするか別のカテゴリを選択して切り替えます。",
     "collapse": "キャンセル",
     "collapseCategory": "カテゴリを折りたたむ",
@@ -938,7 +938,9 @@
     "showUserAriaLabel": "ユーザー設定のみ表示中 — クリックしてすべて表示",
     "title": "サーバー設定",
     "unsaved": "未保存",
-    "userOverride": "· ユーザーオーバーライド"
+    "userOverride": "· ユーザーオーバーライド",
+    "expertCategories": "エキスパート",
+    "expertCategoriesDesc": "エンジンとシステムの内部設定。内容を正確に理解している場合のみ変更してください。"
   },
   "settings": {
     "adv": {
@@ -966,7 +968,11 @@
       "logPath": "ログパス",
       "useContainer": "コンテナを使用（podman exec）",
       "useContainerHint": "AMPユーザーとしてホストで直接実行するには無効にしてください。",
-      "user": "AMPユーザー"
+      "user": "AMPユーザー",
+      "apiUser": "AMP API ユーザー",
+      "apiPassword": "AMP API パスワード",
+      "apiPort": "AMP API ポート",
+      "apiHint": "AMP Web API ログイン。dune-admin が AMP 配下のサーバー設定を管理できるようにし、再起動後も保持されます。デフォルトポートは 8081。"
     },
     "broker": {
       "adminAddr": "管理者アドレス",

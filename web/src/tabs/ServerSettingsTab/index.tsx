@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Fragment } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button, SearchField, Spinner, toast } from '@heroui/react'
@@ -7,8 +7,9 @@ import type { ServerSetting, ServerSettingUpdate, RawSection } from '../../api/c
 import { PageHeader, Panel, SectionLabel, Icon } from '../../dune-ui'
 import { SettingRow } from './components/SettingRow'
 import { RawSectionPanel } from './components/RawSectionPanel'
+import { CategorySection } from './components/CategorySection'
 import {
-  CATEGORY_ICONS, COMMON_KEYS, SOURCE_FILE,
+  ADVANCED_CATEGORIES, COMMON_KEYS, SOURCE_FILE,
   SOURCE_PRIORITY, USER_SOURCES,
 } from './constants'
 import {
@@ -19,6 +20,7 @@ export const ServerSettingsTab: React.FC = () => {
   const { t } = useTranslation()
   const [items, setItems] = useState<ServerSetting[]>([])
   const [raw, setRaw] = useState<RawSection[]>([])
+  const [control, setControl] = useState('')
   const [pending, setPending] = useState<Map<string, string>>(new Map())
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -41,6 +43,7 @@ export const ServerSettingsTab: React.FC = () => {
       .then((data) => {
         setItems(data.settings ?? [])
         setRaw(data.raw ?? [])
+        setControl(data.control ?? '')
         setPending(new Map())
       })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
@@ -136,6 +139,12 @@ export const ServerSettingsTab: React.FC = () => {
     .filter((item) => !COMMON_KEYS.has(`${item.section}|${item.key}`))
     .filter((item) => matchesSetting(item, q))
   const categories = groupByCategory(advancedItems)
+  // Split into the curated gameplay set (Advanced) and the long engine/system
+  // tail (Expert, hidden behind a toggle). Searching reveals everything so a
+  // match in an Expert category isn't silently hidden.
+  const advancedCategories = categories.filter(([cat]) => ADVANCED_CATEGORIES.has(cat))
+  const expertCategories = categories.filter(([cat]) => !ADVANCED_CATEGORIES.has(cat))
+  const ampManaged = (item: ServerSetting) => control === 'amp' && !!item.field_name
 
   const toggleCategory = (cat: string) => {
     setExpandedCategory((prev) => {
@@ -203,14 +212,13 @@ export const ServerSettingsTab: React.FC = () => {
       </PageHeader>
 
       <p className="text-xs text-muted shrink-0">
-        Changes are written to
+        Changes are saved to the server configuration — written to
         {' '}
         <span className="font-mono">UserGame.ini</span>
-        {' '}
-        or
-        {' '}
+        {' / '}
         <span className="font-mono">UserEngine.ini</span>
-        .
+        {' '}
+        directly, or via the AMP API under the AMP control plane.
         A server restart is required for them to take effect.
       </p>
 
@@ -233,6 +241,7 @@ export const ServerSettingsTab: React.FC = () => {
                 <SettingRow
                   key={`common|${item.section}|${item.key}`}
                   item={item}
+                  ampManaged={ampManaged(item)}
                   pending={pending.get(pendingKey(item))}
                   onChange={(v) => handleChange(item, v)}
                   onDelete={() => handleDelete(item)}
@@ -242,84 +251,31 @@ export const ServerSettingsTab: React.FC = () => {
           </Panel>
         )}
 
-        {categories.length > 0 && (
-          <div>
-            <SectionLabel>{t('server.advancedCategories')}</SectionLabel>
-            <div className="text-xs text-muted mb-2">
-              {t('server.advancedCategoriesDesc')}
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mt-2">
-              {categories.map(([cat, catItems]) => {
-                const isOpen = searching || expandedCategory === cat
-                const overrideCount = catItems.filter((i) =>
-                  i.layers.some((l) => USER_SOURCES.has(l.source)),
-                ).length
-                return (
-                  <Fragment key={cat}>
-                    <button
-                      onClick={() => toggleCategory(cat)}
-                      className={`flex items-center gap-2 rounded border px-3 py-2.5 text-left transition-colors ${
-                        isOpen
-                          ? 'bg-accent/15 border-accent/60 text-foreground'
-                          : 'bg-surface border-border/60 hover:bg-surface-secondary hover:border-border text-foreground/90'
-                      }`}
-                    >
-                      <Icon
-                        name={CATEGORY_ICONS[cat] ?? 'sliders'}
-                        className={`w-4 h-4 shrink-0 ${isOpen ? 'text-accent' : 'text-muted'}`}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">{cat}</div>
-                        <div className="text-xs text-muted">
-                          {catItems.length === 1
-                            ? t('server.settingCount_one', { count: catItems.length })
-                            : t('server.settingCount_other', { count: catItems.length })}
-                          {overrideCount > 0 && (
-                            <span className="ml-1 text-warning">
-                              {t('server.overriddenCount', { count: overrideCount })}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <Icon
-                        name={isOpen ? 'chevron-up' : 'chevron-down'}
-                        className={`w-4 h-4 shrink-0 ${isOpen ? 'text-accent' : 'text-muted/50'}`}
-                      />
-                    </button>
-                    {isOpen && (
-                      <Panel className="col-span-full mt-1 mb-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <SectionLabel>{cat}</SectionLabel>
-                          {!searching && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onPress={() => toggleCategory(cat)}
-                              aria-label={t('server.collapseCategory')}
-                            >
-                              <Icon name="x" className="w-3.5 h-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                        <div>
-                          {catItems.map((item) => (
-                            <SettingRow
-                              key={`${item.section}|${item.key}`}
-                              item={item}
-                              pending={pending.get(pendingKey(item))}
-                              onChange={(v) => handleChange(item, v)}
-                              onDelete={() => handleDelete(item)}
-                            />
-                          ))}
-                        </div>
-                      </Panel>
-                    )}
-                  </Fragment>
-                )
-              })}
-            </div>
-          </div>
-        )}
+        <CategorySection
+          title={t('server.advancedCategories')}
+          description={t('server.advancedCategoriesDesc')}
+          categories={advancedCategories}
+          expandedCategory={expandedCategory}
+          onToggle={toggleCategory}
+          searching={searching}
+          pending={pending}
+          onChange={handleChange}
+          onDelete={handleDelete}
+          isAmpManaged={ampManaged}
+        />
+
+        <CategorySection
+          title={t('server.expertCategories')}
+          description={t('server.expertCategoriesDesc')}
+          categories={expertCategories}
+          expandedCategory={expandedCategory}
+          onToggle={toggleCategory}
+          searching={searching}
+          pending={pending}
+          onChange={handleChange}
+          onDelete={handleDelete}
+          isAmpManaged={ampManaged}
+        />
 
         {visibleRawSections.length > 0 && (
           <div>

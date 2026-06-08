@@ -904,7 +904,7 @@
     }
   },
   "server": {
-    "advancedCategories": "Gelişmiş — Tüm Kategoriler",
+    "advancedCategories": "Gelişmiş",
     "advancedCategoriesDesc": "Yerinde genişletmek için bir kategoriye tıklayın. Daraltmak için tekrar tıklayın veya başka birini seçin.",
     "collapse": "İptal",
     "collapseCategory": "Kategoriyi Daralt",
@@ -938,7 +938,9 @@
     "showUserAriaLabel": "Yalnızca kullanıcı ayarları gösteriliyor — tümünü göstermek için tıklayın",
     "title": "Sunucu Ayarları",
     "unsaved": "kaydedilmedi",
-    "userOverride": "· kullanıcı geçersiz kılması"
+    "userOverride": "· kullanıcı geçersiz kılması",
+    "expertCategories": "Uzman",
+    "expertCategoriesDesc": "Motor ve sistem dahili ayarları. Bunları yalnızca ne yaptığınızı tam olarak biliyorsanız değiştirin."
   },
   "settings": {
     "adv": {
@@ -966,7 +968,11 @@
       "logPath": "Kayıt yolu",
       "useContainer": "Konteyner kullan (podman exec)",
       "useContainerHint": "AMP kullanıcısı olarak doğrudan ana bilgisayarda çalıştırmak için devre dışı bırakın.",
-      "user": "AMP kullanıcısı"
+      "user": "AMP kullanıcısı",
+      "apiUser": "AMP API kullanıcısı",
+      "apiPassword": "AMP API parolası",
+      "apiPort": "AMP API bağlantı noktası",
+      "apiHint": "AMP Web API girişi. dune-admin'in sunucu ayarlarını AMP altında yönetmesini sağlar, böylece yeniden başlatmalardan sonra da kalıcı olur. Varsayılan bağlantı noktası 8081."
     },
     "broker": {
       "adminAddr": "Yönetici adresi",

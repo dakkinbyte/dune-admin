@@ -904,7 +904,7 @@
     }
   },
   "server": {
-    "advancedCategories": "Advanced — All Categories",
+    "advancedCategories": "Advanced",
     "advancedCategoriesDesc": "Click a category to expand it in place. Click again or pick another to switch.",
     "collapse": "Cancel",
     "collapseCategory": "Collapse category",
@@ -938,7 +938,9 @@
     "showUserAriaLabel": "Showing user settings only — click to show all",
     "title": "Server Settings",
     "unsaved": "unsaved",
-    "userOverride": "· user override"
+    "userOverride": "· user override",
+    "expertCategories": "Expert",
+    "expertCategoriesDesc": "Engine and system internals. Change these only if you know exactly what you're doing."
   },
   "settings": {
     "adv": {
@@ -966,7 +968,11 @@
       "logPath": "Log path",
       "useContainer": "Use container (podman exec)",
       "useContainerHint": "Disable to run on host as the AMP user directly.",
-      "user": "AMP user"
+      "user": "AMP user",
+      "apiUser": "AMP API user",
+      "apiPassword": "AMP API password",
+      "apiPort": "AMP API port",
+      "apiHint": "AMP Web API login. Lets dune-admin manage server settings under AMP so they survive restarts. Default port 8081."
     },
     "broker": {
       "adminAddr": "Admin addr",

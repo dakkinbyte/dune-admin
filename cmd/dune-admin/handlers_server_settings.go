@@ -27,6 +27,10 @@ const (
 )
 
 type settingDef struct {
+	// FieldName is the AMP config node suffix and the canonical identifier for a
+	// setting, e.g. "ConsoleVariables.Dune.GlobalMiningOutputMultiplier". Section
+	// and Key are derived from it via fieldNameToSectionKey so they cannot drift.
+	FieldName   string
 	Section     string
 	Key         string
 	Type        settingType
@@ -48,6 +52,10 @@ type ServerSetting struct {
 	IsOverride  bool           `json:"is_overridden"`
 	Source      string         `json:"source"` // "userGame"|"userEngine"|"defaultGame"|"defaultEngine"|""
 	Layers      []SettingLayer `json:"layers"` // ordered low→high priority; empty when setting is unconfigured
+	// FieldName is the AMP config node suffix for curated settings; empty for
+	// discovered ones. Its presence marks a setting as AMP-managed (written via
+	// the AMP API under the AMP control plane) so the UI can label it.
+	FieldName string `json:"field_name,omitempty"`
 }
 
 // SettingLayer records one file's contribution to a setting's value,
@@ -81,91 +89,128 @@ type RawSection struct {
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 
+// INI section paths shared by the curated schema. These match what
+// fieldNameToSectionKey derives from each setting's FieldName.
 const (
-	secGame        = "/Script/DuneSandbox.DuneGameMode"
+	secConsoleVars = "ConsoleVariables"
 	secStorm       = "/Script/DuneSandbox.SandStormConfig"
 	secBuilding    = "/Script/DuneSandbox.BuildingSettings"
-	secInventory   = "/Script/DuneSandbox.InventorySystemSettings"
 	secPvP         = "/Script/DuneSandbox.PvpPveSettings"
 	secSecurity    = "/Script/DuneSandbox.SecurityZonesSubsystem"
-	secSpice       = "/Script/DuneSandbox.SpiceHarvestingSystem"
-	secTaxation    = "/Script/DuneSandbox.TaxationSettings"
-	secSandworm    = "/Script/DuneSandbox.SandwormSettings"
 	secDurab       = "/DeteriorationSystem.ItemDeteriorationConstants"
-	secGuilds      = "/Script/DuneSandbox.GuildSettings"
-	secOnlineState = "/Script/DuneSandbox.PlayerOnlineStateSettings"
 )
 
+// Curated categories. AMP groups these under Subcategories; we use flat
+// categories the frontend renders as collapsible groups.
+const (
+	catMultipliers    = "Multipliers"
+	catWorldCombat    = "World & Combat"
+	catPersistence    = "Persistence & Building"
+	catServerIdentity = "Server Identity"
+)
+
+// fieldNameToSectionKey decomposes an AMP FieldName into its INI (section, key).
+//
+//   - ConsoleVariables CVars live under a single [ConsoleVariables] section with
+//     the dotted CVar name as the key (split on the FIRST dot):
+//     "ConsoleVariables.Dune.GlobalMiningOutputMultiplier"
+//     → ("ConsoleVariables", "Dune.GlobalMiningOutputMultiplier")
+//   - UPROPERTY fields use the class path as the section and the trailing member
+//     as the key (split on the LAST dot):
+//     "/Script/DuneSandbox.BuildingSettings.m_MaxNumLandclaimSegments"
+//     → ("/Script/DuneSandbox.BuildingSettings", "m_MaxNumLandclaimSegments")
+//
+// A bare AMP-orchestration field (e.g. "WorldTitle") has no INI representation
+// and returns ("WorldTitle", "").
+func fieldNameToSectionKey(fieldName string) (section, key string) {
+	if rest, ok := strings.CutPrefix(fieldName, secConsoleVars+"."); ok {
+		return secConsoleVars, rest
+	}
+	if i := strings.LastIndex(fieldName, "."); i >= 0 {
+		return fieldName[:i], fieldName[i+1:]
+	}
+	return fieldName, ""
+}
+
+// gameSetting builds a curated settingDef from its AMP FieldName plus metadata,
+// deriving Section and Key so they stay consistent with FieldName by
+// construction.
+func gameSetting(fieldName string, typ settingType, def, label, category, desc string) settingDef {
+	section, key := fieldNameToSectionKey(fieldName)
+	return settingDef{
+		FieldName:   fieldName,
+		Section:     section,
+		Key:         key,
+		Type:        typ,
+		Default:     def,
+		Label:       label,
+		Description: desc,
+		Category:    category,
+	}
+}
+
+// serverSettingsSchema is the curated, evidence-validated set of gameplay
+// settings (#122/#124). Every entry maps to a real engine CVar or a real
+// /Script UPROPERTY confirmed against the shipping binary and AMP's own
+// configmanifest — the earlier fictional m_Global*Multiplier keys (proven
+// no-ops, absent from the real DefaultGame.ini) have been removed. FieldNames
+// mirror AMP's nodes so the AMP control plane can write them via the AMP API,
+// while non-AMP planes write the derived INI section/key directly.
+//
+// AMP-orchestration settings (WorldTitle, Region, PublicIPMode, FlsServiceAuthToken,
+// instance pool, …) are intentionally out of scope here: they have no
+// cross-plane INI representation and are managed in AMP's own panel. See the
+// settings-rework notes for the follow-up to surface those under AMP only.
 var serverSettingsSchema = []settingDef{
-	// Survival
-	{secGame, "m_GlobalHealthMultiplier", settingFloat, "1.0", "Global Health Multiplier", "Scales the health pool of all entities (players + NPCs)", "Survival"},
-	{secGame, "m_GlobalDamageToNpcsMultiplier", settingFloat, "1.0", "Damage to NPCs Multiplier", "Scales damage dealt to NPCs", "Survival"},
-	{secGame, "m_GlobalDamageToPlayersMultiplier", settingFloat, "1.0", "Damage to Players Multiplier", "Scales damage dealt to players", "Survival"},
-	{secGame, "m_WaterConsumptionRate", settingFloat, "1.0", "Water Consumption Rate", "How quickly players consume water", "Survival"},
-	{secGame, "m_WaterConsumptionInStormMultiplier", settingFloat, "2.0", "Water Consumption in Storm Multiplier", "Additional water drain during sandstorms", "Survival"},
-	{secGame, "m_PlayerStartingWater", settingFloat, "100.0", "Player Starting Water", "Water amount when a player spawns", "Survival"},
-	{secOnlineState, "m_DefaultReconnectGracePeriodSeconds", settingInt, "300", "Reconnect Grace Period (s)", "Seconds a player's corpse persists after disconnect", "Survival"},
-	{secDurab, "m_ItemDurabilityLossMultiplier", settingFloat, "1.0", "Item Durability Loss Multiplier", "Scales durability loss for all items", "Survival"},
+	// Multipliers (engine CVars).
+	gameSetting("ConsoleVariables.Dune.GlobalMiningOutputMultiplier", settingFloat, "1.0",
+		"Mining Output", catMultipliers, "Hand-mined resource yield scalar (1.0 = normal)."),
+	gameSetting("ConsoleVariables.Dune.GlobalVehicleMiningOutputMultiplier", settingFloat, "1.0",
+		"Vehicle Mining Output", catMultipliers, "Vehicle-mining resource yield scalar."),
+	gameSetting("ConsoleVariables.SecurityZones.PvpResourceMultiplier", settingFloat, "2.5",
+		"PvP Zone Resource", catMultipliers, "Bonus resource scalar applied inside PvP-enabled zones."),
+	gameSetting("ConsoleVariables.dw.VehicleDurabilityDamageMultiplier", settingFloat, "1.0",
+		"Vehicle Durability Damage", catMultipliers, "Damage scalar to vehicle durability. 0 disables damage; 10 = max."),
+	gameSetting("ConsoleVariables.Vehicle.SandwormInvulnerabilitySecondsOnExit", settingFloat, "900.0",
+		"Sandworm Invuln (Vehicle Exit) seconds", catMultipliers, "Vehicle invulnerability window after exiting a vehicle."),
+	gameSetting("ConsoleVariables.Vehicle.SandwormInvulnerabilitySecondsOnServerRestart", settingFloat, "7200.0",
+		"Sandworm Invuln (Server Restart) seconds", catMultipliers, "Vehicle invulnerability window after a server restart."),
 
-	// Progression
-	{secGame, "m_GlobalXPMultiplier", settingFloat, "1.0", "XP Multiplier", "Scales XP gained from all sources", "Progression"},
-	{secGame, "m_GlobalProgressionSpeedMultiplier", settingFloat, "1.0", "Progression Speed Multiplier", "Scales overall progression speed", "Progression"},
-	{secGame, "m_GlobalFameMultiplier", settingFloat, "1.0", "Fame Multiplier", "Scales fame gained from all sources", "Progression"},
+	// World & Combat.
+	gameSetting("/Script/DuneSandbox.PvpPveSettings.m_bShouldForceEnablePvpOnAllPartitions", settingBool, "False",
+		"Force PvP On All Partitions", catWorldCombat, "If enabled, every map allows PvP regardless of partition setting."),
+	gameSetting("/Script/DuneSandbox.SecurityZonesSubsystem.m_bAreSecurityZonesEnabled", settingBool, "True",
+		"Security Zones Enabled", catWorldCombat, "Disable to allow PvP and abilities everywhere on the map (no safe zones)."),
+	gameSetting("ConsoleVariables.Vehicle.SandwormCollisionInteraction", settingBool, "False",
+		"Sandworm Vehicle Collision", catWorldCombat, "Sandworms can push/damage vehicles."),
+	gameSetting("ConsoleVariables.Sandstorm.Enabled", settingBool, "True",
+		"Sandstorms Enabled", catWorldCombat, "Enable sandstorm weather events."),
+	gameSetting("ConsoleVariables.Sandstorm.Treasure.Enabled", settingBool, "True",
+		"Sandstorm Treasure Drops", catWorldCombat, "Loot drops during sandstorms."),
+	gameSetting("ConsoleVariables.sandworm.dune.Enabled", settingBool, "True",
+		"Sandworms Enabled", catWorldCombat, "Enable sandworm spawns."),
+	gameSetting("ConsoleVariables.Sandworm.SandwormDangerZonesEnabled", settingBool, "True",
+		"Sandworm Danger Zones", catWorldCombat, "Visible danger zones where sandworms can attack."),
+	gameSetting("/Script/DuneSandbox.SandStormConfig.m_bCoriolisAutoSpawnEnabled", settingBool, "True",
+		"Coriolis Storm Auto-Spawn", catWorldCombat, "Coriolis storms spawn automatically."),
 
-	// Harvesting
-	{secGame, "m_GlobalHarvestAmountMultiplier", settingFloat, "1.0", "Harvest Amount Multiplier", "Scales resource yield from harvesting", "Harvesting"},
-	{secGame, "m_GlobalHarvestHealthMultiplier", settingFloat, "1.0", "Harvest Health Multiplier", "Scales node health (how long nodes last)", "Harvesting"},
+	// Persistence & Building.
+	gameSetting("/DeteriorationSystem.ItemDeteriorationConstants.UpdateRateInSeconds", settingFloat, "1.0",
+		"Item Deterioration Rate", catPersistence, "Item deterioration tick interval in seconds. 0 disables decay; 10 = fastest."),
+	gameSetting("/Script/DuneSandbox.BuildingSettings.m_MaxNumLandclaimSegments", settingInt, "6",
+		"Max Landclaim Segments", catPersistence, "Maximum number of land-claim flags a player may own."),
+	gameSetting("/Script/DuneSandbox.BuildingSettings.m_BuildingBlueprintMaxExtensions", settingInt, "4",
+		"Building Blueprint Max Extensions", catPersistence, "How many times a blueprinted building can be extended."),
+	gameSetting("/Script/DuneSandbox.BuildingSettings.m_BaseBackupMaxExtensions", settingInt, "8",
+		"Base Backup Max Extensions", catPersistence, "How many times a base backup can be extended."),
+	gameSetting("/Script/DuneSandbox.BuildingSettings.m_bBuildingRestrictionLimitsEnabled", settingBool, "True",
+		"Building Restriction Limits", catPersistence, "Enforce limits on what may be built (e.g. inside dungeons)."),
 
-	// Building
-	{secBuilding, "m_GlobalBuildingDamageMultiplier", settingFloat, "1.0", "Building Damage Multiplier", "Scales damage dealt to player buildings", "Building"},
-	{secBuilding, "m_BuildingDecayRateMultiplier", settingFloat, "1.0", "Building Decay Rate Multiplier", "Scales how fast buildings decay", "Building"},
-	{secBuilding, "bEnableBuildingStability", settingBool, "True", "Enable Building Stability", "Whether structural stability rules apply", "Building"},
-	{secBuilding, "m_MaxNumLandclaimSegments", settingInt, "100", "Max Landclaim Segments", "Maximum territory claim segments per guild", "Building"},
-	{secBuilding, "m_BuildingBlueprintMaxExtensions", settingInt, "5", "Blueprint Max Extensions", "Maximum blueprint extension slots", "Building"},
-	{secBuilding, "m_BaseBackupExtensions", settingInt, "2", "Base Backup Extensions", "Default backup extension slots per base", "Building"},
-
-	// Inventory
-	{secInventory, "PlayerInventoryStartingSize", settingInt, "40", "Starting Inventory Slots", "Number of inventory slots at spawn", "Inventory"},
-	{secInventory, "PlayerInventoryStartingVolumeCapacity", settingFloat, "225.0", "Starting Inventory Volume", "Volume capacity of starting inventory", "Inventory"},
-	{secGame, "m_InventoryWeightMultiplier", settingFloat, "1.0", "Inventory Weight Multiplier", "Scales item weight across all inventories", "Inventory"},
-
-	// Guilds & Economy
-	{secGuilds, "m_MaxGuildMembersAllowed", settingInt, "32", "Max Guild Members", "Maximum players per guild", "Guilds & Economy"},
-	{secGuilds, "m_MaxGuildsAllowed", settingInt, "3", "Max Guilds per Player", "How many guilds a player may belong to", "Guilds & Economy"},
-	{secGuilds, "m_GuildCreationCost", settingInt, "1000", "Guild Creation Cost (Solari)", "Solari required to create a guild", "Guilds & Economy"},
-	{secGuilds, "m_MaxPermissionsPerActor", settingInt, "20", "Max Permissions per Actor", "Max permission rules per actor/structure", "Guilds & Economy"},
-
-	// Storm Cycle
-	{secStorm, "m_StormCycleDuration", settingInt, "3600", "Storm Cycle Duration (s)", "Total duration of one storm cycle", "Storm Cycle"},
-	{secStorm, "m_StormDuration", settingInt, "900", "Storm Duration (s)", "How long each active storm lasts", "Storm Cycle"},
-	{secStorm, "m_StormWarningDuration", settingInt, "300", "Storm Warning Duration (s)", "Warning period before a storm hits", "Storm Cycle"},
-	{secStorm, "m_CycleDurationInDays", settingInt, "7", "Coriolis Cycle (days)", "In-game days between Coriolis storm events", "Storm Cycle"},
-	{secGame, "m_bCoriolisAutoSpawnEnabled", settingBool, "True", "Coriolis Auto-Spawn", "Whether Coriolis storms spawn automatically", "Storm Cycle"},
-	{secGame, "m_bIsDbWipeEnabled", settingBool, "False", "Database Wipe on Season End", "Wipe the database when the season ends", "Storm Cycle"},
-
-	// PvP & Security
-	{secPvP, "bPvPEnabled", settingBool, "False", "PvP Enabled", "Allow player-vs-player combat globally", "PvP & Security"},
-	{secPvP, "bServerPVE", settingBool, "True", "Server PvE Mode", "Enables PvE protection globally", "PvP & Security"},
-	{secPvP, "m_bShouldForceEnablePvpOnAllPartitions", settingBool, "False", "Force PvP on All Partitions", "Override per-partition PvP settings", "PvP & Security"},
-	{secSecurity, "m_bAreSecurityZonesEnabled", settingBool, "True", "Security Zones Enabled", "Whether base security zones are enforced", "PvP & Security"},
-
-	// Spice
-	{secSpice, "m_PrimeRateInSeconds", settingFloat, "30.0", "Spice Prime Rate (s)", "Seconds between spice node priming ticks", "Spice"},
-	{secSpice, "m_NodeValueToSpiceResourceRatio", settingFloat, "10.0", "Node Value to Spice Ratio", "Converts node value into harvestable spice", "Spice"},
-	{secSpice, "m_bSpawningActive", settingBool, "True", "Spice Spawning Active", "Whether spice nodes spawn at all", "Spice"},
-	{secSpice, "m_bPlayerMustWitnessBloom", settingBool, "True", "Player Must Witness Bloom", "Player must be present for bloom to count", "Spice"},
-
-	// Taxation
-	{secTaxation, "m_bTaxationEnabled", settingBool, "True", "Taxation Enabled", "Whether the taxation system is active", "Taxation"},
-	{secTaxation, "m_TaxationCycleLengthSeconds", settingInt, "86400", "Taxation Cycle (s)", "Seconds between taxation collection cycles", "Taxation"},
-	{secTaxation, "m_SpicePerHour", settingInt, "100", "Spice Yield per Hour", "Base spice generated per hour per field", "Taxation"},
-
-	// Sandworm
-	{secSandworm, "WormDetectionDistance", settingFloat, "5000.0", "Worm Detection Distance", "Distance at which worms detect players", "Sandworm"},
-	{secSandworm, "m_MinWormSpawnInternal", settingFloat, "300.0", "Min Spawn Interval (s)", "Minimum seconds between worm spawns", "Sandworm"},
-	{secSandworm, "m_MinDistanceBetweenSandworms", settingFloat, "10000.0", "Min Distance Between Worms", "Minimum world units separating active worms", "Sandworm"},
-	{secSandworm, "m_SandwormQuicksandSpeedModifier", settingFloat, "0.5", "Quicksand Speed Modifier", "Movement speed multiplier in quicksand", "Sandworm"},
-	{secSandworm, "m_GiantWormMinimumPlayersOnSpiceField", settingInt, "1", "Giant Worm Min Players", "Players required on field to trigger giant worm", "Sandworm"},
+	// Server Identity (engine CVars).
+	gameSetting("ConsoleVariables.Bgd.ServerDisplayName", settingString, "Sietch Cubern",
+		"In-game Server Name", catServerIdentity, "Name shown to players in the in-game server browser and UI."),
+	gameSetting("ConsoleVariables.Bgd.ServerLoginPassword", settingString, "",
+		"Server Login Password", catServerIdentity, "Optional. Players must enter this password to join. Leave blank to disable."),
 }
 
 // ── INI helpers ───────────────────────────────────────────────────────────────
@@ -396,6 +441,51 @@ func inferType(value string) settingType {
 // writing there leaves AMP's dashboard-managed UserGame.ini untouched.
 type gameOverrideProvider interface {
 	gameOverridePath(dir string) string
+}
+
+// serverSettingsWriter is implemented by control planes that own the game's
+// config files themselves and must be written through their own API rather than
+// by editing the INI files directly. AMP regenerates UserEngine.ini /
+// UserGame.ini from its config on every start, so a direct INI edit is
+// clobbered; writing through AMP's API persists and survives restarts. Control
+// planes that don't implement this fall through to the INI write path.
+type serverSettingsWriter interface {
+	// writeServerSettings applies fieldName→value updates through the control
+	// plane's own configuration API.
+	writeServerSettings(ctx context.Context, exec Executor, updates map[string]string) error
+}
+
+// splitCuratedFromINI partitions normalized (section→key→value) updates into
+// curated settings and everything else. Curated settings (those in the schema,
+// which carry an AMP FieldName) are returned as FieldName→value for the AMP API;
+// because AMP has no "unset" — every node holds a value — a clear (empty value)
+// resolves to the curated schema default. All other (section,key) pairs are
+// returned as section→key→value for the INI write path.
+//
+// Under AMP the caller writes the curated settings through the API and the rest
+// to the INI files, so operators can still set custom settings AMP doesn't
+// manage rather than being rejected.
+func splitCuratedFromINI(updates map[string]map[string]string) (fieldUpdates map[string]string, iniUpdates map[string]map[string]string) {
+	schemaMap := buildServerSettingsSchemaMap()
+	fieldUpdates = map[string]string{}
+	iniUpdates = map[string]map[string]string{}
+	for sec, kvs := range updates {
+		for key, val := range kvs {
+			if def, ok := schemaMap[sec+"|"+key]; ok {
+				v := val
+				if v == "" {
+					v = def.Default
+				}
+				fieldUpdates[def.FieldName] = v
+				continue
+			}
+			if iniUpdates[sec] == nil {
+				iniUpdates[sec] = map[string]string{}
+			}
+			iniUpdates[sec][key] = val
+		}
+	}
+	return fieldUpdates, iniUpdates
 }
 
 // gameWritePath returns the file dune-admin writes game-scoped settings to.
@@ -720,6 +810,7 @@ func buildSchemaSettings(layerSources []layerSource) []ServerSetting {
 			Description: def.Description,
 			Category:    def.Category,
 			Current:     def.Default,
+			FieldName:   def.FieldName,
 		}
 		applySettingLayers(&s, layerSources)
 		settings = append(settings, s)
@@ -866,9 +957,14 @@ func handleGetServerSettings(w http.ResponseWriter, r *http.Request) {
 	settings = append(settings, buildDiscoveredSettings(discovered, layerSources, schemaKeys)...)
 	raw := buildServerSettingsRawSections(defaultGameContent, defaultEngineContent, gameContent, engineContent, overridesContent, schemaKeys)
 
+	controlName := ""
+	if globalControl != nil {
+		controlName = globalControl.Name()
+	}
 	jsonOK(w, map[string]any{
 		"settings": settings,
 		"raw":      raw,
+		"control":  controlName,
 	})
 }
 
@@ -1329,6 +1425,19 @@ func normalizeServerSettingsUpdates(
 	return normalized, nil
 }
 
+// isEngineSection reports whether an INI section belongs in UserEngine.ini
+// rather than UserGame.ini. [ConsoleVariables] is always engine-scoped — CVars
+// are applied from an Engine ini, and this must hold even when DefaultEngine.ini
+// is unreadable on a given deployment. Any section declared in DefaultEngine.ini
+// is likewise engine-scoped.
+func isEngineSection(section string, defaultEngineIni map[string]map[string]string) bool {
+	if section == secConsoleVars {
+		return true
+	}
+	_, ok := defaultEngineIni[section]
+	return ok
+}
+
 func splitServerSettingsUpdatesByFile(
 	defaultEngineIni map[string]map[string]string,
 	updates map[string]map[string]string,
@@ -1336,7 +1445,7 @@ func splitServerSettingsUpdatesByFile(
 	gameUpdates = map[string]map[string]string{}
 	engineUpdates = map[string]map[string]string{}
 	for sec, kvs := range updates {
-		if _, inEngine := defaultEngineIni[sec]; inEngine {
+		if isEngineSection(sec, defaultEngineIni) {
 			engineUpdates[sec] = kvs
 		} else {
 			gameUpdates[sec] = kvs
@@ -1352,6 +1461,43 @@ func buildUpdatedINIContent(path string, updates map[string]map[string]string) (
 	return applyDuneAdminUpdates(readINIContent(path), updates)
 }
 
+// applyServerSettingsToINI writes updates to the user INI files
+// (UserGame/UserOverrides + UserEngine), routing each section to the right file.
+// It returns an HTTP status code alongside any error: 409 when a managed-marker
+// conflict would risk data loss, 500 on write failure, 0 on success.
+func applyServerSettingsToINI(dir string, updates map[string]map[string]string) (int, error) {
+	// Route each section to UserGame.ini or UserEngine.ini based on which default
+	// file declares it (ConsoleVariables is always engine-scoped).
+	defaultEngineIni := parseINI(readDefaultINIContent(dir, "DefaultEngine.ini"))
+	gameUpdates, engineUpdates := splitServerSettingsUpdatesByFile(defaultEngineIni, updates)
+
+	// Game settings route to UserOverrides.ini under AMP (leaving AMP's
+	// dashboard-managed UserGame.ini untouched) and to UserGame.ini otherwise.
+	gamePath := gameWritePath(dir)
+	gameName := pathpkg.Base(gamePath)
+	gameBody, err := buildUpdatedINIContent(gamePath, gameUpdates)
+	if err != nil {
+		return 409, fmt.Errorf("%s: %w", gameName, err)
+	}
+	if len(gameUpdates) > 0 {
+		if err := writeINIContent(gamePath, gameBody); err != nil {
+			return 500, fmt.Errorf("write %s: %w", gameName, err)
+		}
+	}
+
+	enginePath := dir + "/UserEngine.ini"
+	engineBody, err := buildUpdatedINIContent(enginePath, engineUpdates)
+	if err != nil {
+		return 409, fmt.Errorf("UserEngine.ini: %w", err)
+	}
+	if len(engineUpdates) > 0 {
+		if err := writeINIContent(enginePath, engineBody); err != nil {
+			return 500, fmt.Errorf("write UserEngine.ini: %w", err)
+		}
+	}
+	return 0, nil
+}
+
 // @Summary Apply one or more server setting changes
 // @Tags server-settings
 // @Accept json
@@ -1364,11 +1510,6 @@ func buildUpdatedINIContent(path string, updates map[string]map[string]string) (
 func handleUpdateServerSettings(w http.ResponseWriter, r *http.Request) {
 	if globalExecutor == nil {
 		jsonErr(w, fmt.Errorf("not connected"), 503)
-		return
-	}
-	dir, err := iniDir()
-	if err != nil {
-		jsonErr(w, err, 503)
 		return
 	}
 
@@ -1386,37 +1527,31 @@ func handleUpdateServerSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Route each section to UserGame.ini or UserEngine.ini based on which default
-	// file declares it. Sections found in DefaultEngine.ini go to UserEngine.ini;
-	// everything else goes to UserGame.ini.
-	defaultEngineIni := parseINI(readDefaultINIContent(dir, "DefaultEngine.ini"))
-	gameUpdates, engineUpdates := splitServerSettingsUpdatesByFile(defaultEngineIni, normalized.updates)
-
-	// Game settings route to UserOverrides.ini under AMP (leaving AMP's
-	// dashboard-managed UserGame.ini untouched) and to UserGame.ini otherwise.
-	gamePath := gameWritePath(dir)
-	gameName := pathpkg.Base(gamePath)
-	gameBody, err := buildUpdatedINIContent(gamePath, gameUpdates)
-	if err != nil {
-		jsonErr(w, fmt.Errorf("%s: %w", gameName, err), 409)
-		return
+	// AMP-style control planes own the game INIs and regenerate them on start, so
+	// AMP-managed (curated) settings must go through their API (Core/SetConfig) to
+	// survive. Everything else — and all settings on non-AMP planes — takes the
+	// direct INI path. Splitting (rather than rejecting non-curated keys) lets
+	// operators still set custom settings AMP doesn't manage.
+	iniUpdates := normalized.updates
+	if writer, ok := globalControl.(serverSettingsWriter); ok {
+		fieldUpdates, rest := splitCuratedFromINI(normalized.updates)
+		if len(fieldUpdates) > 0 {
+			if err := writer.writeServerSettings(r.Context(), globalExecutor, fieldUpdates); err != nil {
+				jsonErr(w, err, 502)
+				return
+			}
+		}
+		iniUpdates = rest
 	}
-	if len(gameUpdates) > 0 {
-		if err := writeINIContent(gamePath, gameBody); err != nil {
-			jsonErr(w, fmt.Errorf("write %s: %w", gameName, err), 500)
+
+	if len(iniUpdates) > 0 {
+		dir, err := iniDir()
+		if err != nil {
+			jsonErr(w, err, 503)
 			return
 		}
-	}
-
-	enginePath := dir + "/UserEngine.ini"
-	engineBody, err := buildUpdatedINIContent(enginePath, engineUpdates)
-	if err != nil {
-		jsonErr(w, fmt.Errorf("UserEngine.ini: %w", err), 409)
-		return
-	}
-	if len(engineUpdates) > 0 {
-		if err := writeINIContent(enginePath, engineBody); err != nil {
-			jsonErr(w, fmt.Errorf("write UserEngine.ini: %w", err), 500)
+		if code, err := applyServerSettingsToINI(dir, iniUpdates); err != nil {
+			jsonErr(w, err, code)
 			return
 		}
 	}
@@ -1463,7 +1598,7 @@ func handleUpdateRawSection(w http.ResponseWriter, r *http.Request) {
 
 	defaultEngineIni := parseINI(readDefaultINIContent(dir, "DefaultEngine.ini"))
 	var filePath string
-	if _, inEngine := defaultEngineIni[req.Section]; inEngine {
+	if isEngineSection(req.Section, defaultEngineIni) {
 		filePath = dir + "/UserEngine.ini"
 	} else {
 		filePath = gameWritePath(dir)
