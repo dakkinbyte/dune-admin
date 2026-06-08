@@ -1,4 +1,15 @@
 {
+  "director": {
+    "title": "Configuração do Director",
+    "subtitle": "Configurações do Battlegroup Director — instanciamento de mapas e ajustes avançados (AMP).",
+    "loading": "Carregando a configuração do Director…",
+    "unsupported": "A edição da configuração do Director só está disponível no plano de controle AMP.",
+    "save": "Salvar",
+    "saveWithCount": "Salvar ({{count}})",
+    "saveFailed": "Falha ao salvar: {{message}}",
+    "readOnly": "somente leitura",
+    "restartNote": "As alterações são gravadas em director_config.ini e aplicadas após reiniciar o servidor."
+  },
   "help": {
     "menu": "Ajuda",
     "reportIssue": "Relatar um problema",
@@ -457,6 +468,7 @@
     "title": "Quadro do mercado"
   },
   "nav": {
+    "director": "Director",
     "bases": "Bases",
     "battlegroup": "Grupo de batalha",
     "blueprints": "Plantas",

@@ -1,4 +1,15 @@
 {
+  "director": {
+    "title": "Director Yapılandırması",
+    "subtitle": "Battlegroup Director ayarları — harita örnekleme ve gelişmiş ayarlar (AMP).",
+    "loading": "Director yapılandırması yükleniyor…",
+    "unsupported": "Director yapılandırması düzenleme yalnızca AMP kontrol düzleminde kullanılabilir.",
+    "save": "Kaydet",
+    "saveWithCount": "Kaydet ({{count}})",
+    "saveFailed": "Kaydetme başarısız: {{message}}",
+    "readOnly": "salt okunur",
+    "restartNote": "Değişiklikler director_config.ini dosyasına yazılır ve sunucu yeniden başlatıldıktan sonra geçerli olur."
+  },
   "help": {
     "menu": "Yardım",
     "reportIssue": "Sorun bildir",
@@ -450,6 +461,7 @@
     "title": "Market Panosu"
   },
   "nav": {
+    "director": "Director",
     "bases": "Üsler",
     "battlegroup": "Savaş Grubu",
     "blueprints": "Planlar",

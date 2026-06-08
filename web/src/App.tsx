@@ -18,6 +18,7 @@ import { BlueprintsTab } from './tabs/BlueprintsTab'
 import { BasesTab } from './tabs/BasesTab'
 import { StorageTab } from './tabs/StorageTab'
 import { ServerSettingsTab } from './tabs/ServerSettingsTab'
+import { DirectorTab } from './tabs/DirectorTab'
 import { MarketTab } from './tabs/MarketTab'
 import { WelcomePackageTab } from './tabs/WelcomePackageTab'
 import { Icon, SideNav } from './dune-ui'
@@ -34,6 +35,7 @@ const TAB_IDS = [
   'storage',
   'livemap',
   'server',
+  'director',
   'market',
   'welcome',
 ] as const
@@ -60,6 +62,7 @@ const MBlueprintsTab = memo(BlueprintsTab)
 const MBasesTab = memo(BasesTab)
 const MStorageTab = memo(StorageTab)
 const MServerSettingsTab = memo(ServerSettingsTab)
+const MDirectorTab = memo(DirectorTab)
 const MMarketTab = memo(MarketTab)
 const MWelcomePackageTab = memo(WelcomePackageTab)
 
@@ -137,6 +140,7 @@ const AppCore: React.FC<AppCoreProps> = ({ isSignedIn }) => {
         { key: 'logs' as TabId, label: t('nav.logs') },
         { key: 'database' as TabId, label: t('nav.database') },
         { key: 'server' as TabId, label: t('nav.server') },
+        { key: 'director' as TabId, label: t('nav.director') },
       ],
     },
     {
@@ -614,6 +618,7 @@ const AppCore: React.FC<AppCoreProps> = ({ isSignedIn }) => {
                 {renderTab('storage', <MStorageTab />)}
                 {renderTab('livemap', <MLiveMapTab isActive={currentTab === 'livemap'} />)}
                 {renderTab('server', <MServerSettingsTab />)}
+                {renderTab('director', <MDirectorTab />)}
                 {renderTab('market', <MMarketTab />)}
                 {renderTab('welcome', welcomeNode)}
               </main>
@@ -651,6 +656,7 @@ const AppCore: React.FC<AppCoreProps> = ({ isSignedIn }) => {
                 {renderTab('storage', <MStorageTab />)}
                 {renderTab('livemap', <MLiveMapTab isActive={currentTab === 'livemap'} />)}
                 {renderTab('server', <MServerSettingsTab />)}
+                {renderTab('director', <MDirectorTab />)}
                 {renderTab('market', <MMarketTab />)}
                 {renderTab('welcome', welcomeNode)}
               </main>

@@ -1,4 +1,15 @@
 {
+  "director": {
+    "title": "Director-Konfiguration",
+    "subtitle": "Battlegroup-Director-Einstellungen — Karten-Instanzierung & erweiterte Optionen (AMP).",
+    "loading": "Director-Konfiguration wird geladen…",
+    "unsupported": "Die Director-Konfiguration kann nur auf der AMP-Steuerungsebene bearbeitet werden.",
+    "save": "Speichern",
+    "saveWithCount": "Speichern ({{count}})",
+    "saveFailed": "Speichern fehlgeschlagen: {{message}}",
+    "readOnly": "schreibgeschützt",
+    "restartNote": "Änderungen werden in director_config.ini geschrieben und nach einem Server-Neustart wirksam."
+  },
   "help": {
     "menu": "Hilfe",
     "reportIssue": "Problem melden",
@@ -450,6 +461,7 @@
     "title": "Marktplatz"
   },
   "nav": {
+    "director": "Director",
     "bases": "Basen",
     "battlegroup": "Kampfgruppe",
     "blueprints": "Baupläne",

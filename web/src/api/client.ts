@@ -311,6 +311,21 @@ export type BaseRow = {
   pieces: number
   placeables: number
 }
+export type DirectorKV = {
+  key: string
+  value: string
+  comment?: string
+  secret?: boolean
+}
+export type DirectorSection = {
+  name: string
+  read_only: boolean
+  lines: DirectorKV[]
+}
+export type DirectorConfig = {
+  path: string
+  sections: DirectorSection[]
+}
 export type LogPod = {
   namespace: string
   name: string
@@ -865,6 +880,12 @@ export const api = {
   bases: {
     list: () => req<BaseRow[]>('GET', '/bases'),
     exportUrl: (id: number) => `${apiBase}/bases/${id}/export`,
+  },
+
+  director: {
+    get: () => req<DirectorConfig>('GET', '/director-config'),
+    update: (updates: Record<string, Record<string, string>>) =>
+      req<MutateResult>('PUT', '/director-config', { updates }),
   },
 
   market: {

@@ -1,4 +1,15 @@
 {
+  "director": {
+    "title": "Director 配置",
+    "subtitle": "Battlegroup Director 设置 — 地图实例化与高级调节（AMP）。",
+    "loading": "正在加载 Director 配置…",
+    "unsupported": "仅在 AMP 控制平面上可编辑 Director 配置。",
+    "save": "保存",
+    "saveWithCount": "保存 ({{count}})",
+    "saveFailed": "保存失败：{{message}}",
+    "readOnly": "只读",
+    "restartNote": "更改将写入 director_config.ini，并在服务器重启后生效。"
+  },
   "help": {
     "menu": "帮助",
     "reportIssue": "报告问题",
@@ -450,6 +461,7 @@
     "title": "市场板"
   },
   "nav": {
+    "director": "Director",
     "bases": "基地",
     "battlegroup": "战斗群",
     "blueprints": "蓝图",

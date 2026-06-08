@@ -1,4 +1,15 @@
 {
+  "director": {
+    "title": "Director Config",
+    "subtitle": "Battlegroup Director settings — map instancing & advanced tunables (AMP).",
+    "loading": "Loading director config…",
+    "unsupported": "Director config editing is only available on the AMP control plane.",
+    "save": "Save",
+    "saveWithCount": "Save ({{count}})",
+    "saveFailed": "Save failed: {{message}}",
+    "readOnly": "read-only",
+    "restartNote": "Changes are written to director_config.ini and take effect after a server restart."
+  },
   "help": {
     "menu": "Help",
     "reportIssue": "Report an issue",
@@ -450,6 +461,7 @@
     "title": "Market Board"
   },
   "nav": {
+    "director": "Director",
     "bases": "Bases",
     "battlegroup": "Battlegroup",
     "blueprints": "Blueprints",

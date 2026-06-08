@@ -1,4 +1,15 @@
 {
+  "director": {
+    "title": "Настройки Director",
+    "subtitle": "Настройки Battlegroup Director — инстансирование карт и расширенные параметры (AMP).",
+    "loading": "Загрузка конфигурации Director…",
+    "unsupported": "Редактирование конфигурации Director доступно только на управляющем плане AMP.",
+    "save": "Сохранить",
+    "saveWithCount": "Сохранить ({{count}})",
+    "saveFailed": "Не удалось сохранить: {{message}}",
+    "readOnly": "только чтение",
+    "restartNote": "Изменения записываются в director_config.ini и применяются после перезапуска сервера."
+  },
   "help": {
     "menu": "Помощь",
     "reportIssue": "Сообщить о проблеме",
@@ -464,6 +475,7 @@
     "title": "Доска рынка"
   },
   "nav": {
+    "director": "Director",
     "bases": "Базы",
     "battlegroup": "Боевая группа",
     "blueprints": "Чертежи",
