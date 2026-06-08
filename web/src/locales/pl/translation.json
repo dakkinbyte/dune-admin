@@ -1,5 +1,6 @@
 {
   "app": {
+    "reportIssue": "Zgłoś problem na GitHubie",
     "changesNote": "Zmiany na wszystkich kartach są zapisywane razem.",
     "checkUpdates": "Sprawdź aktualizacje",
     "configureBackend": "Konfiguruj backend",

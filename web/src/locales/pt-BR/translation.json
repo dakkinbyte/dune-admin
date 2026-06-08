@@ -1,5 +1,6 @@
 {
   "app": {
+    "reportIssue": "Relatar um problema no GitHub",
     "changesNote": "As alterações em todas as abas são salvas juntas.",
     "checkUpdates": "Verificar atualizações",
     "configureBackend": "Configurar backend",

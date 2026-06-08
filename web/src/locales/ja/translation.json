@@ -1,5 +1,6 @@
 {
   "app": {
+    "reportIssue": "GitHub で問題を報告",
     "changesNote": "すべてのタブの変更はまとめて保存されます。",
     "checkUpdates": "更新を確認",
     "configureBackend": "バックエンドの設定",

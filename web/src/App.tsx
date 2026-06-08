@@ -317,6 +317,16 @@ const AppCore: React.FC<AppCoreProps> = ({ isSignedIn }) => {
             </span>
           )}
 
+          <a
+            href="https://github.com/Icehunter/dune-admin/issues"
+            target="_blank"
+            rel="noreferrer"
+            aria-label={t('app.reportIssue')}
+            title={t('app.reportIssue')}
+            className="inline-flex items-center justify-center size-8 rounded text-muted hover:text-foreground hover:bg-surface-secondary transition-colors"
+          >
+            <Icon name="github" />
+          </a>
           <LanguageSelector />
           <ToggleButtonGroup
             selectionMode="single"
