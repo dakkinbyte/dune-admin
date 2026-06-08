@@ -238,7 +238,7 @@ export const ManagePacksModal: React.FC<ManagePacksModalProps> = ({
                     )}
 
                     {/* Pack picker + metadata — single row */}
-                    <div className="flex flex-wrap items-center gap-2 shrink-0 pb-1 border-b border-border">
+                    <div className="flex flex-wrap items-end gap-2 shrink-0 pb-1 border-b border-border">
                       <Select
                         aria-label={t('players.givePacks.editingPack')}
                         selectedKey={selectedID || null}
@@ -286,31 +286,40 @@ export const ManagePacksModal: React.FC<ManagePacksModalProps> = ({
                         {' '}
                         {t('players.givePacks.newPack')}
                       </Button>
-                      <input
-                        className="bg-surface border border-border rounded-[var(--radius)] px-3 py-2 text-sm text-foreground placeholder:text-muted w-28"
-                        aria-label={t('players.givePacks.packId')}
-                        placeholder={t('players.givePacks.packId')}
-                        value={formID}
-                        onChange={(e) => setFormID(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') applyPack() }}
-                      />
-                      <input
-                        className="bg-surface border border-border rounded-[var(--radius)] px-3 py-2 text-sm text-foreground placeholder:text-muted w-24"
-                        aria-label={t('players.givePacks.packName')}
-                        placeholder={t('players.givePacks.packName')}
-                        value={formName}
-                        onChange={(e) => setFormName(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') applyPack() }}
-                      />
-                      <input
-                        className="bg-surface border border-border rounded-[var(--radius)] px-3 py-2 text-sm text-foreground placeholder:text-muted w-28"
-                        aria-label={t('players.givePacks.category')}
-                        placeholder={t('players.givePacks.category')}
-                        value={formCategory}
-                        onChange={(e) => setFormCategory(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') applyPack() }}
-                      />
-                      <NumberInput ariaLabel={t('players.givePacks.tier')} min={1} value={formTier} onChange={setFormTier} className="w-24" />
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-muted">{t('players.givePacks.packId')}</span>
+                        <input
+                          className="bg-surface border border-border rounded-[var(--radius)] px-3 py-2 text-sm text-foreground placeholder:text-muted w-28"
+                          aria-label={t('players.givePacks.packId')}
+                          placeholder={t('players.givePacks.packId')}
+                          value={formID}
+                          onChange={(e) => setFormID(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') applyPack() }}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-muted">{t('players.givePacks.packName')}</span>
+                        <input
+                          className="bg-surface border border-border rounded-[var(--radius)] px-3 py-2 text-sm text-foreground placeholder:text-muted w-24"
+                          aria-label={t('players.givePacks.packName')}
+                          placeholder={t('players.givePacks.packName')}
+                          value={formName}
+                          onChange={(e) => setFormName(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') applyPack() }}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-muted">{t('players.givePacks.category')}</span>
+                        <input
+                          className="bg-surface border border-border rounded-[var(--radius)] px-3 py-2 text-sm text-foreground placeholder:text-muted w-28"
+                          aria-label={t('players.givePacks.category')}
+                          placeholder={t('players.givePacks.category')}
+                          value={formCategory}
+                          onChange={(e) => setFormCategory(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') applyPack() }}
+                        />
+                      </div>
+                      <NumberInput label={t('players.givePacks.tier')} ariaLabel={t('players.givePacks.tier')} min={1} value={formTier} onChange={setFormTier} className="w-24" />
                       <Button
                         size="sm"
                         onPress={applyPack}

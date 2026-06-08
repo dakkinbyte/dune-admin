@@ -27,6 +27,21 @@ CREATE TABLE IF NOT EXISTS map_locations (
 	updated_at TEXT    NOT NULL
 );`
 
+// initLocationSchema creates the map_locations table on db. Safe to call
+// against a shared handle (the unified store). Idempotent.
+func initLocationSchema(db *sql.DB) error {
+	if _, err := db.Exec(locationStoreSchema); err != nil {
+		return fmt.Errorf("init location schema: %w", err)
+	}
+	return nil
+}
+
+// newLocationStore wraps an already-initialised shared handle (schema created by
+// openUnifiedStore). Seeding must be done by the caller via seedIfEmpty().
+func newLocationStore(db *sql.DB) *locationStore {
+	return &locationStore{db: db}
+}
+
 // openLocationStore opens (or creates) the location database at path, ensures
 // the schema exists, and seeds from cheatLocations when the table is empty.
 func openLocationStore(path string) (*locationStore, error) {
@@ -34,9 +49,9 @@ func openLocationStore(path string) (*locationStore, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open location store: %w", err)
 	}
-	if _, err := db.Exec(locationStoreSchema); err != nil {
+	if err := initLocationSchema(db); err != nil {
 		_ = db.Close()
-		return nil, fmt.Errorf("init location schema: %w", err)
+		return nil, err
 	}
 	s := &locationStore{db: db}
 	if err := s.seedIfEmpty(); err != nil {

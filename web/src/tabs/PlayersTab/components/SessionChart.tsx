@@ -10,15 +10,34 @@ interface SessionChartProps {
 
 type DayBucket = { date: string, minutes: number }
 
+const WINDOW_DAYS = 14
+
+/** Returns today's UTC date as YYYY-MM-DD. */
+function todayUTC(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+/**
+ * Aggregates session records into a fixed WINDOW_DAYS window ending today (UTC).
+ * Days with no sessions are zero-filled so the chart always shows a contiguous
+ * range rather than being centred on sparse data.
+ */
 function aggregate(records: SessionRecord[]): DayBucket[] {
-  const map = new Map<string, number>()
+  const minutesByDay = new Map<string, number>()
   for (const r of records) {
     const day = r.started_at.slice(0, 10)
-    map.set(day, (map.get(day) ?? 0) + Math.round(r.duration_secs / 60))
+    minutesByDay.set(day, (minutesByDay.get(day) ?? 0) + Math.round(r.duration_secs / 60))
   }
-  return Array.from(map.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, minutes]) => ({ date, minutes }))
+
+  const buckets: DayBucket[] = []
+  const today = todayUTC()
+  for (let i = WINDOW_DAYS - 1; i >= 0; i--) {
+    const d = new Date(today + 'T12:00:00Z')
+    d.setUTCDate(d.getUTCDate() - i)
+    const date = d.toISOString().slice(0, 10)
+    buckets.push({ date, minutes: minutesByDay.get(date) ?? 0 })
+  }
+  return buckets
 }
 
 function fmtDate(d: string): string {
@@ -29,7 +48,7 @@ export const SessionChart: React.FC<SessionChartProps> = ({ data }) => {
   const { t } = useTranslation()
   const buckets = aggregate(data)
 
-  if (buckets.length === 0) {
+  if (data.length === 0) {
     return (
       <div>
         <SectionLabel>{t('players.detail.sessionHistory')}</SectionLabel>
@@ -61,6 +80,7 @@ export const SessionChart: React.FC<SessionChartProps> = ({ data }) => {
               width={36}
             />
             <Tooltip
+              cursor={{ fill: 'var(--surface-hover)' }}
               formatter={(val) => [`${val as number}m`, t('players.detail.playtime')]}
               labelFormatter={(d) => fmtDate(String(d))}
               contentStyle={{

@@ -180,13 +180,21 @@ func startSessionTracking() context.CancelFunc {
 	return cancel
 }
 
-// initSessionPoller opens (or creates) the session database and starts the
-// background polling goroutine. Skips gracefully when globalDB is not yet
-// connected so the server still starts in degraded mode.
+// initSessionPoller initialises the session database and starts the background
+// polling goroutine. When globalStore is available the unified handle is used
+// directly; otherwise a dedicated file is opened (legacy / test mode). Skips
+// gracefully when globalDB is not yet connected so the server starts in
+// degraded mode.
 func initSessionPoller(ctx context.Context) error {
-	sdb, err := openSessionDB(resolveSessionDBPath())
-	if err != nil {
-		return fmt.Errorf("open session db: %w", err)
+	var sdb *sql.DB
+	if globalStore != nil {
+		sdb = globalStore
+	} else {
+		var err error
+		sdb, err = openSessionDB(resolveSessionDBPath())
+		if err != nil {
+			return fmt.Errorf("open session db: %w", err)
+		}
 	}
 	if err := closeOrphanedSessions(sdb); err != nil {
 		log.Printf("session poller: close orphaned sessions: %v", err)

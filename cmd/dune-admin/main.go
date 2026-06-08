@@ -214,10 +214,16 @@ func marketBotEnabled(cfg appConfig) bool {
 // feature can be toggled on at runtime via the API; each tick is a cheap no-op
 // while disabled. Returns a cancel func, or nil if the store could not open.
 func startWelcomePackageScanner(_ appConfig) context.CancelFunc {
-	store, err := openWelcomeStore(filepath.Join(configDir(), "welcome-package.db"))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "welcome-package: store open failed: %v\n", err)
-		return nil
+	var store *welcomeStore
+	if globalStore != nil {
+		store = newWelcomeStore(globalStore)
+	} else {
+		var err error
+		store, err = openWelcomeStore(filepath.Join(configDir(), "welcome-package.db"))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "welcome-package: store open failed: %v\n", err)
+			return nil
+		}
 	}
 	welcomeStoreDB = store
 
@@ -727,6 +733,9 @@ func main() {
 
 	connectAndPrimeTemplates(alreadyConnected)
 
+	closeStore := initUnifiedStoreOnce()
+	defer closeStore()
+
 	sessionCancel := startSessionTracking()
 	defer sessionCancel()
 
@@ -756,10 +765,19 @@ func main() {
 // globalLocationStore. A failure is non-fatal — the store guard in each handler
 // surfaces a 503 for the affected endpoints.
 func initLocationStore() {
-	s, err := openLocationStore(filepath.Join(configDir(), "locations.db"))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "location store: %v (using empty list)\n", err)
-		return
+	var s *locationStore
+	if globalStore != nil {
+		s = newLocationStore(globalStore)
+		if err := s.seedIfEmpty(); err != nil {
+			fmt.Fprintf(os.Stderr, "location store seed: %v\n", err)
+		}
+	} else {
+		var err error
+		s, err = openLocationStore(filepath.Join(configDir(), "locations.db"))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "location store: %v (using empty list)\n", err)
+			return
+		}
 	}
 	globalLocationStore = s
 }
@@ -768,10 +786,16 @@ func initLocationStore() {
 // it from the embedded default packs.json snapshot on first boot. A failure is
 // non-fatal — handlers guard for a nil store and return 503.
 func initGivePacksStore() {
-	s, err := openGivePacksStore(filepath.Join(configDir(), "give-packs.db"))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "give-packs store: %v (using empty packs)\n", err)
-		return
+	var s *givePacksStore
+	if globalStore != nil {
+		s = newGivePacksStore(globalStore)
+	} else {
+		var err error
+		s, err = openGivePacksStore(filepath.Join(configDir(), "give-packs.db"))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "give-packs store: %v (using empty packs)\n", err)
+			return
+		}
 	}
 	givePacksStoreDB = s
 	loaded, _, ok, err := s.loadConfig()

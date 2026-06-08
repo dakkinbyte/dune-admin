@@ -105,6 +105,7 @@ export const ServerDashboard: React.FC = () => {
                         width={32}
                       />
                       <Tooltip
+                        cursor={{ fill: 'var(--surface-hover)' }}
                         formatter={(val) => [String(val as number), t('players.dashboard.sessions')]}
                         labelFormatter={(d) => fmtDate(String(d))}
                         contentStyle={{

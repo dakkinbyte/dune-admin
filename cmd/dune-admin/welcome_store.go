@@ -81,14 +81,12 @@ type welcomeConfigRow struct {
 	WelcomeWhisperSourcePlayer string
 }
 
-func openWelcomeStore(path string) (*welcomeStore, error) {
-	db, err := sql.Open("sqlite", path)
-	if err != nil {
-		return nil, fmt.Errorf("open welcome store: %w", err)
-	}
+// initWelcomeSchema creates the welcome tables and applies column migrations on
+// db. Safe to call against a shared handle (the unified store) or a dedicated
+// file. Idempotent.
+func initWelcomeSchema(db *sql.DB) error {
 	if _, err := db.Exec(welcomeStoreSchema); err != nil {
-		_ = db.Close()
-		return nil, fmt.Errorf("init welcome schema: %w", err)
+		return fmt.Errorf("init welcome schema: %w", err)
 	}
 	// Add welcome_message columns to existing DBs that predate this feature.
 	// SQLite does not support IF NOT EXISTS in ALTER TABLE, so we attempt each
@@ -102,10 +100,27 @@ func openWelcomeStore(path string) (*welcomeStore, error) {
 	} {
 		if _, alterErr := db.Exec(col); alterErr != nil {
 			if !isDuplicateColumnErr(alterErr) {
-				_ = db.Close()
-				return nil, fmt.Errorf("migrate welcome_config: %w", alterErr)
+				return fmt.Errorf("migrate welcome_config: %w", alterErr)
 			}
 		}
+	}
+	return nil
+}
+
+// newWelcomeStore wraps an already-initialised shared handle (schema created by
+// openUnifiedStore). Used in production so all stores share one SQLite file.
+func newWelcomeStore(db *sql.DB) *welcomeStore {
+	return &welcomeStore{db: db}
+}
+
+func openWelcomeStore(path string) (*welcomeStore, error) {
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		return nil, fmt.Errorf("open welcome store: %w", err)
+	}
+	if err := initWelcomeSchema(db); err != nil {
+		_ = db.Close()
+		return nil, err
 	}
 	return &welcomeStore{db: db}, nil
 }

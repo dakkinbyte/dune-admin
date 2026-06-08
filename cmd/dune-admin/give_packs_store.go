@@ -24,6 +24,21 @@ CREATE TABLE IF NOT EXISTS give_packs_config (
 	updated_at        TEXT    NOT NULL
 );`
 
+// initGivePacksSchema creates the give_packs_config table on db. Safe to call
+// against a shared handle (the unified store). Idempotent.
+func initGivePacksSchema(db *sql.DB) error {
+	if _, err := db.Exec(givePacksStoreSchema); err != nil {
+		return fmt.Errorf("init give-packs schema: %w", err)
+	}
+	return nil
+}
+
+// newGivePacksStore wraps an already-initialised shared handle (schema created
+// by openUnifiedStore). Used so all stores share one SQLite file in production.
+func newGivePacksStore(db *sql.DB) *givePacksStore {
+	return &givePacksStore{db: db}
+}
+
 // openGivePacksStore opens (or creates) the give-packs database at path and
 // ensures the schema exists. path may be ":memory:" for tests.
 func openGivePacksStore(path string) (*givePacksStore, error) {
@@ -31,9 +46,9 @@ func openGivePacksStore(path string) (*givePacksStore, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open give-packs store: %w", err)
 	}
-	if _, err := db.Exec(givePacksStoreSchema); err != nil {
+	if err := initGivePacksSchema(db); err != nil {
 		_ = db.Close()
-		return nil, fmt.Errorf("init give-packs schema: %w", err)
+		return nil, err
 	}
 	return &givePacksStore{db: db}, nil
 }
