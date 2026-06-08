@@ -787,6 +787,8 @@
       "charXP": "Char XP",
       "earned": "Earned",
       "economy": "Economy",
+      "factionAlignment": "Faction Alignment",
+      "unaligned": "Unaligned",
       "factionTier": "Faction tier",
       "failedToLoad": "Failed to load stats.",
       "lastSeen": "Last seen",
