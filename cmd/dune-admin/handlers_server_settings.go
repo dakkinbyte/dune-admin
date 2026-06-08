@@ -957,9 +957,14 @@ func handleGetServerSettings(w http.ResponseWriter, r *http.Request) {
 	settings = append(settings, buildDiscoveredSettings(discovered, layerSources, schemaKeys)...)
 	raw := buildServerSettingsRawSections(defaultGameContent, defaultEngineContent, gameContent, engineContent, overridesContent, schemaKeys)
 
+	controlName := ""
+	if globalControl != nil {
+		controlName = globalControl.Name()
+	}
 	jsonOK(w, map[string]any{
 		"settings": settings,
 		"raw":      raw,
+		"control":  controlName,
 	})
 }
 

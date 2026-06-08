@@ -88,6 +88,9 @@ export type ServerSetting = {
   is_overridden: boolean
   source: 'userGame' | 'userGameOverrides' | 'userEngine' | 'defaultGame' | 'defaultEngine' | ''
   layers: SettingLayer[]
+  // Present for curated settings only — its presence marks the setting as
+  // AMP-managed (written via the AMP API under the AMP control plane).
+  field_name?: string
 }
 
 export type ServerSettingUpdate = {
@@ -111,6 +114,7 @@ export type RawSection = {
 export type ServerSettingsResponse = {
   settings: ServerSetting[]
   raw: RawSection[]
+  control?: string // active control plane: 'amp' | 'docker' | 'kubectl' | 'local'
 }
 
 export const MASKED = '••••••••'

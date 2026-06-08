@@ -980,7 +980,9 @@
     "showUserAriaLabel": "Wyświetlanie tylko ustawień użytkownika — kliknij, aby wyświetlić wszystko",
     "title": "Ustawienia serwera",
     "unsaved": "niezapisane",
-    "userOverride": "· nadpisanie użytkownika"
+    "userOverride": "· nadpisanie użytkownika",
+    "showExpert": "Pokaż ustawienia eksperckie",
+    "hideExpert": "Ukryj ustawienia eksperckie"
   },
   "settings": {
     "adv": {

@@ -938,7 +938,9 @@
     "showUserAriaLabel": "仅显示用户设置 — 点击显示全部",
     "title": "服务器设置",
     "unsaved": "未保存",
-    "userOverride": "· 用户覆盖"
+    "userOverride": "· 用户覆盖",
+    "showExpert": "显示专家设置",
+    "hideExpert": "隐藏专家设置"
   },
   "settings": {
     "adv": {

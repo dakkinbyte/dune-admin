@@ -959,7 +959,9 @@
     "showUserAriaLabel": "Affichage des paramètres utilisateur uniquement — cliquez pour tout afficher",
     "title": "Paramètres serveur",
     "unsaved": "non enregistré",
-    "userOverride": "· remplacement utilisateur"
+    "userOverride": "· remplacement utilisateur",
+    "showExpert": "Afficher les paramètres experts",
+    "hideExpert": "Masquer les paramètres experts"
   },
   "settings": {
     "adv": {

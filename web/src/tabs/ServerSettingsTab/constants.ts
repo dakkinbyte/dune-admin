@@ -1,12 +1,57 @@
+// ADVANCED_CATEGORIES are the gameplay categories operators actually tune. They
+// show by default; every other category (engine/system internals) is treated as
+// Expert and hidden behind a toggle. Names are the exact category strings the
+// backend emits (curated category names + discovered INI short-section names).
+const ADVANCED_CATEGORIES = new Set([
+  'Multipliers', 'World & Combat', 'Persistence & Building', 'Server Identity',
+  'SandwormSettings', 'SandStormConfig', 'CoriolisSubsystem', 'TaxationSettings',
+  'CraftingSettings', 'SpiceHarvestingSystem', 'DewHarvestSettings',
+  'SecurityZonesSubsystem', 'GuildSettings', 'DuneVehicleSettings',
+  'RespawnSettings', 'ShelterSettings',
+])
+
+// Display order for categories; any not listed (Expert) sort after, alphabetically.
 const CATEGORY_ORDER = [
   'Multipliers', 'World & Combat', 'Persistence & Building', 'Server Identity',
+  'SandwormSettings', 'SandStormConfig', 'CoriolisSubsystem', 'TaxationSettings',
+  'CraftingSettings', 'SpiceHarvestingSystem', 'DewHarvestSettings',
+  'SecurityZonesSubsystem', 'GuildSettings', 'DuneVehicleSettings',
+  'RespawnSettings', 'ShelterSettings',
 ]
+
+// Friendlier display names for the raw INI short-section category strings.
+const CATEGORY_LABELS: Record<string, string> = {
+  SandwormSettings: 'Sandworm',
+  SandStormConfig: 'Sandstorm',
+  CoriolisSubsystem: 'Coriolis Storm',
+  TaxationSettings: 'Taxation',
+  CraftingSettings: 'Crafting',
+  SpiceHarvestingSystem: 'Spice Harvesting',
+  DewHarvestSettings: 'Dew Harvesting',
+  SecurityZonesSubsystem: 'Security Zones',
+  GuildSettings: 'Guilds',
+  DuneVehicleSettings: 'Vehicles',
+  RespawnSettings: 'Respawn',
+  ShelterSettings: 'Shelter',
+}
 
 const CATEGORY_ICONS: Record<string, string> = {
   'Multipliers': 'sliders',
   'World & Combat': 'swords',
   'Persistence & Building': 'hammer',
   'Server Identity': 'tag',
+  'SandwormSettings': 'worm',
+  'SandStormConfig': 'wind',
+  'CoriolisSubsystem': 'tornado',
+  'TaxationSettings': 'receipt',
+  'CraftingSettings': 'anvil',
+  'SpiceHarvestingSystem': 'sparkles',
+  'DewHarvestSettings': 'droplet',
+  'SecurityZonesSubsystem': 'shield',
+  'GuildSettings': 'users',
+  'DuneVehicleSettings': 'car',
+  'RespawnSettings': 'rotate-ccw',
+  'ShelterSettings': 'tent',
 }
 
 // Frequently-tuned settings surfaced in the "Common" panel above the categories.
@@ -21,6 +66,9 @@ const COMMON_KEYS = new Set([
   'ConsoleVariables|sandworm.dune.Enabled',
   '/DeteriorationSystem.ItemDeteriorationConstants|UpdateRateInSeconds',
   '/Script/DuneSandbox.BuildingSettings|m_MaxNumLandclaimSegments',
+  'ConsoleVariables|Bgd.ServerDisplayName',
+  'ConsoleVariables|Bgd.ServerLoginPassword',
+  '/Script/DuneSandbox.SandStormConfig|m_bCoriolisAutoSpawnEnabled',
 ])
 
 const SOURCE_FILE: Record<string, string> = {
@@ -43,4 +91,7 @@ const SOURCE_PRIORITY = ['defaultGame', 'defaultEngine', 'userEngine', 'userGame
 
 const USER_SOURCES = new Set(['userGame', 'userEngine', 'userGameOverrides'])
 
-export { CATEGORY_ORDER, CATEGORY_ICONS, COMMON_KEYS, SOURCE_FILE, LAYER_STYLE, SOURCE_PRIORITY, USER_SOURCES }
+export {
+  CATEGORY_ORDER, CATEGORY_ICONS, CATEGORY_LABELS, ADVANCED_CATEGORIES, COMMON_KEYS,
+  SOURCE_FILE, LAYER_STYLE, SOURCE_PRIORITY, USER_SOURCES,
+}

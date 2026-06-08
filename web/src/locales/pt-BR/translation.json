@@ -959,7 +959,9 @@
     "showUserAriaLabel": "Exibindo apenas configurações de usuário — clique para exibir todas",
     "title": "Configurações do servidor",
     "unsaved": "não salvo",
-    "userOverride": "· substituição de usuário"
+    "userOverride": "· substituição de usuário",
+    "showExpert": "Mostrar configurações de especialista",
+    "hideExpert": "Ocultar configurações de especialista"
   },
   "settings": {
     "adv": {

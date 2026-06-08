@@ -938,7 +938,9 @@
     "showUserAriaLabel": "Showing user settings only — click to show all",
     "title": "Server Settings",
     "unsaved": "unsaved",
-    "userOverride": "· user override"
+    "userOverride": "· user override",
+    "showExpert": "Show Expert settings",
+    "hideExpert": "Hide Expert settings"
   },
   "settings": {
     "adv": {

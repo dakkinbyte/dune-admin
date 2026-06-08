@@ -959,7 +959,9 @@
     "showUserAriaLabel": "Mostrando solo la configuración de usuario — haz clic para mostrar todo",
     "title": "Configuración del servidor",
     "unsaved": "sin guardar",
-    "userOverride": "· anulación de usuario"
+    "userOverride": "· anulación de usuario",
+    "showExpert": "Mostrar ajustes de experto",
+    "hideExpert": "Ocultar ajustes de experto"
   },
   "settings": {
     "adv": {

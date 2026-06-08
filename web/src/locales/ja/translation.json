@@ -938,7 +938,9 @@
     "showUserAriaLabel": "ユーザー設定のみ表示中 — クリックしてすべて表示",
     "title": "サーバー設定",
     "unsaved": "未保存",
-    "userOverride": "· ユーザーオーバーライド"
+    "userOverride": "· ユーザーオーバーライド",
+    "showExpert": "エキスパート設定を表示",
+    "hideExpert": "エキスパート設定を非表示"
   },
   "settings": {
     "adv": {

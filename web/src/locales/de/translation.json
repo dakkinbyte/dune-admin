@@ -938,7 +938,9 @@
     "showUserAriaLabel": "Nur Benutzereinstellungen werden angezeigt — klicken, um alle anzuzeigen",
     "title": "Servereinstellungen",
     "unsaved": "nicht gespeichert",
-    "userOverride": "· Benutzerüberschreibung"
+    "userOverride": "· Benutzerüberschreibung",
+    "showExpert": "Expert-Einstellungen anzeigen",
+    "hideExpert": "Expert-Einstellungen ausblenden"
   },
   "settings": {
     "adv": {

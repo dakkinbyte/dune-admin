@@ -938,7 +938,9 @@
     "showUserAriaLabel": "Yalnızca kullanıcı ayarları gösteriliyor — tümünü göstermek için tıklayın",
     "title": "Sunucu Ayarları",
     "unsaved": "kaydedilmedi",
-    "userOverride": "· kullanıcı geçersiz kılması"
+    "userOverride": "· kullanıcı geçersiz kılması",
+    "showExpert": "Uzman ayarlarını göster",
+    "hideExpert": "Uzman ayarlarını gizle"
   },
   "settings": {
     "adv": {

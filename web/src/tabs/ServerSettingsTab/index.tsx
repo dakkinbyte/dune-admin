@@ -8,7 +8,7 @@ import { PageHeader, Panel, SectionLabel, Icon } from '../../dune-ui'
 import { SettingRow } from './components/SettingRow'
 import { RawSectionPanel } from './components/RawSectionPanel'
 import {
-  CATEGORY_ICONS, COMMON_KEYS, SOURCE_FILE,
+  CATEGORY_ICONS, CATEGORY_LABELS, ADVANCED_CATEGORIES, COMMON_KEYS, SOURCE_FILE,
   SOURCE_PRIORITY, USER_SOURCES,
 } from './constants'
 import {
@@ -19,6 +19,8 @@ export const ServerSettingsTab: React.FC = () => {
   const { t } = useTranslation()
   const [items, setItems] = useState<ServerSetting[]>([])
   const [raw, setRaw] = useState<RawSection[]>([])
+  const [control, setControl] = useState('')
+  const [showExpert, setShowExpert] = useState(false)
   const [pending, setPending] = useState<Map<string, string>>(new Map())
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -41,6 +43,7 @@ export const ServerSettingsTab: React.FC = () => {
       .then((data) => {
         setItems(data.settings ?? [])
         setRaw(data.raw ?? [])
+        setControl(data.control ?? '')
         setPending(new Map())
       })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
@@ -136,6 +139,15 @@ export const ServerSettingsTab: React.FC = () => {
     .filter((item) => !COMMON_KEYS.has(`${item.section}|${item.key}`))
     .filter((item) => matchesSetting(item, q))
   const categories = groupByCategory(advancedItems)
+  // Split into the curated gameplay set (Advanced) and the long engine/system
+  // tail (Expert, hidden behind a toggle). Searching reveals everything so a
+  // match in an Expert category isn't silently hidden.
+  const advancedCategories = categories.filter(([cat]) => ADVANCED_CATEGORIES.has(cat))
+  const expertCategories = categories.filter(([cat]) => !ADVANCED_CATEGORIES.has(cat))
+  const ampManaged = (item: ServerSetting) => control === 'amp' && !!item.field_name
+  const shownCategories = (showExpert || searching)
+    ? [...advancedCategories, ...expertCategories]
+    : advancedCategories
 
   const toggleCategory = (cat: string) => {
     setExpandedCategory((prev) => {
@@ -232,6 +244,7 @@ export const ServerSettingsTab: React.FC = () => {
                 <SettingRow
                   key={`common|${item.section}|${item.key}`}
                   item={item}
+                  ampManaged={ampManaged(item)}
                   pending={pending.get(pendingKey(item))}
                   onChange={(v) => handleChange(item, v)}
                   onDelete={() => handleDelete(item)}
@@ -248,7 +261,7 @@ export const ServerSettingsTab: React.FC = () => {
               {t('server.advancedCategoriesDesc')}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mt-2">
-              {categories.map(([cat, catItems]) => {
+              {shownCategories.map(([cat, catItems]) => {
                 const isOpen = searching || expandedCategory === cat
                 const overrideCount = catItems.filter((i) =>
                   i.layers.some((l) => USER_SOURCES.has(l.source)),
@@ -268,7 +281,7 @@ export const ServerSettingsTab: React.FC = () => {
                         className={`w-4 h-4 shrink-0 ${isOpen ? 'text-accent' : 'text-muted'}`}
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">{cat}</div>
+                        <div className="text-sm font-medium truncate">{CATEGORY_LABELS[cat] ?? cat}</div>
                         <div className="text-xs text-muted">
                           {catItems.length === 1
                             ? t('server.settingCount_one', { count: catItems.length })
@@ -288,7 +301,7 @@ export const ServerSettingsTab: React.FC = () => {
                     {isOpen && (
                       <Panel className="col-span-full mt-1 mb-1">
                         <div className="flex items-center justify-between mb-2">
-                          <SectionLabel>{cat}</SectionLabel>
+                          <SectionLabel>{CATEGORY_LABELS[cat] ?? cat}</SectionLabel>
                           {!searching && (
                             <Button
                               size="sm"
@@ -305,6 +318,7 @@ export const ServerSettingsTab: React.FC = () => {
                             <SettingRow
                               key={`${item.section}|${item.key}`}
                               item={item}
+                              ampManaged={ampManaged(item)}
                               pending={pending.get(pendingKey(item))}
                               onChange={(v) => handleChange(item, v)}
                               onDelete={() => handleDelete(item)}
@@ -317,6 +331,17 @@ export const ServerSettingsTab: React.FC = () => {
                 )
               })}
             </div>
+            {!searching && expertCategories.length > 0 && (
+              <button
+                onClick={() => setShowExpert((v) => !v)}
+                className="mt-3 flex items-center gap-1.5 text-xs text-muted hover:text-foreground transition-colors"
+              >
+                <Icon name={showExpert ? 'chevron-up' : 'chevron-down'} className="w-3.5 h-3.5" />
+                {showExpert
+                  ? t('server.hideExpert')
+                  : `${t('server.showExpert')} (${expertCategories.length})`}
+              </button>
+            )}
           </div>
         )}
 
