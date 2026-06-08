@@ -1,4 +1,39 @@
 {
+  "landsraad": {
+    "title": "Landsraad",
+    "subtitle": "The weekly political term — decrees and the house task board (read-only).",
+    "failedToLoad": "Failed to load Landsraad: {{message}}",
+    "currentTerm": "Current Term",
+    "noTerm": "No active term.",
+    "testTerm": "Test term",
+    "term": {
+      "id": "Term",
+      "window": "Window",
+      "reigning": "Reigning Faction",
+      "activeDecree": "Active Decree",
+      "electedDecree": "Elected Decree",
+      "winning": "Winning Faction"
+    },
+    "decrees": "Decrees",
+    "decreesDesc": "Server-wide buffs that can be elected each term.",
+    "noDecrees": "No decrees.",
+    "weight": "Weight {{weight}}",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "taskBoard": "Task Board",
+    "taskBoardDesc": "House contribution tasks for the current term.",
+    "noTasks": "No tasks.",
+    "tasks": {
+      "index": "#",
+      "house": "House",
+      "goal": "Goal",
+      "completed": "Status",
+      "sysselraad": "Sysselraad",
+      "done": "Done",
+      "open": "Open",
+      "yes": "Yes"
+    }
+  },
   "guilds": {
     "title": "Guilds ({{count}})",
     "subtitle": "Player guilds on this server — read-only.",
@@ -460,6 +495,7 @@
     "title": "Market Board"
   },
   "nav": {
+    "landsraad": "Landsraad",
     "guilds": "Guilds",
     "bases": "Bases",
     "battlegroup": "Battlegroup",

@@ -1,4 +1,39 @@
 {
+  "landsraad": {
+    "title": "Landsraad",
+    "subtitle": "Le mandat politique hebdomadaire — décrets et tableau des tâches des maisons (lecture seule).",
+    "failedToLoad": "Échec du chargement du Landsraad : {{message}}",
+    "currentTerm": "Mandat actuel",
+    "noTerm": "Aucun mandat actif.",
+    "testTerm": "Mandat de test",
+    "term": {
+      "id": "Mandat",
+      "window": "Période",
+      "reigning": "Faction régnante",
+      "activeDecree": "Décret actif",
+      "electedDecree": "Décret élu",
+      "winning": "Faction gagnante"
+    },
+    "decrees": "Décrets",
+    "decreesDesc": "Bonus à l'échelle du serveur pouvant être élus chaque mandat.",
+    "noDecrees": "Aucun décret.",
+    "weight": "Poids {{weight}}",
+    "enabled": "Activé",
+    "disabled": "Désactivé",
+    "taskBoard": "Tableau des tâches",
+    "taskBoardDesc": "Tâches de contribution des maisons pour le mandat actuel.",
+    "noTasks": "Aucune tâche.",
+    "tasks": {
+      "index": "#",
+      "house": "Maison",
+      "goal": "Objectif",
+      "completed": "Statut",
+      "sysselraad": "Sysselraad",
+      "done": "Terminé",
+      "open": "Ouvert",
+      "yes": "Oui"
+    }
+  },
   "guilds": {
     "title": "Guildes ({{count}})",
     "subtitle": "Guildes de joueurs sur ce serveur — lecture seule.",
@@ -467,6 +502,7 @@
     "title": "Tableau du marché"
   },
   "nav": {
+    "landsraad": "Landsraad",
     "guilds": "Guildes",
     "bases": "Bases",
     "battlegroup": "Groupe de combat",

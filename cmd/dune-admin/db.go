@@ -472,6 +472,145 @@ func cmdFetchGuildDetail(ctx context.Context, pool *pgxpool.Pool, guildID int64)
 	return d, nil
 }
 
+// ── Landsraad (#117 Phase A — read-only) ─────────────────────────────────────
+//
+// The Landsraad is the weekly political endgame: a term cycle
+// (landsraad_decree_term) with a 25-task board (landsraad_tasks, each keyed to a
+// noble house) and electable server-wide decrees (landsraad_decrees). This is a
+// read-only overview — the latest term + the decree catalogue + that term's task
+// board. Faction/decree ids resolve to names; nullable election fields → "".
+
+type landsraadTerm struct {
+	TermID          int64     `json:"term_id"`
+	StartTime       time.Time `json:"start_time"`
+	EndTime         time.Time `json:"end_time"`
+	TestTerm        bool      `json:"test_term"`
+	ReigningFaction string    `json:"reigning_faction"`
+	ActiveDecree    string    `json:"active_decree"`
+	ElectedDecree   string    `json:"elected_decree"`
+	WinningFaction  string    `json:"winning_faction"`
+}
+
+type landsraadDecree struct {
+	ID       int64   `json:"id"`
+	Name     string  `json:"name"`
+	Weight   float64 `json:"weight"`
+	Disabled bool    `json:"disabled"`
+}
+
+type landsraadTask struct {
+	ID             int64  `json:"id"`
+	BoardIndex     int16  `json:"board_index"`
+	House          string `json:"house"`
+	Completed      bool   `json:"completed"`
+	WinningFaction string `json:"winning_faction"`
+	Sysselraad     bool   `json:"sysselraad"`
+	GoalAmount     int    `json:"goal_amount"`
+}
+
+type landsraadOverview struct {
+	Term    *landsraadTerm    `json:"term"`
+	Decrees []landsraadDecree `json:"decrees"`
+	Tasks   []landsraadTask   `json:"tasks"`
+}
+
+// landsraadHouseName strips the "DA_House" prefix from a task's house_name
+// (e.g. "DA_HouseHagal" -> "Hagal"). Unprefixed values pass through unchanged.
+func landsraadHouseName(raw string) string {
+	return strings.TrimPrefix(raw, "DA_House")
+}
+
+func cmdFetchLandsraad(ctx context.Context, pool *pgxpool.Pool) (landsraadOverview, error) {
+	var ov landsraadOverview
+	term, err := fetchLandsraadTerm(ctx, pool)
+	if err != nil {
+		return ov, err
+	}
+	ov.Term = term
+	if ov.Decrees, err = fetchLandsraadDecrees(ctx, pool); err != nil {
+		return ov, err
+	}
+	if term != nil {
+		if ov.Tasks, err = fetchLandsraadTasks(ctx, pool, term.TermID); err != nil {
+			return ov, err
+		}
+	}
+	return ov, nil
+}
+
+const landsraadTermSQL = `
+	SELECT t.term_id, t.start_time, t.end_time, t.test_term,
+	       COALESCE(rf.name, ''), COALESCE(ad.decree_name, ''),
+	       COALESCE(ed.decree_name, ''), COALESCE(wf.name, '')
+	FROM dune.landsraad_decree_term t
+	LEFT JOIN dune.factions rf ON rf.id = t.reigning_faction_id
+	LEFT JOIN dune.landsraad_decrees ad ON ad.id = t.active_decree_id
+	LEFT JOIN dune.landsraad_decrees ed ON ed.id = t.elected_decree_id
+	LEFT JOIN dune.factions wf ON wf.id = t.winning_faction_id
+	ORDER BY t.term_id DESC
+	LIMIT 1`
+
+// fetchLandsraadTerm returns the latest term, or (nil, nil) when none exist.
+func fetchLandsraadTerm(ctx context.Context, pool *pgxpool.Pool) (*landsraadTerm, error) {
+	var t landsraadTerm
+	err := pool.QueryRow(ctx, landsraadTermSQL).Scan(
+		&t.TermID, &t.StartTime, &t.EndTime, &t.TestTerm,
+		&t.ReigningFaction, &t.ActiveDecree, &t.ElectedDecree, &t.WinningFaction)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("landsraad term: %w", err)
+	}
+	return &t, nil
+}
+
+func fetchLandsraadDecrees(ctx context.Context, pool *pgxpool.Pool) ([]landsraadDecree, error) {
+	rows, err := pool.Query(ctx, `
+		SELECT id, decree_name, weight::float8, disabled
+		FROM dune.landsraad_decrees ORDER BY id`)
+	if err != nil {
+		return nil, fmt.Errorf("landsraad decrees: %w", err)
+	}
+	defer rows.Close()
+	out := make([]landsraadDecree, 0, 16)
+	for rows.Next() {
+		var d landsraadDecree
+		if err := rows.Scan(&d.ID, &d.Name, &d.Weight, &d.Disabled); err != nil {
+			return nil, fmt.Errorf("scan decree: %w", err)
+		}
+		out = append(out, d)
+	}
+	return out, rows.Err()
+}
+
+const landsraadTasksSQL = `
+	SELECT t.id, t.board_index, t.house_name, t.completed,
+	       COALESCE(wf.name, ''), t.sysselraad, t.goal_amount
+	FROM dune.landsraad_tasks t
+	LEFT JOIN dune.factions wf ON wf.id = t.winning_faction_id
+	WHERE t.term_id = $1
+	ORDER BY t.board_index, t.id`
+
+func fetchLandsraadTasks(ctx context.Context, pool *pgxpool.Pool, termID int64) ([]landsraadTask, error) {
+	rows, err := pool.Query(ctx, landsraadTasksSQL, termID)
+	if err != nil {
+		return nil, fmt.Errorf("landsraad tasks %d: %w", termID, err)
+	}
+	defer rows.Close()
+	out := make([]landsraadTask, 0, 32)
+	for rows.Next() {
+		var tk landsraadTask
+		var house string
+		if err := rows.Scan(&tk.ID, &tk.BoardIndex, &house, &tk.Completed, &tk.WinningFaction, &tk.Sysselraad, &tk.GoalAmount); err != nil {
+			return nil, fmt.Errorf("scan task: %w", err)
+		}
+		tk.House = landsraadHouseName(house)
+		out = append(out, tk)
+	}
+	return out, rows.Err()
+}
+
 // factionTrendPoint is one day's per-faction value (faction name -> value).
 type factionTrendPoint struct {
 	Day    string             `json:"day"`

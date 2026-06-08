@@ -1,4 +1,39 @@
 {
+  "landsraad": {
+    "title": "Landsraad",
+    "subtitle": "每周政治任期——法令与家族任务板（只读）。",
+    "failedToLoad": "加载 Landsraad 失败：{{message}}",
+    "currentTerm": "当前任期",
+    "noTerm": "没有活动任期。",
+    "testTerm": "测试任期",
+    "term": {
+      "id": "任期",
+      "window": "时间段",
+      "reigning": "执政阵营",
+      "activeDecree": "当前法令",
+      "electedDecree": "选定法令",
+      "winning": "获胜阵营"
+    },
+    "decrees": "法令",
+    "decreesDesc": "每个任期可选举的全服增益。",
+    "noDecrees": "暂无法令。",
+    "weight": "权重 {{weight}}",
+    "enabled": "启用",
+    "disabled": "禁用",
+    "taskBoard": "任务板",
+    "taskBoardDesc": "当前任期的家族贡献任务。",
+    "noTasks": "暂无任务。",
+    "tasks": {
+      "index": "#",
+      "house": "家族",
+      "goal": "目标",
+      "completed": "状态",
+      "sysselraad": "Sysselraad",
+      "done": "完成",
+      "open": "进行中",
+      "yes": "是"
+    }
+  },
   "guilds": {
     "title": "公会 ({{count}})",
     "subtitle": "此服务器上的玩家公会 — 只读。",
@@ -460,6 +495,7 @@
     "title": "市场板"
   },
   "nav": {
+    "landsraad": "Landsraad",
     "guilds": "公会",
     "bases": "基地",
     "battlegroup": "战斗群",

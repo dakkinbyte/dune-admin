@@ -335,6 +335,36 @@ export type GuildDetail = GuildSummary & {
   members: GuildMember[]
   invites: GuildInvite[]
 }
+export type LandsraadTerm = {
+  term_id: number
+  start_time: string
+  end_time: string
+  test_term: boolean
+  reigning_faction: string
+  active_decree: string
+  elected_decree: string
+  winning_faction: string
+}
+export type LandsraadDecree = {
+  id: number
+  name: string
+  weight: number
+  disabled: boolean
+}
+export type LandsraadTask = {
+  id: number
+  board_index: number
+  house: string
+  completed: boolean
+  winning_faction: string
+  sysselraad: boolean
+  goal_amount: number
+}
+export type LandsraadOverview = {
+  term: LandsraadTerm | null
+  decrees: LandsraadDecree[]
+  tasks: LandsraadTask[]
+}
 export type LogPod = {
   namespace: string
   name: string
@@ -894,6 +924,10 @@ export const api = {
   guilds: {
     list: () => req<GuildSummary[]>('GET', '/guilds'),
     get: (id: number) => req<GuildDetail>('GET', `/guilds/${id}`),
+  },
+
+  landsraad: {
+    get: () => req<LandsraadOverview>('GET', '/landsraad'),
   },
 
   market: {

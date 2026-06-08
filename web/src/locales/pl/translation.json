@@ -1,4 +1,39 @@
 {
+  "landsraad": {
+    "title": "Landsraad",
+    "subtitle": "Cotygodniowa kadencja polityczna — dekrety i tablica zadań rodów (tylko do odczytu).",
+    "failedToLoad": "Nie udało się załadować Landsraadu: {{message}}",
+    "currentTerm": "Bieżąca kadencja",
+    "noTerm": "Brak aktywnej kadencji.",
+    "testTerm": "Kadencja testowa",
+    "term": {
+      "id": "Kadencja",
+      "window": "Okres",
+      "reigning": "Panująca frakcja",
+      "activeDecree": "Aktywny dekret",
+      "electedDecree": "Wybrany dekret",
+      "winning": "Zwycięska frakcja"
+    },
+    "decrees": "Dekrety",
+    "decreesDesc": "Ogólnoserwerowe wzmocnienia wybierane w każdej kadencji.",
+    "noDecrees": "Brak dekretów.",
+    "weight": "Waga {{weight}}",
+    "enabled": "Włączony",
+    "disabled": "Wyłączony",
+    "taskBoard": "Tablica zadań",
+    "taskBoardDesc": "Zadania kontrybucyjne rodów na bieżącą kadencję.",
+    "noTasks": "Brak zadań.",
+    "tasks": {
+      "index": "#",
+      "house": "Ród",
+      "goal": "Cel",
+      "completed": "Status",
+      "sysselraad": "Sysselraad",
+      "done": "Ukończone",
+      "open": "Otwarte",
+      "yes": "Tak"
+    }
+  },
   "guilds": {
     "title": "Gildie ({{count}})",
     "subtitle": "Gildie graczy na tym serwerze — tylko do odczytu.",
@@ -474,6 +509,7 @@
     "title": "Tablica rynku"
   },
   "nav": {
+    "landsraad": "Landsraad",
     "guilds": "Gildie",
     "bases": "Bazy",
     "battlegroup": "Grupa bojowa",

@@ -1,4 +1,39 @@
 {
+  "landsraad": {
+    "title": "Landsraad",
+    "subtitle": "Haftalık politik dönem — kararnameler ve hane görev panosu (salt okunur).",
+    "failedToLoad": "Landsraad yüklenemedi: {{message}}",
+    "currentTerm": "Mevcut Dönem",
+    "noTerm": "Aktif dönem yok.",
+    "testTerm": "Test dönemi",
+    "term": {
+      "id": "Dönem",
+      "window": "Aralık",
+      "reigning": "Hüküm süren hizip",
+      "activeDecree": "Aktif kararname",
+      "electedDecree": "Seçilen kararname",
+      "winning": "Kazanan hizip"
+    },
+    "decrees": "Kararnameler",
+    "decreesDesc": "Her dönem seçilebilen sunucu geneli güçlendirmeler.",
+    "noDecrees": "Kararname yok.",
+    "weight": "Ağırlık {{weight}}",
+    "enabled": "Etkin",
+    "disabled": "Devre dışı",
+    "taskBoard": "Görev panosu",
+    "taskBoardDesc": "Mevcut döneme ait hane katkı görevleri.",
+    "noTasks": "Görev yok.",
+    "tasks": {
+      "index": "#",
+      "house": "Hane",
+      "goal": "Hedef",
+      "completed": "Durum",
+      "sysselraad": "Sysselraad",
+      "done": "Tamamlandı",
+      "open": "Açık",
+      "yes": "Evet"
+    }
+  },
   "guilds": {
     "title": "Loncalar ({{count}})",
     "subtitle": "Bu sunucudaki oyuncu loncaları — salt okunur.",
@@ -460,6 +495,7 @@
     "title": "Market Panosu"
   },
   "nav": {
+    "landsraad": "Landsraad",
     "guilds": "Loncalar",
     "bases": "Üsler",
     "battlegroup": "Savaş Grubu",

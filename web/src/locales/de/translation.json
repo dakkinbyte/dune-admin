@@ -1,4 +1,39 @@
 {
+  "landsraad": {
+    "title": "Landsraad",
+    "subtitle": "Die wöchentliche politische Amtszeit — Dekrete und das Haus-Aufgabenbrett (schreibgeschützt).",
+    "failedToLoad": "Landsraad konnte nicht geladen werden: {{message}}",
+    "currentTerm": "Aktuelle Amtszeit",
+    "noTerm": "Keine aktive Amtszeit.",
+    "testTerm": "Test-Amtszeit",
+    "term": {
+      "id": "Amtszeit",
+      "window": "Zeitraum",
+      "reigning": "Herrschende Fraktion",
+      "activeDecree": "Aktives Dekret",
+      "electedDecree": "Gewähltes Dekret",
+      "winning": "Siegerfraktion"
+    },
+    "decrees": "Dekrete",
+    "decreesDesc": "Serverweite Boni, die pro Amtszeit gewählt werden können.",
+    "noDecrees": "Keine Dekrete.",
+    "weight": "Gewicht {{weight}}",
+    "enabled": "Aktiviert",
+    "disabled": "Deaktiviert",
+    "taskBoard": "Aufgabenbrett",
+    "taskBoardDesc": "Haus-Beitragsaufgaben für die aktuelle Amtszeit.",
+    "noTasks": "Keine Aufgaben.",
+    "tasks": {
+      "index": "#",
+      "house": "Haus",
+      "goal": "Ziel",
+      "completed": "Status",
+      "sysselraad": "Sysselraad",
+      "done": "Fertig",
+      "open": "Offen",
+      "yes": "Ja"
+    }
+  },
   "guilds": {
     "title": "Gilden ({{count}})",
     "subtitle": "Spielergilden auf diesem Server — schreibgeschützt.",
@@ -460,6 +495,7 @@
     "title": "Marktplatz"
   },
   "nav": {
+    "landsraad": "Landsraad",
     "guilds": "Gilden",
     "bases": "Basen",
     "battlegroup": "Kampfgruppe",

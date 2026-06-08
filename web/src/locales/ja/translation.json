@@ -1,4 +1,39 @@
 {
+  "landsraad": {
+    "title": "Landsraad",
+    "subtitle": "週次の政治会期 — 法令とハウス課題ボード（読み取り専用）。",
+    "failedToLoad": "Landsraad の読み込みに失敗しました: {{message}}",
+    "currentTerm": "現在の会期",
+    "noTerm": "アクティブな会期はありません。",
+    "testTerm": "テスト会期",
+    "term": {
+      "id": "会期",
+      "window": "期間",
+      "reigning": "支配派閥",
+      "activeDecree": "有効な法令",
+      "electedDecree": "選出された法令",
+      "winning": "勝利派閥"
+    },
+    "decrees": "法令",
+    "decreesDesc": "会期ごとに選出できるサーバー全体のバフ。",
+    "noDecrees": "法令がありません。",
+    "weight": "重み {{weight}}",
+    "enabled": "有効",
+    "disabled": "無効",
+    "taskBoard": "課題ボード",
+    "taskBoardDesc": "現在の会期のハウス貢献課題。",
+    "noTasks": "課題がありません。",
+    "tasks": {
+      "index": "#",
+      "house": "ハウス",
+      "goal": "目標",
+      "completed": "状態",
+      "sysselraad": "Sysselraad",
+      "done": "完了",
+      "open": "未完了",
+      "yes": "はい"
+    }
+  },
   "guilds": {
     "title": "ギルド ({{count}})",
     "subtitle": "このサーバーのプレイヤーギルド — 読み取り専用。",
@@ -460,6 +495,7 @@
     "title": "マーケットボード"
   },
   "nav": {
+    "landsraad": "Landsraad",
     "guilds": "ギルド",
     "bases": "拠点",
     "battlegroup": "バトルグループ",

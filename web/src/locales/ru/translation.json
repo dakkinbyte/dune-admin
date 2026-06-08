@@ -1,4 +1,39 @@
 {
+  "landsraad": {
+    "title": "Landsraad",
+    "subtitle": "Еженедельный политический срок — указы и доска задач домов (только чтение).",
+    "failedToLoad": "Не удалось загрузить Ландсраад: {{message}}",
+    "currentTerm": "Текущий срок",
+    "noTerm": "Нет активного срока.",
+    "testTerm": "Тестовый срок",
+    "term": {
+      "id": "Срок",
+      "window": "Период",
+      "reigning": "Правящая фракция",
+      "activeDecree": "Активный указ",
+      "electedDecree": "Избранный указ",
+      "winning": "Победившая фракция"
+    },
+    "decrees": "Указы",
+    "decreesDesc": "Общесерверные бонусы, которые можно избрать каждый срок.",
+    "noDecrees": "Нет указов.",
+    "weight": "Вес {{weight}}",
+    "enabled": "Включён",
+    "disabled": "Отключён",
+    "taskBoard": "Доска задач",
+    "taskBoardDesc": "Задачи вклада домов на текущий срок.",
+    "noTasks": "Нет задач.",
+    "tasks": {
+      "index": "#",
+      "house": "Дом",
+      "goal": "Цель",
+      "completed": "Статус",
+      "sysselraad": "Sysselraad",
+      "done": "Готово",
+      "open": "Открыто",
+      "yes": "Да"
+    }
+  },
   "guilds": {
     "title": "Гильдии ({{count}})",
     "subtitle": "Гильдии игроков на этом сервере — только чтение.",
@@ -474,6 +509,7 @@
     "title": "Доска рынка"
   },
   "nav": {
+    "landsraad": "Landsraad",
     "guilds": "Гильдии",
     "bases": "Базы",
     "battlegroup": "Боевая группа",

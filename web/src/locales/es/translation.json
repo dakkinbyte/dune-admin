@@ -1,4 +1,39 @@
 {
+  "landsraad": {
+    "title": "Landsraad",
+    "subtitle": "El período político semanal: decretos y el tablero de tareas de las casas (solo lectura).",
+    "failedToLoad": "Error al cargar el Landsraad: {{message}}",
+    "currentTerm": "Período actual",
+    "noTerm": "Sin período activo.",
+    "testTerm": "Período de prueba",
+    "term": {
+      "id": "Período",
+      "window": "Intervalo",
+      "reigning": "Facción reinante",
+      "activeDecree": "Decreto activo",
+      "electedDecree": "Decreto elegido",
+      "winning": "Facción ganadora"
+    },
+    "decrees": "Decretos",
+    "decreesDesc": "Mejoras de servidor que pueden elegirse cada período.",
+    "noDecrees": "Sin decretos.",
+    "weight": "Peso {{weight}}",
+    "enabled": "Activado",
+    "disabled": "Desactivado",
+    "taskBoard": "Tablero de tareas",
+    "taskBoardDesc": "Tareas de contribución de las casas para el período actual.",
+    "noTasks": "Sin tareas.",
+    "tasks": {
+      "index": "#",
+      "house": "Casa",
+      "goal": "Objetivo",
+      "completed": "Estado",
+      "sysselraad": "Sysselraad",
+      "done": "Hecho",
+      "open": "Abierto",
+      "yes": "Sí"
+    }
+  },
   "guilds": {
     "title": "Gremios ({{count}})",
     "subtitle": "Gremios de jugadores en este servidor — solo lectura.",
@@ -467,6 +502,7 @@
     "title": "Tablero del mercado"
   },
   "nav": {
+    "landsraad": "Landsraad",
     "guilds": "Gremios",
     "bases": "Bases",
     "battlegroup": "Grupo de batalla",
