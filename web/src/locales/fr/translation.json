@@ -921,7 +921,7 @@
     }
   },
   "server": {
-    "advancedCategories": "Avancé — Toutes les catégories",
+    "advancedCategories": "Avancé",
     "advancedCategoriesDesc": "Cliquez sur une catégorie pour la développer sur place. Cliquez à nouveau ou choisissez-en une autre pour changer.",
     "collapse": "Annuler",
     "collapseCategory": "Réduire la catégorie",
@@ -960,8 +960,8 @@
     "title": "Paramètres serveur",
     "unsaved": "non enregistré",
     "userOverride": "· remplacement utilisateur",
-    "showExpert": "Afficher les paramètres experts",
-    "hideExpert": "Masquer les paramètres experts"
+    "expertCategories": "Expert",
+    "expertCategoriesDesc": "Paramètres internes du moteur et du système. Ne les modifiez que si vous savez exactement ce que vous faites."
   },
   "settings": {
     "adv": {

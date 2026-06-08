@@ -904,7 +904,7 @@
     }
   },
   "server": {
-    "advancedCategories": "Erweitert — Alle Kategorien",
+    "advancedCategories": "Erweitert",
     "advancedCategoriesDesc": "Klicken Sie auf eine Kategorie, um sie zu erweitern. Erneut klicken oder eine andere auswählen, um zu wechseln.",
     "collapse": "Abbrechen",
     "collapseCategory": "Kategorie einklappen",
@@ -939,8 +939,8 @@
     "title": "Servereinstellungen",
     "unsaved": "nicht gespeichert",
     "userOverride": "· Benutzerüberschreibung",
-    "showExpert": "Expert-Einstellungen anzeigen",
-    "hideExpert": "Expert-Einstellungen ausblenden"
+    "expertCategories": "Experte",
+    "expertCategoriesDesc": "Engine- und Systeminterna. Ändern Sie diese nur, wenn Sie genau wissen, was Sie tun."
   },
   "settings": {
     "adv": {

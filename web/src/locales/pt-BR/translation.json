@@ -921,7 +921,7 @@
     }
   },
   "server": {
-    "advancedCategories": "Avançado — Todas as categorias",
+    "advancedCategories": "Avançado",
     "advancedCategoriesDesc": "Clique em uma categoria para expandi-la no lugar. Clique novamente ou escolha outra para alternar.",
     "collapse": "Cancelar",
     "collapseCategory": "Recolher categoria",
@@ -960,8 +960,8 @@
     "title": "Configurações do servidor",
     "unsaved": "não salvo",
     "userOverride": "· substituição de usuário",
-    "showExpert": "Mostrar configurações de especialista",
-    "hideExpert": "Ocultar configurações de especialista"
+    "expertCategories": "Especialista",
+    "expertCategoriesDesc": "Componentes internos do motor e do sistema. Altere-os apenas se souber exatamente o que está fazendo."
   },
   "settings": {
     "adv": {

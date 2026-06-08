@@ -904,7 +904,7 @@
     }
   },
   "server": {
-    "advancedCategories": "Advanced — All Categories",
+    "advancedCategories": "Advanced",
     "advancedCategoriesDesc": "Click a category to expand it in place. Click again or pick another to switch.",
     "collapse": "Cancel",
     "collapseCategory": "Collapse category",
@@ -939,8 +939,8 @@
     "title": "Server Settings",
     "unsaved": "unsaved",
     "userOverride": "· user override",
-    "showExpert": "Show Expert settings",
-    "hideExpert": "Hide Expert settings"
+    "expertCategories": "Expert",
+    "expertCategoriesDesc": "Engine and system internals. Change these only if you know exactly what you're doing."
   },
   "settings": {
     "adv": {

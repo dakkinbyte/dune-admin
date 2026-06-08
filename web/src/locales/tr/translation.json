@@ -904,7 +904,7 @@
     }
   },
   "server": {
-    "advancedCategories": "Gelişmiş — Tüm Kategoriler",
+    "advancedCategories": "Gelişmiş",
     "advancedCategoriesDesc": "Yerinde genişletmek için bir kategoriye tıklayın. Daraltmak için tekrar tıklayın veya başka birini seçin.",
     "collapse": "İptal",
     "collapseCategory": "Kategoriyi Daralt",
@@ -939,8 +939,8 @@
     "title": "Sunucu Ayarları",
     "unsaved": "kaydedilmedi",
     "userOverride": "· kullanıcı geçersiz kılması",
-    "showExpert": "Uzman ayarlarını göster",
-    "hideExpert": "Uzman ayarlarını gizle"
+    "expertCategories": "Uzman",
+    "expertCategoriesDesc": "Motor ve sistem dahili ayarları. Bunları yalnızca ne yaptığınızı tam olarak biliyorsanız değiştirin."
   },
   "settings": {
     "adv": {

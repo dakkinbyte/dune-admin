@@ -904,7 +904,7 @@
     }
   },
   "server": {
-    "advancedCategories": "詳細設定 — すべてのカテゴリ",
+    "advancedCategories": "高度な設定",
     "advancedCategoriesDesc": "カテゴリをクリックして展開します。もう一度クリックするか別のカテゴリを選択して切り替えます。",
     "collapse": "キャンセル",
     "collapseCategory": "カテゴリを折りたたむ",
@@ -939,8 +939,8 @@
     "title": "サーバー設定",
     "unsaved": "未保存",
     "userOverride": "· ユーザーオーバーライド",
-    "showExpert": "エキスパート設定を表示",
-    "hideExpert": "エキスパート設定を非表示"
+    "expertCategories": "エキスパート",
+    "expertCategoriesDesc": "エンジンとシステムの内部設定。内容を正確に理解している場合のみ変更してください。"
   },
   "settings": {
     "adv": {

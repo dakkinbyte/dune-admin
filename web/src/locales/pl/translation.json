@@ -938,7 +938,7 @@
     }
   },
   "server": {
-    "advancedCategories": "Zaawansowane — Wszystkie kategorie",
+    "advancedCategories": "Zaawansowane",
     "advancedCategoriesDesc": "Kliknij kategorię, aby ją rozwinąć. Kliknij ponownie lub wybierz inną, aby przełączyć.",
     "collapse": "Anuluj",
     "collapseCategory": "Zwiń kategorię",
@@ -981,8 +981,8 @@
     "title": "Ustawienia serwera",
     "unsaved": "niezapisane",
     "userOverride": "· nadpisanie użytkownika",
-    "showExpert": "Pokaż ustawienia eksperckie",
-    "hideExpert": "Ukryj ustawienia eksperckie"
+    "expertCategories": "Eksperckie",
+    "expertCategoriesDesc": "Wewnętrzne ustawienia silnika i systemu. Zmieniaj je tylko, jeśli dokładnie wiesz, co robisz."
   },
   "settings": {
     "adv": {
