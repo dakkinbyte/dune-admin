@@ -262,6 +262,15 @@ func startServer(addr string) {
 	mux.HandleFunc("GET /api/v1/bases", handleListBases)
 	mux.HandleFunc("GET /api/v1/bases/{id}/export", handleExportBase)
 
+	// ── guilds ──────────────────────────────────────────────────────────────────
+	mux.HandleFunc("GET /api/v1/guilds", handleListGuilds)
+	mux.HandleFunc("GET /api/v1/guilds/{id}", handleGetGuild)
+	mux.HandleFunc("PATCH /api/v1/guilds/{id}", handleUpdateGuild)
+	mux.HandleFunc("PUT /api/v1/guilds/{id}/members/{pid}/role", handleSetGuildMemberRole)
+
+	// ── landsraad (read-only) ─────────────────────────────────────────────────
+	mux.HandleFunc("GET /api/v1/landsraad", handleGetLandsraad)
+
 	// ── static data files (Go-first, CDN fallback on the frontend) ──────────
 	mux.HandleFunc("GET /api/v1/data/{file}", handleGetDataFile)
 

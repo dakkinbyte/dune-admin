@@ -16,6 +16,8 @@ import { DatabaseTab } from './tabs/DatabaseTab'
 import { LogsTab } from './tabs/LogsTab'
 import { BlueprintsTab } from './tabs/BlueprintsTab'
 import { BasesTab } from './tabs/BasesTab'
+import { GuildsTab } from './tabs/GuildsTab'
+import { LandsraadTab } from './tabs/LandsraadTab'
 import { StorageTab } from './tabs/StorageTab'
 import { ServerSettingsTab } from './tabs/ServerSettingsTab'
 import { DirectorTab } from './tabs/DirectorTab'
@@ -32,6 +34,8 @@ const TAB_IDS = [
   'logs',
   'blueprints',
   'bases',
+  'guilds',
+  'landsraad',
   'storage',
   'livemap',
   'server',
@@ -60,6 +64,8 @@ const MDatabaseTab = memo(DatabaseTab)
 const MLogsTab = memo(LogsTab)
 const MBlueprintsTab = memo(BlueprintsTab)
 const MBasesTab = memo(BasesTab)
+const MGuildsTab = memo(GuildsTab)
+const MLandsraadTab = memo(LandsraadTab)
 const MStorageTab = memo(StorageTab)
 const MServerSettingsTab = memo(ServerSettingsTab)
 const MDirectorTab = memo(DirectorTab)
@@ -151,6 +157,8 @@ const AppCore: React.FC<AppCoreProps> = ({ isSignedIn }) => {
         { key: 'livemap' as TabId, label: t('nav.liveMap') },
         { key: 'storage' as TabId, label: t('nav.storage') },
         { key: 'bases' as TabId, label: t('nav.bases') },
+        { key: 'guilds' as TabId, label: t('nav.guilds') },
+        { key: 'landsraad' as TabId, label: t('nav.landsraad') },
         { key: 'blueprints' as TabId, label: t('nav.blueprints') },
       ],
     },
@@ -616,6 +624,8 @@ const AppCore: React.FC<AppCoreProps> = ({ isSignedIn }) => {
                 {renderTab('logs', <MLogsTab control={status?.control} />)}
                 {renderTab('blueprints', <MBlueprintsTab isSignedIn={isSignedIn} />)}
                 {renderTab('bases', <MBasesTab isSignedIn={isSignedIn} />)}
+                {renderTab('guilds', <MGuildsTab isSignedIn={isSignedIn} />)}
+                {renderTab('landsraad', <MLandsraadTab />)}
                 {renderTab('storage', <MStorageTab />)}
                 {renderTab('livemap', <MLiveMapTab isActive={currentTab === 'livemap'} />)}
                 {renderTab('server', <MServerSettingsTab />)}
@@ -654,6 +664,8 @@ const AppCore: React.FC<AppCoreProps> = ({ isSignedIn }) => {
                 {renderTab('logs', <MLogsTab control={status?.control} />)}
                 {renderTab('blueprints', <MBlueprintsTab isSignedIn={isSignedIn} />)}
                 {renderTab('bases', <MBasesTab isSignedIn={isSignedIn} />)}
+                {renderTab('guilds', <MGuildsTab isSignedIn={isSignedIn} />)}
+                {renderTab('landsraad', <MLandsraadTab />)}
                 {renderTab('storage', <MStorageTab />)}
                 {renderTab('livemap', <MLiveMapTab isActive={currentTab === 'livemap'} />)}
                 {renderTab('server', <MServerSettingsTab />)}

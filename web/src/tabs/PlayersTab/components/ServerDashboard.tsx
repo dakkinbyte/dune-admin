@@ -7,9 +7,23 @@ import { api } from '../../../api/client'
 import type { FactionTrends, ServerSummary } from '../../../api/client'
 import { InfoCard, PageHeader, Panel, SectionLabel } from '../../../dune-ui'
 
-// Explicit line colors — recharts can't read CSS tokens at render time. accent
-// first, then distinct hues; cycled per faction line.
-const FACTION_COLORS = ['var(--accent)', '#52c080', '#e05252', '#5b8def', '#c9820a', '#9b59b6']
+// Faction line colors keyed by name (recharts can't read CSS tokens at render).
+// Atreides green, Harkonnen red, Smuggler spice-amber; unaffiliated (None /
+// Unaligned) grey. Unknown factions fall back to a distinct-hue palette.
+const FACTION_COLOR_MAP: Record<string, string> = {
+  Atreides: '#52c080',
+  Harkonnen: '#e05252',
+  Smuggler: '#c9820a',
+  None: '#8a8a8a',
+  Unaligned: '#8a8a8a',
+}
+const FACTION_FALLBACK = ['var(--accent)', '#5b8def', '#9b59b6', '#d98c5f']
+const factionColor = (faction: string, i: number) =>
+  FACTION_COLOR_MAP[faction] ?? FACTION_FALLBACK[i % FACTION_FALLBACK.length]
+
+// Compact axis labels so large Solaris totals (tens of millions) don't overflow
+// the Y-axis gutter — e.g. 10,000,000 → "10M". Tooltip shows the full number.
+const compactNum = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
 
 function fmtDate(d: string): string {
   return new Date(d + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
@@ -114,6 +128,7 @@ export const ServerDashboard: React.FC = () => {
                           borderRadius: 'var(--radius)',
                           fontSize: 12,
                         }}
+                        labelStyle={{ color: 'var(--foreground)' }}
                       />
                       <Bar dataKey="count" fill="var(--accent)" radius={[3, 3, 0, 0]} maxBarSize={28} />
                     </BarChart>
@@ -205,17 +220,20 @@ export const ServerDashboard: React.FC = () => {
                               tick={{ fontSize: 11, fill: 'var(--muted)' }}
                               tickLine={false}
                               axisLine={false}
-                              width={52}
-                              tickFormatter={(v) => (v as number).toLocaleString()}
+                              width={48}
+                              tickFormatter={(v) => compactNum.format(v as number)}
                             />
                             <Tooltip
                               labelFormatter={(d) => fmtDate(String(d))}
+                              formatter={(val) => (val as number).toLocaleString()}
+                              cursor={{ stroke: 'var(--border)' }}
                               contentStyle={{
                                 background: 'var(--surface)',
                                 border: '1px solid var(--border)',
                                 borderRadius: 'var(--radius)',
                                 fontSize: 12,
                               }}
+                              labelStyle={{ color: 'var(--foreground)' }}
                             />
                             <Legend wrapperStyle={{ fontSize: 11 }} />
                             {trends.factions.map((fac, i) => (
@@ -223,7 +241,7 @@ export const ServerDashboard: React.FC = () => {
                                 key={fac}
                                 type="monotone"
                                 dataKey={fac}
-                                stroke={FACTION_COLORS[i % FACTION_COLORS.length]}
+                                stroke={factionColor(fac, i)}
                                 strokeWidth={2}
                                 dot={false}
                               />
