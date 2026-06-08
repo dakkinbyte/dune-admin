@@ -111,6 +111,10 @@ func startServer(addr string) {
 	mux.HandleFunc("PUT /api/v1/server-settings", handleUpdateServerSettings)
 	mux.HandleFunc("PUT /api/v1/server-settings/raw", handleUpdateRawSection)
 
+	// ── director config (Battlegroup Director / map persistence — AMP) ────────
+	mux.HandleFunc("GET /api/v1/director-config", handleGetDirectorConfig)
+	mux.HandleFunc("PUT /api/v1/director-config", handleUpdateDirectorConfig)
+
 	// ── battlegroup ───────────────────────────────────────────────────────────
 	mux.HandleFunc("GET /api/v1/battlegroup/status", handleBGStatus)
 	mux.HandleFunc("POST /api/v1/battlegroup/exec", handleBGExec)

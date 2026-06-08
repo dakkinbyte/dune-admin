@@ -622,3 +622,45 @@ func (c *ampControl) ReadDefaultINI(_ context.Context, exec Executor, filename s
 	}
 	return out
 }
+
+// ── Battlegroup Director config (#147) ──────────────────────────────────────
+// director_config.ini is a HOST file ($STATE/director_config.ini, amp-owned
+// 0700) — NOT in the game container — so it's read/written on the host as the
+// AMP user. prestart.sh copies it into runtime/director-conf.d on every start,
+// so edits persist and apply on the next instance restart.
+
+// directorConfigPath derives $STATE/director_config.ini from the resolved server
+// INI dir, which is $STATE/ue5-saved/UserSettings (so $STATE is two levels up).
+func (c *ampControl) directorConfigPath() (string, error) {
+	dir, err := iniDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(filepath.Dir(filepath.Dir(dir)), "director_config.ini"), nil
+}
+
+func (c *ampControl) readDirectorConfig(exec Executor) (string, string, error) {
+	path, err := c.directorConfigPath()
+	if err != nil {
+		return "", "", err
+	}
+	out, err := exec.Exec(fmt.Sprintf("sudo -i -u %s cat %s 2>/dev/null", shellQuote(c.ampUser), shellQuote(path)))
+	if err != nil {
+		return path, "", fmt.Errorf("read %s: %w", path, err)
+	}
+	if strings.TrimSpace(out) == "" {
+		return path, "", fmt.Errorf("director config empty or unreadable at %s", path)
+	}
+	return path, out, nil
+}
+
+func (c *ampControl) writeDirectorConfig(exec Executor, content string) (string, error) {
+	path, err := c.directorConfigPath()
+	if err != nil {
+		return "", err
+	}
+	if err := exec.WriteFile(path, strings.NewReader(content)); err != nil {
+		return path, fmt.Errorf("write %s: %w", path, err)
+	}
+	return path, nil
+}
