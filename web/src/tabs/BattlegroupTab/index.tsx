@@ -6,6 +6,7 @@ import { Button, Input, Select, ListBox, Spinner, toast, TextField } from '@hero
 import { api } from '../../api/client'
 import type { BackupFile } from '../../api/client'
 import { NumberInput, PageHeader, InfoCard, SectionDivider, Icon } from '../../dune-ui'
+import { ScheduledRestartsCard } from '../../components/ScheduledRestartsCard'
 
 import { phaseColor } from './helpers'
 import { ACTIONS, INIT_WARN_MS, type ActionDef, type DetailedStatus } from './types'
@@ -334,6 +335,10 @@ export const BattlegroupTab: React.FC<BattlegroupTabProps> = ({ isActive = false
         </div>
 
       </div>
+
+      {/* ── Scheduled Restarts (#145) — folds into Server Health (#149) ── */}
+      <SectionDivider title={t('restarts.title')} />
+      <ScheduledRestartsCard />
 
       {/* ── Modals ───────────────────────────────────────────────────── */}
       <ConfirmDialog

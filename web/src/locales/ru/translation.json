@@ -1,4 +1,20 @@
 {
+  "restarts": {
+    "title": "Запланированные перезапуски",
+    "enable": "Включено",
+    "nextRestart": "Следующий перезапуск: {{when}}",
+    "noneScheduled": "Перезапуски не запланированы",
+    "noRules": "Пока нет правил — добавьте ниже.",
+    "addRule": "Добавить правило",
+    "removeRule": "Удалить правило",
+    "warnMinutes": "Предупр. (мин)",
+    "timezone": "Часовой пояс",
+    "tzPlaceholder": "локальное хоста (напр. UTC)",
+    "save": "Сохранить",
+    "skipNext": "Пропустить следующий",
+    "failedToLoad": "Не удалось загрузить: {{message}}",
+    "saveFailed": "Не удалось сохранить: {{message}}"
+  },
   "director": {
     "title": "Настройки Director",
     "subtitle": "Настройки Battlegroup Director — инстансирование карт и расширенные параметры (AMP).",

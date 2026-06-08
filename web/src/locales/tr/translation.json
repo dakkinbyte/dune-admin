@@ -1,4 +1,20 @@
 {
+  "restarts": {
+    "title": "Zamanlanmış yeniden başlatmalar",
+    "enable": "Etkin",
+    "nextRestart": "Sonraki yeniden başlatma: {{when}}",
+    "noneScheduled": "Zamanlanmış yeniden başlatma yok",
+    "noRules": "Henüz kural yok — aşağıdan ekleyin.",
+    "addRule": "Kural ekle",
+    "removeRule": "Kuralı kaldır",
+    "warnMinutes": "Uyarı (dk)",
+    "timezone": "Saat dilimi",
+    "tzPlaceholder": "ana makine yereli (örn. UTC)",
+    "save": "Kaydet",
+    "skipNext": "Sonrakini atla",
+    "failedToLoad": "Yükleme başarısız: {{message}}",
+    "saveFailed": "Kaydetme başarısız: {{message}}"
+  },
   "director": {
     "title": "Director Yapılandırması",
     "subtitle": "Battlegroup Director ayarları — harita örnekleme ve gelişmiş ayarlar (AMP).",

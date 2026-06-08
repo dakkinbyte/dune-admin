@@ -1,4 +1,20 @@
 {
+  "restarts": {
+    "title": "Geplante Neustarts",
+    "enable": "Aktiviert",
+    "nextRestart": "Nächster Neustart: {{when}}",
+    "noneScheduled": "Keine Neustarts geplant",
+    "noRules": "Noch keine Regeln — unten eine hinzufügen.",
+    "addRule": "Regel hinzufügen",
+    "removeRule": "Regel entfernen",
+    "warnMinutes": "Warnung (Min)",
+    "timezone": "Zeitzone",
+    "tzPlaceholder": "Host-lokal (z. B. UTC)",
+    "save": "Speichern",
+    "skipNext": "Nächsten überspringen",
+    "failedToLoad": "Laden fehlgeschlagen: {{message}}",
+    "saveFailed": "Speichern fehlgeschlagen: {{message}}"
+  },
   "director": {
     "title": "Director-Konfiguration",
     "subtitle": "Battlegroup-Director-Einstellungen — Karten-Instanzierung & erweiterte Optionen (AMP).",

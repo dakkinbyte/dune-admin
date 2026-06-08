@@ -1,4 +1,20 @@
 {
+  "restarts": {
+    "title": "Scheduled Restarts",
+    "enable": "Enabled",
+    "nextRestart": "Next restart: {{when}}",
+    "noneScheduled": "No restarts scheduled",
+    "noRules": "No rules yet — add one below.",
+    "addRule": "Add rule",
+    "removeRule": "Remove rule",
+    "warnMinutes": "Warn (min)",
+    "timezone": "Timezone",
+    "tzPlaceholder": "host local (e.g. UTC)",
+    "save": "Save",
+    "skipNext": "Skip next",
+    "failedToLoad": "Failed to load: {{message}}",
+    "saveFailed": "Save failed: {{message}}"
+  },
   "director": {
     "title": "Director Config",
     "subtitle": "Battlegroup Director settings — map instancing & advanced tunables (AMP).",

@@ -1,4 +1,20 @@
 {
+  "restarts": {
+    "title": "スケジュール再起動",
+    "enable": "有効",
+    "nextRestart": "次回の再起動: {{when}}",
+    "noneScheduled": "予定された再起動はありません",
+    "noRules": "ルールがありません — 下で追加してください。",
+    "addRule": "ルールを追加",
+    "removeRule": "ルールを削除",
+    "warnMinutes": "警告 (分)",
+    "timezone": "タイムゾーン",
+    "tzPlaceholder": "ホストのローカル（例: UTC）",
+    "save": "保存",
+    "skipNext": "次回をスキップ",
+    "failedToLoad": "読み込みに失敗しました: {{message}}",
+    "saveFailed": "保存に失敗しました: {{message}}"
+  },
   "director": {
     "title": "Director 設定",
     "subtitle": "Battlegroup Director 設定 — マップのインスタンス化と詳細設定（AMP）。",

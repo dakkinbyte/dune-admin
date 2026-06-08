@@ -1,4 +1,20 @@
 {
+  "restarts": {
+    "title": "Reinicios programados",
+    "enable": "Activado",
+    "nextRestart": "Próximo reinicio: {{when}}",
+    "noneScheduled": "Sin reinicios programados",
+    "noRules": "Aún no hay reglas: añade una abajo.",
+    "addRule": "Añadir regla",
+    "removeRule": "Eliminar regla",
+    "warnMinutes": "Aviso (min)",
+    "timezone": "Zona horaria",
+    "tzPlaceholder": "local del host (p. ej. UTC)",
+    "save": "Guardar",
+    "skipNext": "Saltar el próximo",
+    "failedToLoad": "Error al cargar: {{message}}",
+    "saveFailed": "Error al guardar: {{message}}"
+  },
   "director": {
     "title": "Configuración del Director",
     "subtitle": "Ajustes del Battlegroup Director — instanciación de mapas y opciones avanzadas (AMP).",

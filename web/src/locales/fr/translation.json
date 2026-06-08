@@ -1,4 +1,20 @@
 {
+  "restarts": {
+    "title": "Redémarrages planifiés",
+    "enable": "Activé",
+    "nextRestart": "Prochain redémarrage : {{when}}",
+    "noneScheduled": "Aucun redémarrage planifié",
+    "noRules": "Aucune règle — ajoutez-en une ci-dessous.",
+    "addRule": "Ajouter une règle",
+    "removeRule": "Supprimer la règle",
+    "warnMinutes": "Alerte (min)",
+    "timezone": "Fuseau horaire",
+    "tzPlaceholder": "local hôte (p. ex. UTC)",
+    "save": "Enregistrer",
+    "skipNext": "Ignorer le prochain",
+    "failedToLoad": "Échec du chargement : {{message}}",
+    "saveFailed": "Échec de l'enregistrement : {{message}}"
+  },
   "director": {
     "title": "Configuration du Director",
     "subtitle": "Paramètres du Battlegroup Director — instanciation des cartes et réglages avancés (AMP).",

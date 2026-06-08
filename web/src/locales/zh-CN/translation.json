@@ -1,4 +1,20 @@
 {
+  "restarts": {
+    "title": "计划重启",
+    "enable": "启用",
+    "nextRestart": "下次重启：{{when}}",
+    "noneScheduled": "未计划重启",
+    "noRules": "暂无规则 — 在下方添加。",
+    "addRule": "添加规则",
+    "removeRule": "删除规则",
+    "warnMinutes": "提前警告（分）",
+    "timezone": "时区",
+    "tzPlaceholder": "主机本地（如 UTC）",
+    "save": "保存",
+    "skipNext": "跳过下一次",
+    "failedToLoad": "加载失败：{{message}}",
+    "saveFailed": "保存失败：{{message}}"
+  },
   "director": {
     "title": "Director 配置",
     "subtitle": "Battlegroup Director 设置 — 地图实例化与高级调节（AMP）。",

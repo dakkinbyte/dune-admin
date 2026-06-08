@@ -326,6 +326,18 @@ export type DirectorConfig = {
   path: string
   sections: DirectorSection[]
 }
+export type RestartRule = {
+  days: number[] // 0=Sun .. 6=Sat
+  time: string // "HH:MM"
+}
+export type ScheduledRestarts = {
+  enabled: boolean
+  timezone: string
+  rules: RestartRule[]
+  warn_minutes: number
+  last_fired: number
+  next_restart?: string
+}
 export type LogPod = {
   namespace: string
   name: string
@@ -886,6 +898,13 @@ export const api = {
     get: () => req<DirectorConfig>('GET', '/director-config'),
     update: (updates: Record<string, Record<string, string>>) =>
       req<MutateResult>('PUT', '/director-config', { updates }),
+  },
+
+  scheduledRestarts: {
+    get: () => req<ScheduledRestarts>('GET', '/scheduled-restarts'),
+    update: (body: { enabled: boolean, timezone: string, rules: RestartRule[], warn_minutes: number }) =>
+      req<MutateResult>('PUT', '/scheduled-restarts', body),
+    skipNext: () => req<MutateResult>('POST', '/scheduled-restarts/skip-next'),
   },
 
   market: {
