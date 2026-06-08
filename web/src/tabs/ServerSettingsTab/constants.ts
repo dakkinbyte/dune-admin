@@ -8,6 +8,8 @@ const ADVANCED_CATEGORIES = new Set([
   'CraftingSettings', 'SpiceHarvestingSystem', 'DewHarvestSettings',
   'SecurityZonesSubsystem', 'GuildSettings', 'DuneVehicleSettings',
   'RespawnSettings', 'ShelterSettings',
+  'BuildingSettings', 'InventorySystemSettings', 'DuneGameMode', 'DuneExchangeSettings',
+  'SpiceAddictionSubsystem', 'HydrationSubsystem', 'HazardsSettings', 'URL', 'Global',
 ])
 
 // Display order for categories; any not listed (Expert) sort after, alphabetically.
@@ -17,6 +19,8 @@ const CATEGORY_ORDER = [
   'CraftingSettings', 'SpiceHarvestingSystem', 'DewHarvestSettings',
   'SecurityZonesSubsystem', 'GuildSettings', 'DuneVehicleSettings',
   'RespawnSettings', 'ShelterSettings',
+  'BuildingSettings', 'InventorySystemSettings', 'DuneGameMode', 'DuneExchangeSettings',
+  'SpiceAddictionSubsystem', 'HydrationSubsystem', 'HazardsSettings', 'URL', 'Global',
 ]
 
 // Friendlier display names for the raw INI short-section category strings.
@@ -33,6 +37,13 @@ const CATEGORY_LABELS: Record<string, string> = {
   DuneVehicleSettings: 'Vehicles',
   RespawnSettings: 'Respawn',
   ShelterSettings: 'Shelter',
+  BuildingSettings: 'Building',
+  InventorySystemSettings: 'Inventory',
+  DuneGameMode: 'Game Mode',
+  DuneExchangeSettings: 'Exchange / Market',
+  SpiceAddictionSubsystem: 'Spice Addiction',
+  HydrationSubsystem: 'Hydration',
+  HazardsSettings: 'Hazards',
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -52,6 +63,15 @@ const CATEGORY_ICONS: Record<string, string> = {
   'DuneVehicleSettings': 'car',
   'RespawnSettings': 'rotate-ccw',
   'ShelterSettings': 'tent',
+  'BuildingSettings': 'blocks',
+  'InventorySystemSettings': 'package',
+  'DuneGameMode': 'gamepad-2',
+  'DuneExchangeSettings': 'store',
+  'SpiceAddictionSubsystem': 'pill',
+  'HydrationSubsystem': 'glass-water',
+  'HazardsSettings': 'triangle-alert',
+  'URL': 'link',
+  'Global': 'globe',
 }
 
 // Frequently-tuned settings surfaced in the "Common" panel above the categories.
