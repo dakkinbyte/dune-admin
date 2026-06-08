@@ -36,7 +36,7 @@
   },
   "guilds": {
     "title": "Guildes ({{count}})",
-    "subtitle": "Guildes de joueurs sur ce serveur — lecture seule.",
+    "subtitle": "Guildes de joueurs sur ce serveur.",
     "view": "Voir",
     "empty": "Aucune guilde trouvée.",
     "failedToLoad": "Échec du chargement des guildes : {{message}}",
@@ -49,7 +49,6 @@
     "editGuild": "Modifier la guilde",
     "nameLabel": "Nom",
     "descLabel": "Description",
-    "nameRestartHint": "Les changements de nom s'appliquent après un redémarrage du serveur.",
     "save": "Enregistrer",
     "saved": "Guilde mise à jour.",
     "saveFailed": "Échec de l'enregistrement : {{message}}",

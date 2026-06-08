@@ -36,7 +36,7 @@
   },
   "guilds": {
     "title": "Loncalar ({{count}})",
-    "subtitle": "Bu sunucudaki oyuncu loncaları — salt okunur.",
+    "subtitle": "Bu sunucudaki oyuncu loncaları.",
     "view": "Görüntüle",
     "empty": "Lonca bulunamadı.",
     "failedToLoad": "Loncalar yüklenemedi: {{message}}",
@@ -49,7 +49,6 @@
     "editGuild": "Loncayı düzenle",
     "nameLabel": "Ad",
     "descLabel": "Açıklama",
-    "nameRestartHint": "Ad değişiklikleri sunucu yeniden başlatıldıktan sonra geçerli olur.",
     "save": "Kaydet",
     "saved": "Lonca güncellendi.",
     "saveFailed": "Kaydetme başarısız: {{message}}",

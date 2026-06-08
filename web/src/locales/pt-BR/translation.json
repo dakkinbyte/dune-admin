@@ -36,7 +36,7 @@
   },
   "guilds": {
     "title": "Guildas ({{count}})",
-    "subtitle": "Guildas de jogadores neste servidor — somente leitura.",
+    "subtitle": "Guildas de jogadores neste servidor.",
     "view": "Ver",
     "empty": "Nenhuma guilda encontrada.",
     "failedToLoad": "Falha ao carregar as guildas: {{message}}",
@@ -49,7 +49,6 @@
     "editGuild": "Editar guilda",
     "nameLabel": "Nome",
     "descLabel": "Descrição",
-    "nameRestartHint": "Alterações de nome se aplicam após reiniciar o servidor.",
     "save": "Salvar",
     "saved": "Guilda atualizada.",
     "saveFailed": "Falha ao salvar: {{message}}",

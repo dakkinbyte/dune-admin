@@ -204,7 +204,6 @@ export const GuildsTab: React.FC<GuildsTabProps> = ({ isSignedIn = true }) => {
                                 value={editName}
                                 onChange={(e) => setEditName(e.target.value)}
                               />
-                              <div className="text-xs text-warning mt-0.5">{t('guilds.nameRestartHint')}</div>
                             </div>
                             <div>
                               <label className="text-xs text-muted">{t('guilds.descLabel')}</label>

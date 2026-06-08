@@ -36,7 +36,7 @@
   },
   "guilds": {
     "title": "Gremios ({{count}})",
-    "subtitle": "Gremios de jugadores en este servidor — solo lectura.",
+    "subtitle": "Gremios de jugadores en este servidor.",
     "view": "Ver",
     "empty": "No se encontraron gremios.",
     "failedToLoad": "Error al cargar los gremios: {{message}}",
@@ -49,7 +49,6 @@
     "editGuild": "Editar gremio",
     "nameLabel": "Nombre",
     "descLabel": "Descripción",
-    "nameRestartHint": "Los cambios de nombre se aplican tras reiniciar el servidor.",
     "save": "Guardar",
     "saved": "Gremio actualizado.",
     "saveFailed": "Error al guardar: {{message}}",

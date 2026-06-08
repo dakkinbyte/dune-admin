@@ -36,7 +36,7 @@
   },
   "guilds": {
     "title": "公会 ({{count}})",
-    "subtitle": "此服务器上的玩家公会 — 只读。",
+    "subtitle": "此服务器上的玩家公会。",
     "view": "查看",
     "empty": "未找到公会。",
     "failedToLoad": "加载公会失败：{{message}}",
@@ -49,7 +49,6 @@
     "editGuild": "编辑公会",
     "nameLabel": "名称",
     "descLabel": "描述",
-    "nameRestartHint": "名称更改将在服务器重启后生效。",
     "save": "保存",
     "saved": "公会已更新。",
     "saveFailed": "保存失败：{{message}}",

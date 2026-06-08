@@ -36,7 +36,7 @@
   },
   "guilds": {
     "title": "Guilds ({{count}})",
-    "subtitle": "Player guilds on this server — read-only.",
+    "subtitle": "Player guilds on this server.",
     "view": "View",
     "empty": "No guilds found.",
     "failedToLoad": "Failed to load guilds: {{message}}",
@@ -49,7 +49,6 @@
     "editGuild": "Edit Guild",
     "nameLabel": "Name",
     "descLabel": "Description",
-    "nameRestartHint": "Name changes apply after a server restart.",
     "save": "Save",
     "saved": "Guild updated.",
     "saveFailed": "Save failed: {{message}}",
