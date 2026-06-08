@@ -45,6 +45,14 @@
     }
   },
   "serverHealth": {
+    "ifaceLoadFailed": "Error al cargar las interfaces web: {{message}}",
+    "ifaceSaveFailed": "Error al guardar: {{message}}",
+    "ifaceLabel": "Etiqueta",
+    "ifaceUrl": "URL (http:// o /ruta)",
+    "editInterfaces": "Editar interfaces web",
+    "removeInterface": "Eliminar",
+    "addInterface": "Añadir interfaz",
+    "saveInterfaces": "Guardar",
     "title": "Estado del servidor",
     "subtitle": "Estado en vivo de la VM, el grupo de batalla y los puertos.",
     "gamePorts": "Juego (UDP)",
@@ -329,6 +337,8 @@
     "title_other": "Planos ({{count}})"
   },
   "common": {
+    "timezone": "Zona horaria",
+    "tzHostLocal": "Local del host",
     "add": "Añadir",
     "cancel": "Cancelar",
     "checking": "Comprobando…",

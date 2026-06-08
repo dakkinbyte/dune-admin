@@ -45,6 +45,14 @@
     }
   },
   "serverHealth": {
+    "ifaceLoadFailed": "Web arayüzleri yüklenemedi: {{message}}",
+    "ifaceSaveFailed": "Kaydetme başarısız: {{message}}",
+    "ifaceLabel": "Etiket",
+    "ifaceUrl": "URL (http:// veya /yol)",
+    "editInterfaces": "Web arayüzlerini düzenle",
+    "removeInterface": "Kaldır",
+    "addInterface": "Arayüz ekle",
+    "saveInterfaces": "Kaydet",
     "title": "Sunucu Durumu",
     "subtitle": "Canlı VM, savaş grubu ve port durumu.",
     "gamePorts": "Oyun (UDP)",
@@ -327,6 +335,8 @@
     "title_other": "Planlar ({{count}})"
   },
   "common": {
+    "timezone": "Saat dilimi",
+    "tzHostLocal": "Ana makine yereli",
     "add": "Ekle",
     "cancel": "İptal",
     "checking": "Kontrol ediliyor…",

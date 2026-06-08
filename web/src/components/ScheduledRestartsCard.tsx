@@ -5,6 +5,7 @@ import { Button, Spinner, toast } from '@heroui/react'
 import { api } from '../api/client'
 import type { ScheduledRestarts, RestartRule } from '../api/client'
 import { Panel, SectionLabel, Icon } from '../dune-ui'
+import { TimezoneSelect } from './TimezoneSelect'
 
 const DOW = [0, 1, 2, 3, 4, 5, 6] // Sun..Sat
 
@@ -151,12 +152,7 @@ export const ScheduledRestartsCard: React.FC = () => {
                 </label>
                 <label className="flex items-center gap-2 flex-1 min-w-[160px]">
                   {t('restarts.timezone')}
-                  <input
-                    value={timezone}
-                    placeholder={t('restarts.tzPlaceholder')}
-                    onChange={(e) => setTimezone(e.target.value)}
-                    className={`${inputCls} flex-1`}
-                  />
+                  <TimezoneSelect value={timezone} onChange={setTimezone} className="flex-1" />
                 </label>
               </div>
 

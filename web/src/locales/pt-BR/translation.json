@@ -45,6 +45,14 @@
     }
   },
   "serverHealth": {
+    "ifaceLoadFailed": "Falha ao carregar as interfaces web: {{message}}",
+    "ifaceSaveFailed": "Falha ao salvar: {{message}}",
+    "ifaceLabel": "Rótulo",
+    "ifaceUrl": "URL (http:// ou /caminho)",
+    "editInterfaces": "Editar interfaces web",
+    "removeInterface": "Remover",
+    "addInterface": "Adicionar interface",
+    "saveInterfaces": "Salvar",
     "title": "Saúde do servidor",
     "subtitle": "Status ao vivo da VM, do grupo de batalha e das portas.",
     "gamePorts": "Jogo (UDP)",
@@ -329,6 +337,8 @@
     "title_other": "Plantas ({{count}})"
   },
   "common": {
+    "timezone": "Fuso horário",
+    "tzHostLocal": "Local do host",
     "add": "Adicionar",
     "cancel": "Cancelar",
     "checking": "Verificando…",

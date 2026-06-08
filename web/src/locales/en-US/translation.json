@@ -45,6 +45,14 @@
     }
   },
   "serverHealth": {
+    "ifaceLoadFailed": "Failed to load web interfaces: {{message}}",
+    "ifaceSaveFailed": "Save failed: {{message}}",
+    "ifaceLabel": "Label",
+    "ifaceUrl": "URL (http:// or /path)",
+    "editInterfaces": "Edit web interfaces",
+    "removeInterface": "Remove",
+    "addInterface": "Add interface",
+    "saveInterfaces": "Save",
     "title": "Server Health",
     "subtitle": "Live VM, battlegroup, and port status.",
     "gamePorts": "Game (UDP)",
@@ -327,6 +335,8 @@
     "title_other": "Blueprints ({{count}})"
   },
   "common": {
+    "timezone": "Timezone",
+    "tzHostLocal": "Host local",
     "add": "Add",
     "cancel": "Cancel",
     "checking": "Checking…",

@@ -45,6 +45,14 @@
     }
   },
   "serverHealth": {
+    "ifaceLoadFailed": "Échec du chargement des interfaces web : {{message}}",
+    "ifaceSaveFailed": "Échec de l'enregistrement : {{message}}",
+    "ifaceLabel": "Libellé",
+    "ifaceUrl": "URL (http:// ou /chemin)",
+    "editInterfaces": "Modifier les interfaces web",
+    "removeInterface": "Supprimer",
+    "addInterface": "Ajouter une interface",
+    "saveInterfaces": "Enregistrer",
     "title": "État du serveur",
     "subtitle": "État en direct de la VM, du groupe de combat et des ports.",
     "gamePorts": "Jeu (UDP)",
@@ -329,6 +337,8 @@
     "title_other": "Schémas ({{count}})"
   },
   "common": {
+    "timezone": "Fuseau horaire",
+    "tzHostLocal": "Local hôte",
     "add": "Ajouter",
     "cancel": "Annuler",
     "checking": "Vérification…",
