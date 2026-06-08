@@ -73,6 +73,40 @@ func TestParseAMPGameProcess(t *testing.T) {
 	}
 }
 
+func TestAmpPgDumpRestoreCommands(t *testing.T) {
+	t.Parallel()
+	c := &ampControl{
+		container:        "AMP_DuneTest01",
+		ampUser:          "amp",
+		containerRuntime: "docker",
+		pgBin:            "/AMP/duneawakening/extracted/postgres/usr/local/bin",
+		pgLib:            "/pg/lib:/db/lib",
+	}
+	conn := dbConn{Host: "127.0.0.1", Port: 15432, User: "dune", Pass: "secret", Name: "dune"}
+
+	dump := c.pgDumpCommand(conn, "/home/test/db-backups/x.dump")
+	for _, want := range []string{
+		"sudo -i -u amp", "docker exec", "AMP_DuneTest01",
+		"PGPASSWORD=", "LD_LIBRARY_PATH=", "/pg/lib:/db/lib",
+		"pg_dump", "-Fc", "-h ", "127.0.0.1", "-p 15432", "-U ", "-d ",
+		"> ", "/home/test/db-backups/x.dump",
+	} {
+		if !strings.Contains(dump, want) {
+			t.Errorf("pgDumpCommand missing %q in:\n%s", want, dump)
+		}
+	}
+
+	restore := c.pgRestoreCommand(conn, "/home/test/db-backups/x.dump")
+	for _, want := range []string{
+		"docker exec -i", "pg_restore", "--clean", "--if-exists", "-d ",
+		"< ", "/home/test/db-backups/x.dump",
+	} {
+		if !strings.Contains(restore, want) {
+			t.Errorf("pgRestoreCommand missing %q in:\n%s", want, restore)
+		}
+	}
+}
+
 func TestParseProcessAges(t *testing.T) {
 	t.Parallel()
 

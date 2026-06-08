@@ -47,7 +47,7 @@ function currentTabFromPath(pathname: string): TabId {
   return (TAB_IDS as readonly string[]).includes(seg) ? (seg as TabId) : DEFAULT_TAB
 }
 
-type DbSection = 'tables' | 'describe' | 'sample' | 'search' | 'sql'
+type DbSection = 'backups' | 'tables' | 'describe' | 'sample' | 'search' | 'sql'
 type WelcomeSection = 'config' | 'packages' | 'grants'
 type LayoutMode = 'sidenav' | 'topnav'
 
@@ -99,6 +99,7 @@ const AppCore: React.FC<AppCoreProps> = ({ isSignedIn }) => {
   const [reconnecting, setReconnecting] = useState(false)
 
   const DB_SECTIONS: { key: string, label: string, depth: number }[] = [
+    { key: 'db:backups', label: `╰─ ${t('database.sections.backups')}`, depth: 1 },
     { key: 'db:tables', label: `╰─ ${t('database.sections.tables')}`, depth: 1 },
     { key: 'db:describe', label: `╰─ ${t('database.sections.describe')}`, depth: 1 },
     { key: 'db:sample', label: `╰─ ${t('database.sections.sample')}`, depth: 1 },
@@ -169,7 +170,7 @@ const AppCore: React.FC<AppCoreProps> = ({ isSignedIn }) => {
     localStorage.setItem('dune_admin_layout', m)
     setLayoutMode(m)
   }, [])
-  const [dbSection, setDbSection] = useState<DbSection>('tables')
+  const [dbSection, setDbSection] = useState<DbSection>('backups')
   const [welcomeSection, setWelcomeSection] = useState<WelcomeSection>('config')
   const [showBackendConfig, setShowBackendConfig] = useState(false)
   const [updateInfo, setUpdateInfo] = useState<UpdateCheckResult | null>(null)

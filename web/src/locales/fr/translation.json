@@ -1,4 +1,49 @@
 {
+  "backups": {
+    "warning": "Arrêtez le groupe de combat avant de créer ou de restaurer une sauvegarde. Les sauvegardes prises pendant que le jeu tourne peuvent être incohérentes, et une restauration nécessite l'arrêt du groupe de combat.",
+    "loadFailed": "Échec du chargement des sauvegardes : {{message}}",
+    "take": {
+      "title": "Créer une sauvegarde",
+      "desc": "Capture la base de données PostgreSQL du groupe de combat dans un fichier horodaté sur l'hôte. Recommandé avant des changements risqués.",
+      "btn": "Créer une sauvegarde"
+    },
+    "taken": "Sauvegarde créée : {{name}}",
+    "takeFailed": "Échec de la sauvegarde : {{message}}",
+    "recent": {
+      "title": "Sauvegardes récentes",
+      "empty": "Aucune sauvegarde pour l'instant."
+    },
+    "col": {
+      "name": "Fichier",
+      "size": "Taille",
+      "modified": "Créée"
+    },
+    "download": "Télécharger",
+    "restoreLabel": "Restaurer",
+    "restoreFailed": "Échec de la restauration : {{message}}",
+    "restoreConfirmTitle": "Restaurer la base de données ?",
+    "restoreConfirmDesc": "Cela remplace la base de données active par {{name}}. Le groupe de combat doit être arrêté — action irréversible.",
+    "deleteLabel": "Supprimer",
+    "deleteConfirmTitle": "Supprimer la sauvegarde ?",
+    "deleteConfirmDesc": "Supprimer définitivement {{name}} ?",
+    "deleteFailed": "Échec de la suppression : {{message}}",
+    "schedule": {
+      "title": "Planification des sauvegardes",
+      "enable": "Activé",
+      "desc": "Exécute des sauvegardes automatiques selon un planning hebdomadaire. Les heures sont dans le fuseau configuré.",
+      "nextBackup": "Prochaine sauvegarde : {{when}}",
+      "noneScheduled": "Aucune sauvegarde planifiée",
+      "noRules": "Aucune règle — ajoutez-en une ci-dessous.",
+      "addRule": "Ajouter une règle",
+      "removeRule": "Supprimer la règle",
+      "keepN": "Conserver les dernières",
+      "keepHint": "0 = tout conserver",
+      "timezone": "Fuseau horaire",
+      "tzPlaceholder": "local hôte (p. ex. UTC)",
+      "save": "Enregistrer",
+      "saveFailed": "Échec de l'enregistrement : {{message}}"
+    }
+  },
   "serverHealth": {
     "title": "État du serveur",
     "subtitle": "État en direct de la VM, du groupe de combat et des ports.",
@@ -251,6 +296,7 @@
     "searchLabel": "Nom de colonne ou de table",
     "searchPlaceholder": "player_id, faction...",
     "sections": {
+      "backups": "Sauvegardes",
       "describe": "Décrire",
       "sample": "Exemple",
       "search": "Rechercher des colonnes",

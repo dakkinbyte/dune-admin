@@ -129,6 +129,8 @@ func newControlPlane(name string, cfg appConfig) ControlPlane {
 			apiUser:          cfg.AmpAPIUser,
 			apiPass:          cfg.AmpAPIPass,
 			apiPort:          cfg.AmpAPIPort,
+			pgBin:            cfg.AmpPgBin,
+			pgLib:            cfg.AmpPgLib,
 		}
 	default:
 		return &localControl{

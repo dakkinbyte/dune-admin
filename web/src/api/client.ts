@@ -340,6 +340,23 @@ export type ScheduledRestarts = {
   last_fired: number
   next_restart?: string
 }
+export type DBBackupFile = {
+  name: string
+  size_bytes: number
+  modified: string
+}
+export type BackupRule = {
+  days: number[] // 0=Sun .. 6=Sat
+  time: string // "HH:MM"
+}
+export type ScheduledBackups = {
+  enabled: boolean
+  timezone: string
+  rules: BackupRule[]
+  keep_n: number
+  last_fired: number
+  next_backup?: string
+}
 export type LogPod = {
   namespace: string
   name: string
@@ -907,6 +924,20 @@ export const api = {
     update: (body: { enabled: boolean, timezone: string, rules: RestartRule[], warn_minutes: number }) =>
       req<MutateResult>('PUT', '/scheduled-restarts', body),
     skipNext: () => req<MutateResult>('POST', '/scheduled-restarts/skip-next'),
+  },
+
+  dbBackups: {
+    list: () => req<{ backups: DBBackupFile[] }>('GET', '/db-backups'),
+    take: () => req<{ ok: string, name: string, size_bytes: number }>('POST', '/db-backups'),
+    remove: (file: string) => req<MutateResult>('DELETE', `/db-backups?file=${encodeURIComponent(file)}`),
+    downloadUrl: (file: string) => `${apiBase}/db-backups/download?file=${encodeURIComponent(file)}`,
+    restore: (file: string) =>
+      req<{ ok: string, output: string }>('POST', '/db-backups/restore', { file, confirm: true }),
+  },
+  scheduledBackups: {
+    get: () => req<ScheduledBackups>('GET', '/scheduled-backups'),
+    update: (body: { enabled: boolean, timezone: string, rules: BackupRule[], keep_n: number }) =>
+      req<MutateResult>('PUT', '/scheduled-backups', body),
   },
 
   market: {

@@ -1,4 +1,49 @@
 {
+  "backups": {
+    "warning": "Yedek almadan veya geri yüklemeden önce savaş grubunu durdurun. Oyun çalışırken alınan yedekler tutarsız olabilir ve geri yükleme için savaş grubunun durdurulmuş olması gerekir.",
+    "loadFailed": "Yedekler yüklenemedi: {{message}}",
+    "take": {
+      "title": "Yedek Al",
+      "desc": "Savaş grubunun PostgreSQL veritabanını ana makinede zaman damgalı bir dosyaya alır. Riskli değişikliklerden önce önerilir.",
+      "btn": "Yedek Al"
+    },
+    "taken": "Yedek oluşturuldu: {{name}}",
+    "takeFailed": "Yedek başarısız: {{message}}",
+    "recent": {
+      "title": "Son Yedekler",
+      "empty": "Henüz yedek yok."
+    },
+    "col": {
+      "name": "Dosya",
+      "size": "Boyut",
+      "modified": "Oluşturuldu"
+    },
+    "download": "İndir",
+    "restoreLabel": "Geri yükle",
+    "restoreFailed": "Geri yükleme başarısız: {{message}}",
+    "restoreConfirmTitle": "Veritabanı geri yüklensin mi?",
+    "restoreConfirmDesc": "Bu, aktif veritabanını {{name}} ile değiştirir. Savaş grubu durdurulmuş olmalı — geri alınamaz.",
+    "deleteLabel": "Sil",
+    "deleteConfirmTitle": "Yedek silinsin mi?",
+    "deleteConfirmDesc": "{{name}} kalıcı olarak silinsin mi?",
+    "deleteFailed": "Silme başarısız: {{message}}",
+    "schedule": {
+      "title": "Yedek Zamanlaması",
+      "enable": "Etkin",
+      "desc": "Otomatik yedekleri haftalık zamanlamayla çalıştırın. Saatler yapılandırılan saat dilimindedir.",
+      "nextBackup": "Sonraki yedek: {{when}}",
+      "noneScheduled": "Zamanlanmış yedek yok",
+      "noRules": "Henüz kural yok — aşağıdan ekleyin.",
+      "addRule": "Kural ekle",
+      "removeRule": "Kuralı kaldır",
+      "keepN": "Son N'yi tut",
+      "keepHint": "0 = hepsini tut",
+      "timezone": "Saat dilimi",
+      "tzPlaceholder": "ana makine yereli (örn. UTC)",
+      "save": "Kaydet",
+      "saveFailed": "Kaydetme başarısız: {{message}}"
+    }
+  },
   "serverHealth": {
     "title": "Sunucu Durumu",
     "subtitle": "Canlı VM, savaş grubu ve port durumu.",
@@ -249,6 +294,7 @@
     "searchLabel": "Sütun veya tablo adı",
     "searchPlaceholder": "player_id, faction...",
     "sections": {
+      "backups": "Yedekler",
       "describe": "Açıkla",
       "sample": "Örnek",
       "search": "Sütunlarda Ara",

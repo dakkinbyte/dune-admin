@@ -1,4 +1,49 @@
 {
+  "backups": {
+    "warning": "在创建或恢复备份前请先停止战斗群。游戏运行时创建的备份可能不一致，恢复需要战斗群处于停止状态。",
+    "loadFailed": "加载备份失败：{{message}}",
+    "take": {
+      "title": "创建备份",
+      "desc": "将战斗群的 PostgreSQL 数据库快照保存为主机上带时间戳的文件。建议在进行有风险的更改前执行。",
+      "btn": "创建备份"
+    },
+    "taken": "已创建备份：{{name}}",
+    "takeFailed": "备份失败：{{message}}",
+    "recent": {
+      "title": "最近备份",
+      "empty": "暂无备份。"
+    },
+    "col": {
+      "name": "文件",
+      "size": "大小",
+      "modified": "创建时间"
+    },
+    "download": "下载",
+    "restoreLabel": "恢复",
+    "restoreFailed": "恢复失败：{{message}}",
+    "restoreConfirmTitle": "恢复数据库？",
+    "restoreConfirmDesc": "这将用 {{name}} 替换当前数据库。战斗群必须已停止——此操作无法撤销。",
+    "deleteLabel": "删除",
+    "deleteConfirmTitle": "删除备份？",
+    "deleteConfirmDesc": "永久删除 {{name}}？",
+    "deleteFailed": "删除失败：{{message}}",
+    "schedule": {
+      "title": "备份计划",
+      "enable": "启用",
+      "desc": "按每周计划运行自动备份。时间使用所配置的时区。",
+      "nextBackup": "下次备份：{{when}}",
+      "noneScheduled": "未计划备份",
+      "noRules": "暂无规则 — 在下方添加。",
+      "addRule": "添加规则",
+      "removeRule": "删除规则",
+      "keepN": "保留最近",
+      "keepHint": "0 = 全部保留",
+      "timezone": "时区",
+      "tzPlaceholder": "主机本地（如 UTC）",
+      "save": "保存",
+      "saveFailed": "保存失败：{{message}}"
+    }
+  },
   "serverHealth": {
     "title": "服务器健康",
     "subtitle": "VM、战斗群和端口的实时状态。",
@@ -249,6 +294,7 @@
     "searchLabel": "列或表名",
     "searchPlaceholder": "player_id, faction...",
     "sections": {
+      "backups": "备份",
       "describe": "描述",
       "sample": "示例",
       "search": "搜索列",

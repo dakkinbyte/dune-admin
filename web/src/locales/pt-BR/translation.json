@@ -1,4 +1,49 @@
 {
+  "backups": {
+    "warning": "Pare o grupo de batalha antes de criar ou restaurar um backup. Backups feitos com o jogo em execução podem ser inconsistentes, e a restauração exige o grupo de batalha parado.",
+    "loadFailed": "Falha ao carregar backups: {{message}}",
+    "take": {
+      "title": "Fazer backup",
+      "desc": "Cria um snapshot do banco PostgreSQL do grupo de batalha em um arquivo com carimbo de data/hora no host. Recomendado antes de mudanças arriscadas.",
+      "btn": "Fazer backup"
+    },
+    "taken": "Backup criado: {{name}}",
+    "takeFailed": "Falha no backup: {{message}}",
+    "recent": {
+      "title": "Backups recentes",
+      "empty": "Nenhum backup ainda."
+    },
+    "col": {
+      "name": "Arquivo",
+      "size": "Tamanho",
+      "modified": "Criado"
+    },
+    "download": "Baixar",
+    "restoreLabel": "Restaurar",
+    "restoreFailed": "Falha na restauração: {{message}}",
+    "restoreConfirmTitle": "Restaurar o banco de dados?",
+    "restoreConfirmDesc": "Isto substitui o banco de dados ativo por {{name}}. O grupo de batalha deve estar parado — não pode ser desfeito.",
+    "deleteLabel": "Excluir",
+    "deleteConfirmTitle": "Excluir backup?",
+    "deleteConfirmDesc": "Excluir {{name}} permanentemente?",
+    "deleteFailed": "Falha ao excluir: {{message}}",
+    "schedule": {
+      "title": "Agendamento de backups",
+      "enable": "Ativado",
+      "desc": "Executa backups automáticos em um agendamento semanal. Os horários são no fuso configurado.",
+      "nextBackup": "Próximo backup: {{when}}",
+      "noneScheduled": "Nenhum backup agendado",
+      "noRules": "Nenhuma regra ainda — adicione uma abaixo.",
+      "addRule": "Adicionar regra",
+      "removeRule": "Remover regra",
+      "keepN": "Manter últimos",
+      "keepHint": "0 = manter todos",
+      "timezone": "Fuso horário",
+      "tzPlaceholder": "local do host (ex.: UTC)",
+      "save": "Salvar",
+      "saveFailed": "Falha ao salvar: {{message}}"
+    }
+  },
   "serverHealth": {
     "title": "Saúde do servidor",
     "subtitle": "Status ao vivo da VM, do grupo de batalha e das portas.",
@@ -251,6 +296,7 @@
     "searchLabel": "Nome de coluna ou tabela",
     "searchPlaceholder": "player_id, faction...",
     "sections": {
+      "backups": "Backups",
       "describe": "Descrever",
       "sample": "Amostra",
       "search": "Pesquisar colunas",

@@ -45,6 +45,33 @@ type ampControl struct {
 	apiUser string
 	apiPass string
 	apiPort int // 0 → defaultAmpAPIPort (8081)
+
+	// Postgres client tooling inside the container, for #150 DB backups. The
+	// game's PG17 ships a musl pg_dump under pgBin, but its libpq dir lacks the
+	// compression/SSL libs — those live in the sibling db-utils tree, so pgLib is
+	// a colon-joined path spanning both. Empty → validated AMP defaults.
+	pgBin string // dir containing pg_dump/pg_restore
+	pgLib string // LD_LIBRARY_PATH for the above
+}
+
+const (
+	defaultAmpPgBin = "/AMP/duneawakening/extracted/postgres/usr/local/bin"
+	defaultAmpPgLib = "/AMP/duneawakening/extracted/postgres/usr/local/lib:" +
+		"/AMP/duneawakening/extracted/db-utils/usr/lib"
+)
+
+func (c *ampControl) pgBinDir() string {
+	if c.pgBin != "" {
+		return c.pgBin
+	}
+	return defaultAmpPgBin
+}
+
+func (c *ampControl) pgLibPath() string {
+	if c.pgLib != "" {
+		return c.pgLib
+	}
+	return defaultAmpPgLib
 }
 
 func (c *ampControl) Name() string { return "amp" }
@@ -258,6 +285,67 @@ func (c *ampControl) restartGame(exec Executor) (string, error) {
 	}
 	return exec.Exec(fmt.Sprintf("sudo -i -u %s ampinstmgr -q %s 2>&1 && sudo -i -u %s ampinstmgr -s %s 2>&1",
 		c.ampUser, c.instance, c.ampUser, c.instance))
+}
+
+// ── database backup/restore (#150) ──────────────────────────────────────────
+
+// pgDumpCommand builds the host shell command that runs pg_dump (-Fc) inside the
+// container, redirecting its stdout to a host file. The '>' redirect is handled
+// by the outer host shell (run by the dune-admin service user), so the dump
+// lands host-side and service-user-owned.
+func (c *ampControl) pgDumpCommand(conn dbConn, destPath string) string {
+	inner := fmt.Sprintf(
+		"%s exec -e PGPASSWORD=%s -e LD_LIBRARY_PATH=%s %s %s -Fc -h %s -p %d -U %s -d %s",
+		c.runtimeCLI(),
+		shellQuote(conn.Pass),
+		shellQuote(c.pgLibPath()),
+		shellQuote(c.container),
+		shellQuote(c.pgBinDir()+"/pg_dump"),
+		shellQuote(conn.Host), conn.Port, shellQuote(conn.User), shellQuote(conn.Name),
+	)
+	return fmt.Sprintf("sudo -i -u %s %s > %s", c.ampUser, inner, shellQuote(destPath))
+}
+
+// pgRestoreCommand builds the host shell command that pipes a host dump file into
+// pg_restore (--clean --if-exists) running inside the container. DESTRUCTIVE:
+// the caller must ensure the game is stopped.
+func (c *ampControl) pgRestoreCommand(conn dbConn, srcPath string) string {
+	inner := fmt.Sprintf(
+		"%s exec -i -e PGPASSWORD=%s -e LD_LIBRARY_PATH=%s %s %s --clean --if-exists --no-owner -h %s -p %d -U %s -d %s",
+		c.runtimeCLI(),
+		shellQuote(conn.Pass),
+		shellQuote(c.pgLibPath()),
+		shellQuote(c.container),
+		shellQuote(c.pgBinDir()+"/pg_restore"),
+		shellQuote(conn.Host), conn.Port, shellQuote(conn.User), shellQuote(conn.Name),
+	)
+	return fmt.Sprintf("sudo -i -u %s %s < %s", c.ampUser, inner, shellQuote(srcPath))
+}
+
+// BackupDatabase runs pg_dump in-container and writes the archive to destPath on
+// the host. Implements dbBackupProvider.
+func (c *ampControl) BackupDatabase(exec Executor, conn dbConn, destPath string) (string, error) {
+	if !c.useContainer || c.container == "" {
+		return "", fmt.Errorf("AMP database backup requires container mode (amp_container)")
+	}
+	out, err := exec.Exec(c.pgDumpCommand(conn, destPath))
+	if err != nil {
+		return out, fmt.Errorf("pg_dump: %w", err)
+	}
+	return out, nil
+}
+
+// RestoreDatabase pipes a host dump into pg_restore in-container. DESTRUCTIVE.
+// Implements dbBackupProvider.
+func (c *ampControl) RestoreDatabase(exec Executor, conn dbConn, srcPath string) (string, error) {
+	if !c.useContainer || c.container == "" {
+		return "", fmt.Errorf("AMP database restore requires container mode (amp_container)")
+	}
+	out, err := exec.Exec(c.pgRestoreCommand(conn, srcPath))
+	if err != nil {
+		return out, fmt.Errorf("pg_restore: %w", err)
+	}
+	return out, nil
 }
 
 // ── process & log discovery ───────────────────────────────────────────────────

@@ -1,4 +1,49 @@
 {
+  "backups": {
+    "warning": "バックアップの取得や復元の前にバトルグループを停止してください。実行中に取得したバックアップは不整合になる可能性があり、復元にはバトルグループの停止が必要です。",
+    "loadFailed": "バックアップの読み込みに失敗しました: {{message}}",
+    "take": {
+      "title": "バックアップを取得",
+      "desc": "バトルグループの PostgreSQL データベースをタイムスタンプ付きファイルとしてホストに保存します。リスクのある変更の前に推奨されます。",
+      "btn": "バックアップを取得"
+    },
+    "taken": "バックアップを作成しました: {{name}}",
+    "takeFailed": "バックアップに失敗しました: {{message}}",
+    "recent": {
+      "title": "最近のバックアップ",
+      "empty": "バックアップはまだありません。"
+    },
+    "col": {
+      "name": "ファイル",
+      "size": "サイズ",
+      "modified": "作成日時"
+    },
+    "download": "ダウンロード",
+    "restoreLabel": "復元",
+    "restoreFailed": "復元に失敗しました: {{message}}",
+    "restoreConfirmTitle": "データベースを復元しますか？",
+    "restoreConfirmDesc": "現在のデータベースを {{name}} で置き換えます。バトルグループを停止する必要があり、元に戻せません。",
+    "deleteLabel": "削除",
+    "deleteConfirmTitle": "バックアップを削除しますか？",
+    "deleteConfirmDesc": "{{name}} を完全に削除しますか？",
+    "deleteFailed": "削除に失敗しました: {{message}}",
+    "schedule": {
+      "title": "バックアップのスケジュール",
+      "enable": "有効",
+      "desc": "毎週のスケジュールで自動バックアップを実行します。時刻は設定したタイムゾーンです。",
+      "nextBackup": "次のバックアップ: {{when}}",
+      "noneScheduled": "スケジュールされたバックアップはありません",
+      "noRules": "ルールがありません — 下で追加してください。",
+      "addRule": "ルールを追加",
+      "removeRule": "ルールを削除",
+      "keepN": "保持する数",
+      "keepHint": "0 = すべて保持",
+      "timezone": "タイムゾーン",
+      "tzPlaceholder": "ホストのローカル（例: UTC）",
+      "save": "保存",
+      "saveFailed": "保存に失敗しました: {{message}}"
+    }
+  },
   "serverHealth": {
     "title": "サーバーの状態",
     "subtitle": "VM・バトルグループ・ポートのライブ状態。",
@@ -249,6 +294,7 @@
     "searchLabel": "カラムまたはテーブル名",
     "searchPlaceholder": "player_id, faction...",
     "sections": {
+      "backups": "バックアップ",
       "describe": "詳細",
       "sample": "サンプル",
       "search": "カラムを検索",

@@ -1,4 +1,49 @@
 {
+  "backups": {
+    "warning": "Stoppe die Kampfgruppe, bevor du ein Backup erstellst oder wiederherstellst. Backups während des laufenden Spiels können inkonsistent sein, und eine Wiederherstellung erfordert eine gestoppte Kampfgruppe.",
+    "loadFailed": "Backups konnten nicht geladen werden: {{message}}",
+    "take": {
+      "title": "Backup erstellen",
+      "desc": "Sichert die PostgreSQL-Datenbank der Kampfgruppe in eine zeitgestempelte Datei auf dem Host. Empfohlen vor riskanten Änderungen.",
+      "btn": "Backup erstellen"
+    },
+    "taken": "Backup erstellt: {{name}}",
+    "takeFailed": "Backup fehlgeschlagen: {{message}}",
+    "recent": {
+      "title": "Letzte Backups",
+      "empty": "Noch keine Backups."
+    },
+    "col": {
+      "name": "Datei",
+      "size": "Größe",
+      "modified": "Erstellt"
+    },
+    "download": "Herunterladen",
+    "restoreLabel": "Wiederherstellen",
+    "restoreFailed": "Wiederherstellung fehlgeschlagen: {{message}}",
+    "restoreConfirmTitle": "Datenbank wiederherstellen?",
+    "restoreConfirmDesc": "Dies ersetzt die aktive Datenbank durch {{name}}. Die Kampfgruppe muss gestoppt sein — dies kann nicht rückgängig gemacht werden.",
+    "deleteLabel": "Löschen",
+    "deleteConfirmTitle": "Backup löschen?",
+    "deleteConfirmDesc": "{{name}} endgültig löschen?",
+    "deleteFailed": "Löschen fehlgeschlagen: {{message}}",
+    "schedule": {
+      "title": "Backup-Zeitplan",
+      "enable": "Aktiviert",
+      "desc": "Automatische Backups nach einem wöchentlichen Zeitplan ausführen. Zeiten gelten in der konfigurierten Zeitzone.",
+      "nextBackup": "Nächstes Backup: {{when}}",
+      "noneScheduled": "Keine Backups geplant",
+      "noRules": "Noch keine Regeln — unten eine hinzufügen.",
+      "addRule": "Regel hinzufügen",
+      "removeRule": "Regel entfernen",
+      "keepN": "Behalte letzte",
+      "keepHint": "0 = alle behalten",
+      "timezone": "Zeitzone",
+      "tzPlaceholder": "Host-lokal (z. B. UTC)",
+      "save": "Speichern",
+      "saveFailed": "Speichern fehlgeschlagen: {{message}}"
+    }
+  },
   "serverHealth": {
     "title": "Serverzustand",
     "subtitle": "Live-Status von VM, Kampfgruppe und Ports.",
@@ -249,6 +294,7 @@
     "searchLabel": "Spalten- oder Tabellenname",
     "searchPlaceholder": "player_id, faction...",
     "sections": {
+      "backups": "Backups",
       "describe": "Beschreiben",
       "sample": "Beispiel",
       "search": "Spalten suchen",

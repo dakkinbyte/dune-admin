@@ -1,4 +1,49 @@
 {
+  "backups": {
+    "warning": "Stop the battlegroup before taking or restoring a backup. Backups taken while the game is running may be inconsistent, and a restore requires the battlegroup stopped.",
+    "loadFailed": "Failed to load backups: {{message}}",
+    "take": {
+      "title": "Take Backup",
+      "desc": "Snapshot the battlegroup's PostgreSQL database to a timestamped file on the host. Recommended before risky changes.",
+      "btn": "Take Backup"
+    },
+    "taken": "Backup created: {{name}}",
+    "takeFailed": "Backup failed: {{message}}",
+    "recent": {
+      "title": "Recent Backups",
+      "empty": "No backups yet."
+    },
+    "col": {
+      "name": "File",
+      "size": "Size",
+      "modified": "Created"
+    },
+    "download": "Download",
+    "restoreLabel": "Restore",
+    "restoreFailed": "Restore failed: {{message}}",
+    "restoreConfirmTitle": "Restore database?",
+    "restoreConfirmDesc": "This replaces the live database with {{name}}. The battlegroup must be stopped — this cannot be undone.",
+    "deleteLabel": "Delete",
+    "deleteConfirmTitle": "Delete backup?",
+    "deleteConfirmDesc": "Permanently delete {{name}}?",
+    "deleteFailed": "Delete failed: {{message}}",
+    "schedule": {
+      "title": "Backup Schedule",
+      "enable": "Enabled",
+      "desc": "Run automatic backups on a weekly schedule. Times are in the configured timezone.",
+      "nextBackup": "Next backup: {{when}}",
+      "noneScheduled": "No backups scheduled",
+      "noRules": "No rules yet — add one below.",
+      "addRule": "Add rule",
+      "removeRule": "Remove rule",
+      "keepN": "Keep last",
+      "keepHint": "0 = keep all",
+      "timezone": "Timezone",
+      "tzPlaceholder": "host local (e.g. UTC)",
+      "save": "Save",
+      "saveFailed": "Save failed: {{message}}"
+    }
+  },
   "serverHealth": {
     "title": "Server Health",
     "subtitle": "Live VM, battlegroup, and port status.",
@@ -249,6 +294,7 @@
     "searchLabel": "Column or table name",
     "searchPlaceholder": "player_id, faction...",
     "sections": {
+      "backups": "Backups",
       "describe": "Describe",
       "sample": "Sample",
       "search": "Search Columns",
