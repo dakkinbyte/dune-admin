@@ -108,7 +108,7 @@ export const LandsraadTab: React.FC = () => {
                       <span className="text-foreground">{d.name}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted">{t('landsraad.weight', { weight: d.weight })}</span>
-                        <Chip size="sm" variant="soft" color={d.disabled ? 'default' : 'success'}>
+                        <Chip size="sm" variant="soft" color={d.disabled ? 'danger' : 'success'}>
                           {d.disabled ? t('landsraad.disabled') : t('landsraad.enabled')}
                         </Chip>
                       </div>
