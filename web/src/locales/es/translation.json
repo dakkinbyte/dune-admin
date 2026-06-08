@@ -13,6 +13,7 @@
     "reinstalled": "{{version}} reinstalado. El servidor se está reiniciando…",
     "saveApply": "Guardar y aplicar",
     "selectLanguage": "Seleccionar idioma",
+    "selectTheme": "Seleccionar tema",
     "settings": "Configuración",
     "signIn": "Iniciar sesión",
     "switchToSidenav": "Cambiar a navegación lateral",

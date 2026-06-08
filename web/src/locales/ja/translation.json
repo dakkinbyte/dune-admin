@@ -13,6 +13,7 @@
     "reinstalled": "{{version}} を再インストールしました。サーバーを再起動しています…",
     "saveApply": "保存して適用",
     "selectLanguage": "言語を選択",
+    "selectTheme": "テーマを選択",
     "settings": "設定",
     "signIn": "サインイン",
     "switchToSidenav": "サイドナビゲーションに切替",

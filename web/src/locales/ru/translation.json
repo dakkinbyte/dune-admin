@@ -13,6 +13,7 @@
     "reinstalled": "{{version}} переустановлен. Сервер перезапускается…",
     "saveApply": "Сохранить и применить",
     "selectLanguage": "Выбрать язык",
+    "selectTheme": "Выбрать тему",
     "settings": "Настройки",
     "signIn": "Войти",
     "switchToSidenav": "Переключить на боковую навигацию",

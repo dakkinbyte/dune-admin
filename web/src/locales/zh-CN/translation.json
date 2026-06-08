@@ -13,6 +13,7 @@
     "reinstalled": "已重新安装 {{version}}。服务器正在重启…",
     "saveApply": "保存并应用",
     "selectLanguage": "选择语言",
+    "selectTheme": "选择主题",
     "settings": "设置",
     "signIn": "登录",
     "switchToSidenav": "切换到侧边导航",

@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { useStatus } from './hooks/useStatus'
 import { SettingsConfigForm } from './components/SettingsConfigForm'
 import { LanguageSelector } from './components/LanguageSelector'
+import { ThemeSelector } from './components/ThemeSelector'
 import { BattlegroupTab } from './tabs/BattlegroupTab'
 import { LiveMapTab } from './tabs/LiveMapTab'
 import { PlayersTab } from './tabs/PlayersTab'
@@ -317,6 +318,7 @@ const AppCore: React.FC<AppCoreProps> = ({ isSignedIn }) => {
             </span>
           )}
 
+          <ThemeSelector />
           <LanguageSelector />
           <ToggleButtonGroup
             selectionMode="single"
@@ -336,13 +338,14 @@ const AppCore: React.FC<AppCoreProps> = ({ isSignedIn }) => {
           </ToggleButtonGroup>
           <Button
             size="sm"
-            variant="ghost"
-            isIconOnly
+            variant="outline"
             aria-label={t('app.configureBackend')}
             onPress={() => setShowBackendConfig((v) => !v)}
-            className={showBackendConfig ? 'text-accent' : ''}
+            className={showBackendConfig ? 'text-accent border-accent' : ''}
           >
             <Icon name="settings" />
+            {' '}
+            {t('app.settings')}
           </Button>
 
           {hasClerk && (

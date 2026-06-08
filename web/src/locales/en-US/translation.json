@@ -13,6 +13,7 @@
     "reinstalled": "Reinstalled {{version}}. Server is restarting…",
     "saveApply": "Save & Apply",
     "selectLanguage": "Select language",
+    "selectTheme": "Select theme",
     "settings": "Settings",
     "signIn": "Sign In",
     "switchToSidenav": "Switch to side navigation",
