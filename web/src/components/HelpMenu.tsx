@@ -23,6 +23,35 @@ function buildDiagnostics(status?: Status | null): string {
   ].join('\n')
 }
 
+// copyText copies to the clipboard. navigator.clipboard only exists in a secure
+// context (HTTPS or localhost); dune-admin is commonly served over plain HTTP on
+// a LAN IP, where it's undefined — so fall back to a hidden textarea +
+// document.execCommand('copy'), which works in insecure contexts.
+async function copyText(text: string): Promise<boolean> {
+  if (window.isSecureContext && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text)
+      return true
+    }
+    catch { /* fall through to the legacy path */ }
+  }
+  try {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.setAttribute('readonly', '')
+    ta.style.position = 'fixed'
+    ta.style.top = '-9999px'
+    document.body.appendChild(ta)
+    ta.select()
+    const ok = document.execCommand('copy')
+    document.body.removeChild(ta)
+    return ok
+  }
+  catch {
+    return false
+  }
+}
+
 // HelpMenu (#143): a header dropdown that makes it easy to file a GitHub issue
 // pre-filled with diagnostic context, copy that context for Discord/etc., and
 // reach the repository. Supersedes the standalone GitHub link (#138/#151).
@@ -45,9 +74,10 @@ export const HelpMenu: React.FC<{ status?: Status | null }> = ({ status }) => {
     setOpen(false)
   }
   const copyDiagnostics = () => {
-    navigator.clipboard?.writeText(buildDiagnostics(status))
-      .then(() => toast.success(t('help.copied')))
-      .catch(() => toast.danger(t('help.copyFailed')))
+    copyText(buildDiagnostics(status)).then((ok) => {
+      if (ok) toast.success(t('help.copied'))
+      else toast.danger(t('help.copyFailed'))
+    })
     setOpen(false)
   }
   const openRepo = () => {
