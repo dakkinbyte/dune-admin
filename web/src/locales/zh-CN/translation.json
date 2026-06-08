@@ -1,4 +1,12 @@
 {
+  "help": {
+    "menu": "帮助",
+    "reportIssue": "报告问题",
+    "copyDiagnostics": "复制诊断信息",
+    "viewOnGitHub": "在 GitHub 上查看",
+    "copied": "诊断信息已复制到剪贴板",
+    "copyFailed": "无法复制到剪贴板"
+  },
   "app": {
     "changesNote": "所有选项卡上的更改将一起保存。",
     "checkUpdates": "检查更新",

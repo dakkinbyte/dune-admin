@@ -1,4 +1,12 @@
 {
+  "help": {
+    "menu": "Aide",
+    "reportIssue": "Signaler un problème",
+    "copyDiagnostics": "Copier le diagnostic",
+    "viewOnGitHub": "Voir sur GitHub",
+    "copied": "Diagnostic copié dans le presse-papiers",
+    "copyFailed": "Impossible de copier dans le presse-papiers"
+  },
   "app": {
     "changesNote": "Les modifications de tous les onglets sont enregistrées ensemble.",
     "checkUpdates": "Vérifier les mises à jour",

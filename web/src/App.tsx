@@ -8,6 +8,7 @@ import { useStatus } from './hooks/useStatus'
 import { SettingsConfigForm } from './components/SettingsConfigForm'
 import { LanguageSelector } from './components/LanguageSelector'
 import { ThemeSelector } from './components/ThemeSelector'
+import { HelpMenu } from './components/HelpMenu'
 import { BattlegroupTab } from './tabs/BattlegroupTab'
 import { LiveMapTab } from './tabs/LiveMapTab'
 import { PlayersTab } from './tabs/PlayersTab'
@@ -318,6 +319,7 @@ const AppCore: React.FC<AppCoreProps> = ({ isSignedIn }) => {
             </span>
           )}
 
+          <HelpMenu status={status} />
           <ThemeSelector />
           <LanguageSelector />
           <ToggleButtonGroup

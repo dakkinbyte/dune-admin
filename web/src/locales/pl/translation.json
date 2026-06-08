@@ -1,4 +1,12 @@
 {
+  "help": {
+    "menu": "Pomoc",
+    "reportIssue": "Zgłoś problem",
+    "copyDiagnostics": "Kopiuj diagnostykę",
+    "viewOnGitHub": "Zobacz na GitHubie",
+    "copied": "Diagnostyka skopiowana do schowka",
+    "copyFailed": "Nie udało się skopiować do schowka"
+  },
   "app": {
     "changesNote": "Zmiany na wszystkich kartach są zapisywane razem.",
     "checkUpdates": "Sprawdź aktualizacje",

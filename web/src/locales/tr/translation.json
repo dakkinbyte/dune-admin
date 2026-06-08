@@ -1,4 +1,12 @@
 {
+  "help": {
+    "menu": "Yardım",
+    "reportIssue": "Sorun bildir",
+    "copyDiagnostics": "Tanılamayı kopyala",
+    "viewOnGitHub": "GitHub'da görüntüle",
+    "copied": "Tanılama panoya kopyalandı",
+    "copyFailed": "Panoya kopyalanamadı"
+  },
   "app": {
     "changesNote": "Tüm sekmelerdeki değişiklikler birlikte kaydedilir.",
     "checkUpdates": "Güncellemeleri Kontrol Et",

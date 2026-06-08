@@ -1,4 +1,12 @@
 {
+  "help": {
+    "menu": "Ayuda",
+    "reportIssue": "Informar de un problema",
+    "copyDiagnostics": "Copiar diagnóstico",
+    "viewOnGitHub": "Ver en GitHub",
+    "copied": "Diagnóstico copiado al portapapeles",
+    "copyFailed": "No se pudo copiar al portapapeles"
+  },
   "app": {
     "changesNote": "Los cambios en todas las pestañas se guardan juntos.",
     "checkUpdates": "Buscar actualizaciones",

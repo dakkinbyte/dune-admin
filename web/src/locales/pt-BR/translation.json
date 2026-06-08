@@ -1,4 +1,12 @@
 {
+  "help": {
+    "menu": "Ajuda",
+    "reportIssue": "Relatar um problema",
+    "copyDiagnostics": "Copiar diagnóstico",
+    "viewOnGitHub": "Ver no GitHub",
+    "copied": "Diagnóstico copiado para a área de transferência",
+    "copyFailed": "Não foi possível copiar para a área de transferência"
+  },
   "app": {
     "changesNote": "As alterações em todas as abas são salvas juntas.",
     "checkUpdates": "Verificar atualizações",

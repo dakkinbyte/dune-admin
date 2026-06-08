@@ -1,4 +1,12 @@
 {
+  "help": {
+    "menu": "Help",
+    "reportIssue": "Report an issue",
+    "copyDiagnostics": "Copy diagnostics",
+    "viewOnGitHub": "View on GitHub",
+    "copied": "Diagnostics copied to clipboard",
+    "copyFailed": "Could not copy to clipboard"
+  },
   "app": {
     "changesNote": "Changes on all tabs are saved together.",
     "checkUpdates": "Check for Updates",

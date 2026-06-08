@@ -1,4 +1,12 @@
 {
+  "help": {
+    "menu": "Hilfe",
+    "reportIssue": "Problem melden",
+    "copyDiagnostics": "Diagnose kopieren",
+    "viewOnGitHub": "Auf GitHub ansehen",
+    "copied": "Diagnose in die Zwischenablage kopiert",
+    "copyFailed": "Kopieren in die Zwischenablage fehlgeschlagen"
+  },
   "app": {
     "changesNote": "Änderungen auf allen Tabs werden gemeinsam gespeichert.",
     "checkUpdates": "Nach Updates suchen",

@@ -1,4 +1,12 @@
 {
+  "help": {
+    "menu": "ヘルプ",
+    "reportIssue": "問題を報告",
+    "copyDiagnostics": "診断情報をコピー",
+    "viewOnGitHub": "GitHub で表示",
+    "copied": "診断情報をクリップボードにコピーしました",
+    "copyFailed": "クリップボードにコピーできませんでした"
+  },
   "app": {
     "changesNote": "すべてのタブの変更はまとめて保存されます。",
     "checkUpdates": "更新を確認",
