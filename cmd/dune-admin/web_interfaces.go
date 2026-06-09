@@ -11,11 +11,11 @@ import (
 )
 
 // ── Web interfaces (#155) ────────────────────────────────────────────────────
-// A configurable, deployment-agnostic list of labeled links the Server Health
-// "Web Interfaces" card renders (Director, AMP panel, file browser, anything the
-// operator runs). Persisted as a small JSON file in configDir, mirroring the
-// scheduled-restarts store. Seeded from director_url so existing installs keep
-// their proxied Director link; fully editable thereafter.
+// A configurable, deployment-agnostic list of operator-defined web links (AMP
+// panel, file browser, etc.) the Server Health "Web Interfaces" card renders.
+// Persisted as a small JSON file in configDir, mirroring the scheduled-restarts
+// store. The Battlegroup Director is NOT stored here — the card shows it
+// automatically from director_url (via the /director/ proxy) when configured.
 
 type webInterface struct {
 	Label string `json:"label"`
@@ -42,28 +42,19 @@ func webInterfacesPath() string {
 	return filepath.Join(configDir(), "web-interfaces.json")
 }
 
-// seedWebInterfaces returns the default list for a fresh install: the proxied
-// Director link when a director_url is configured, otherwise empty.
-func seedWebInterfaces() []webInterface {
-	if loadedConfig.DirectorURL != "" {
-		return []webInterface{{Label: "Director", URL: "/director/"}}
-	}
-	return []webInterface{}
-}
-
 func loadWebInterfaces() {
 	webIfaceMu.Lock()
 	defer webIfaceMu.Unlock()
 	webIfaceLoaded = true
 	data, err := os.ReadFile(webInterfacesPath())
 	if err != nil {
-		webIfaces = seedWebInterfaces() // no file yet → seed (in memory only)
+		webIfaces = []webInterface{} // no file yet → empty (the Director shows automatically)
 		return
 	}
 	var list []webInterface
 	if err := json.Unmarshal(data, &list); err != nil {
 		log.Printf("web-interfaces: config parse: %v", err)
-		webIfaces = seedWebInterfaces()
+		webIfaces = []webInterface{}
 		return
 	}
 	webIfaces = list

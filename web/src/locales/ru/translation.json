@@ -45,6 +45,7 @@
     }
   },
   "serverHealth": {
+    "directorProxied": "(через прокси)",
     "ifaceLoadFailed": "Не удалось загрузить веб-интерфейсы: {{message}}",
     "ifaceSaveFailed": "Не удалось сохранить: {{message}}",
     "ifaceLabel": "Метка",

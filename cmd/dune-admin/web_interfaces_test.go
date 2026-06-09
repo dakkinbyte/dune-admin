@@ -39,19 +39,3 @@ func TestValidateWebInterfaces(t *testing.T) {
 		t.Fatalf("expected error for > %d entries", maxWebInterfaces)
 	}
 }
-
-func TestSeedWebInterfaces(t *testing.T) {
-	prev := loadedConfig
-	t.Cleanup(func() { loadedConfig = prev })
-
-	loadedConfig = appConfig{DirectorURL: "http://127.0.0.1:11717"}
-	seed := seedWebInterfaces()
-	if len(seed) != 1 || seed[0].Label != "Director" || seed[0].URL != "/director/" {
-		t.Fatalf("with director_url set, seed = %+v, want one Director→/director/ entry", seed)
-	}
-
-	loadedConfig = appConfig{DirectorURL: ""}
-	if len(seedWebInterfaces()) != 0 {
-		t.Fatalf("with no director_url, seed should be empty")
-	}
-}

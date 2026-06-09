@@ -45,6 +45,7 @@
     }
   },
   "serverHealth": {
+    "directorProxied": "(przez proxy)",
     "ifaceLoadFailed": "Nie udało się załadować interfejsów webowych: {{message}}",
     "ifaceSaveFailed": "Zapis nie powiódł się: {{message}}",
     "ifaceLabel": "Etykieta",
