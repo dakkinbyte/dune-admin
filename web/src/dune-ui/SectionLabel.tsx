@@ -11,7 +11,7 @@ interface SectionLabelProps {
  */
 export const SectionLabel: React.FC<SectionLabelProps> = ({ children }) => {
   return (
-    <h4 className="text-xs font-semibold uppercase tracking-widest text-accent border-l-2 border-[#754d13] pl-2">
+    <h4 className="text-xs font-semibold uppercase tracking-widest text-accent border-l-2 border-(--accent-soft-border) pl-2">
       {children}
     </h4>
   )

@@ -268,8 +268,8 @@ const AppCore: React.FC<AppCoreProps> = ({ isSignedIn }) => {
 
       {/* Header */}
       <header
-        className="flex items-center justify-between px-6 py-3 border-b border-[#4e3411] bg-surface shrink-0"
-        style={{ background: 'linear-gradient(180deg, #241a0e 0%, #1a1610 100%)' }}
+        className="flex items-center justify-between px-6 py-3 border-b border-border bg-surface shrink-0"
+        style={{ background: 'linear-gradient(180deg, var(--surface-secondary) 0%, var(--surface) 100%)' }}
       >
         <div className="flex items-center gap-3">
           <Button
