@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import type React from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, Spinner, toast } from '@heroui/react'
+import { Button, Spinner, Switch, ToggleButton, ToggleButtonGroup, toast } from '@heroui/react'
 import { api } from '../../../api/client'
 import type { DBBackupFile, ScheduledBackups, BackupRule } from '../../../api/client'
-import { Panel, SectionLabel, PageHeader, Icon, ConfirmDialog } from '../../../dune-ui'
+import { Panel, SectionLabel, PageHeader, Icon, ConfirmDialog, NumberInput, TimeInput } from '../../../dune-ui'
+import { TimezoneSelect } from '../../../components/TimezoneSelect'
 
 const DOW = [0, 1, 2, 3, 4, 5, 6] // Sun..Sat
 
@@ -14,8 +15,6 @@ function fmtSize(b: number): string {
   if (b < 1024 * 1024 * 1024) return `${(b / 1024 / 1024).toFixed(1)} MB`
   return `${(b / 1024 / 1024 / 1024).toFixed(1)} GB`
 }
-
-const inputCls = 'bg-surface text-foreground border border-border rounded px-2 py-1 text-sm'
 
 // ── Backup schedule card (self-contained, mirrors ScheduledRestartsCard) ──────
 const ScheduleCard: React.FC = () => {
@@ -66,12 +65,8 @@ const ScheduleCard: React.FC = () => {
   const removeRule = (i: number) => setRules((r) => r.filter((_, idx) => idx !== i))
   const setRuleTime = (i: number, time: string) =>
     setRules((r) => r.map((rule, idx) => (idx === i ? { ...rule, time } : rule)))
-  const toggleDay = (i: number, d: number) =>
-    setRules((r) => r.map((rule, idx) => {
-      if (idx !== i) return rule
-      const days = rule.days.includes(d) ? rule.days.filter((x) => x !== d) : [...rule.days, d].sort((a, b) => a - b)
-      return { ...rule, days }
-    }))
+  const setRuleDays = (i: number, days: number[]) =>
+    setRules((r) => r.map((rule, idx) => (idx === i ? { ...rule, days } : rule)))
 
   const dowLabel = (d: number) =>
     new Intl.DateTimeFormat(i18n.language, { weekday: 'short' }).format(new Date(Date.UTC(2023, 0, 1 + d)))
@@ -80,10 +75,9 @@ const ScheduleCard: React.FC = () => {
     <Panel>
       <div className="flex items-center justify-between mb-1">
         <SectionLabel>{t('backups.schedule.title')}</SectionLabel>
-        <label className="flex items-center gap-2 text-xs text-muted cursor-pointer">
-          <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
+        <Switch isSelected={enabled} onChange={setEnabled} size="sm" className="text-xs text-muted">
           {t('backups.schedule.enable')}
-        </label>
+        </Switch>
       </div>
       <p className="text-xs text-muted mb-2">{t('backups.schedule.desc')}</p>
 
@@ -104,28 +98,20 @@ const ScheduleCard: React.FC = () => {
               {rules.length === 0 && <div className="text-xs text-muted mb-2">{t('backups.schedule.noRules')}</div>}
               {rules.map((rule, i) => (
                 <div key={i} className="flex items-center gap-2 mb-2 flex-wrap">
-                  <div className="flex gap-1">
+                  <ToggleButtonGroup
+                    selectionMode="multiple"
+                    selectedKeys={rule.days.map(String)}
+                    onSelectionChange={(keys) => {
+                      const days = [...keys].map(Number).sort((a, b) => a - b)
+                      setRuleDays(i, days)
+                    }}
+                    size="sm"
+                  >
                     {DOW.map((d) => (
-                      <button
-                        key={d}
-                        type="button"
-                        onClick={() => toggleDay(i, d)}
-                        className={`h-7 px-1.5 rounded text-xs transition-colors ${
-                          rule.days.includes(d)
-                            ? 'bg-accent text-accent-foreground'
-                            : 'bg-surface-secondary text-muted hover:text-foreground'
-                        }`}
-                      >
-                        {dowLabel(d)}
-                      </button>
+                      <ToggleButton key={d} id={String(d)}>{dowLabel(d)}</ToggleButton>
                     ))}
-                  </div>
-                  <input
-                    type="time"
-                    value={rule.time}
-                    onChange={(e) => setRuleTime(i, e.target.value)}
-                    className={inputCls}
-                  />
+                  </ToggleButtonGroup>
+                  <TimeInput value={rule.time} onChange={(v) => setRuleTime(i, v)} ariaLabel="time" />
                   <Button
                     size="sm"
                     variant="ghost"
@@ -147,23 +133,19 @@ const ScheduleCard: React.FC = () => {
               <div className="flex items-center gap-4 mb-3 text-sm flex-wrap">
                 <label className="flex items-center gap-2">
                   {t('backups.schedule.keepN')}
-                  <input
-                    type="number"
-                    min={0}
+                  <NumberInput
                     value={keepN}
-                    onChange={(e) => setKeepN(Number(e.target.value) || 0)}
-                    className={`${inputCls} w-20`}
+                    onChange={setKeepN}
+                    min={0}
+                    ariaLabel={t('backups.schedule.keepN')}
+                    className="w-20"
+                    showButtons={false}
                   />
                   <span className="text-xs text-muted">{t('backups.schedule.keepHint')}</span>
                 </label>
                 <label className="flex items-center gap-2 flex-1 min-w-[160px]">
                   {t('backups.schedule.timezone')}
-                  <input
-                    value={timezone}
-                    placeholder={t('backups.schedule.tzPlaceholder')}
-                    onChange={(e) => setTimezone(e.target.value)}
-                    className={`${inputCls} flex-1`}
-                  />
+                  <TimezoneSelect value={timezone} onChange={setTimezone} className="flex-1" />
                 </label>
               </div>
 

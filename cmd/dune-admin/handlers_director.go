@@ -74,11 +74,24 @@ func parseDirectorINI(content string) []directorSection {
 	return sections
 }
 
+// inlineCommentStart returns the index of the first inline comment delimiter
+// in s, or -1 if none. Recognises ";;" (double-semicolon), " ; " (single
+// semicolon padded with spaces), and " : " (colon padded with spaces).
+func inlineCommentStart(s string) int {
+	best := -1
+	for _, delim := range []string{";;", " ; ", " : "} {
+		if c := strings.Index(s, delim); c >= 0 && (best < 0 || c < best) {
+			best = c
+		}
+	}
+	return best
+}
+
 func splitDirectorLine(line string, eq int) directorKV {
 	key := strings.TrimSpace(line[:eq])
 	value, comment := line[eq+1:], ""
-	if c := strings.Index(value, ";;"); c >= 0 {
-		comment = strings.TrimSpace(strings.TrimLeft(value[c:], "; "))
+	if c := inlineCommentStart(value); c >= 0 {
+		comment = strings.TrimSpace(strings.TrimLeft(value[c:], ";: "))
 		value = value[:c]
 	}
 	kv := directorKV{Key: key, Value: strings.TrimSpace(value), Comment: comment, Secret: isDirectorSecretKey(key)}
@@ -88,8 +101,23 @@ func splitDirectorLine(line string, eq int) directorKV {
 	return kv
 }
 
+// rewriteDirectorLine replaces the value in a "key=value [comment]" line while
+// preserving any inline comment and its original delimiter verbatim.
+func rewriteDirectorLine(raw string, eq int, newVal string) string {
+	afterEq := raw[eq+1:]
+	comment := ""
+	if c := inlineCommentStart(afterEq); c >= 0 {
+		start := c
+		if start > 0 && afterEq[start-1] == ' ' {
+			start--
+		}
+		comment = afterEq[start:]
+	}
+	return raw[:eq+1] + newVal + comment
+}
+
 // applyDirectorEdits rewrites the file, replacing the value of edited keys within
-// their section while preserving the key part, inline ';;' comments, ordering,
+// their section while preserving the key part, inline comments, ordering,
 // and all non-edited lines. edits is section -> key -> new value. Read-only
 // sections and secret keys are never written (double-guarded).
 func applyDirectorEdits(content string, edits map[string]map[string]string) string {
@@ -115,11 +143,7 @@ func applyDirectorEdits(content string, edits map[string]map[string]string) stri
 		if !has || isDirectorSecretKey(key) {
 			continue
 		}
-		comment := ""
-		if c := strings.Index(raw[eq+1:], ";;"); c >= 0 {
-			comment = " " + strings.TrimSpace(raw[eq+1+c:])
-		}
-		lines[i] = raw[:eq+1] + newVal + comment
+		lines[i] = rewriteDirectorLine(raw, eq, newVal)
 	}
 	return strings.Join(lines, "\n")
 }

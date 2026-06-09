@@ -20,6 +20,104 @@ Survival_1=Dimension
 DeepDesert_1=ClassicalInstancing
 `
 
+// inlineCommentStart tests
+func TestInlineCommentStart(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		s    string
+		want int
+	}{
+		{"false ;; some comment", 6},   // ;; starts at 6 (after "false ")
+		{"false ; some comment", 5},    // " ; " starts at 5 (the leading space)
+		{"false : some comment", 5},    // " : " starts at 5 (the leading space)
+		{"value", -1},                  // no comment
+		{"5", -1},                      // no comment
+		{"ClassicalInstancing", -1},    // no comment
+		{" ;; leading space delim", 1}, // ;; starts at 1 (after the leading space)
+	}
+	for _, tt := range tests {
+		got := inlineCommentStart(tt.s)
+		if got != tt.want {
+			t.Errorf("inlineCommentStart(%q) = %d, want %d", tt.s, got, tt.want)
+		}
+	}
+}
+
+// splitDirectorLine tests for alternative comment delimiters
+func TestSplitDirectorLine_Delimiters(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		line        string
+		wantKey     string
+		wantValue   string
+		wantComment string
+	}{
+		{
+			// existing double-semicolon style
+			line:        "DbFetchInterval=5 ;; seconds between fetch",
+			wantKey:     "DbFetchInterval",
+			wantValue:   "5",
+			wantComment: "seconds between fetch",
+		},
+		{
+			// single semicolon with spaces (Funcom style)
+			line:        "KeepPartiesTogether=false ; Remove when PlayerHardCap is changed to > 1",
+			wantKey:     "KeepPartiesTogether",
+			wantValue:   "false",
+			wantComment: "Remove when PlayerHardCap is changed to > 1",
+		},
+		{
+			// colon delimiter
+			line:        "KeepPartiesTogether=false : Remove when PlayerHardCap is changed to > 1",
+			wantKey:     "KeepPartiesTogether",
+			wantValue:   "false",
+			wantComment: "Remove when PlayerHardCap is changed to > 1",
+		},
+		{
+			// no comment
+			line:      "Survival_1=Dimension",
+			wantKey:   "Survival_1",
+			wantValue: "Dimension",
+		},
+	}
+	for _, tt := range tests {
+		eq := strings.Index(tt.line, "=")
+		kv := splitDirectorLine(tt.line, eq)
+		if kv.Key != tt.wantKey || kv.Value != tt.wantValue || kv.Comment != tt.wantComment {
+			t.Errorf("splitDirectorLine(%q) = {Key:%q Value:%q Comment:%q}, want {Key:%q Value:%q Comment:%q}",
+				tt.line, kv.Key, kv.Value, kv.Comment, tt.wantKey, tt.wantValue, tt.wantComment)
+		}
+	}
+}
+
+// applyDirectorEdits must preserve the original comment delimiter verbatim
+func TestApplyDirectorEdits_Delimiters(t *testing.T) {
+	t.Parallel()
+	ini := `[ Battlegroup ]
+KeepPartiesTogether=false : Remove when PlayerHardCap is changed to > 1
+MaxPlayersPerParty=10 ; max players
+NoComment=old
+`
+	edits := map[string]map[string]string{
+		"Battlegroup": {
+			"KeepPartiesTogether": "true",
+			"MaxPlayersPerParty":  "20",
+			"NoComment":           "new",
+		},
+	}
+	out := applyDirectorEdits(ini, edits)
+
+	if !strings.Contains(out, "KeepPartiesTogether=true : Remove when PlayerHardCap is changed to > 1") {
+		t.Errorf("colon delimiter not preserved:\n%s", out)
+	}
+	if !strings.Contains(out, "MaxPlayersPerParty=20 ; max players") {
+		t.Errorf("semicolon delimiter not preserved:\n%s", out)
+	}
+	if !strings.Contains(out, "NoComment=new") {
+		t.Errorf("no-comment edit not applied:\n%s", out)
+	}
+}
+
 func findDirectorSection(secs []directorSection, name string) *directorSection {
 	for i := range secs {
 		if secs[i].Name == name {

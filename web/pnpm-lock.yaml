@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  '@internationalized/date': 3.12.2
+
 importers:
 
   .:
@@ -38,6 +41,9 @@ importers:
       '@iconify/react':
         specifier: ^6.0.2
         version: 6.0.2(react@19.2.6)
+      '@internationalized/date':
+        specifier: ^3.12.2
+        version: 3.12.2
       '@lezer/highlight':
         specifier: ^1.2.3
         version: 1.2.3

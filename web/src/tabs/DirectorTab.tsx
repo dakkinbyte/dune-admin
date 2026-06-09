@@ -1,10 +1,69 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import type React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button, Spinner, toast } from '@heroui/react'
 import { api, ApiError } from '../api/client'
 import type { DirectorConfig } from '../api/client'
-import { PageHeader, Panel, SectionLabel, Icon } from '../dune-ui'
+import { PageHeader, Panel, SectionLabel, Icon, FieldInput, FieldSelect } from '../dune-ui'
+
+// ── field-type inference (#157) ──────────────────────────────────────────────
+// The director config is untyped INI text, so we infer an editor from the value
+// + comment (data-driven, no hardcoded enum tables): booleans → a dropdown,
+// numbers → a number input, and enums from either a "Alternatives: a, b, c"
+// comment or the distinct values used across the [InstancingModes] section.
+const numberRe = /^-?\d+(\.\d+)?$/
+
+function parseAlternatives(comment?: string): string[] {
+  const m = comment?.match(/alternatives?:\s*(.+)/i)
+  return m ? m[1].split(',').map((s) => s.trim()).filter(Boolean) : []
+}
+
+type FieldKind = { kind: 'bool' } | { kind: 'number' } | { kind: 'enum', options: string[] } | { kind: 'text' }
+
+function fieldKind(
+  section: string, value: string, comment: string | undefined, instancingOptions: string[],
+): FieldKind {
+  if (section === 'InstancingModes' && instancingOptions.length > 1) return { kind: 'enum', options: instancingOptions }
+  const alt = parseAlternatives(comment)
+  if (alt.length > 1) return { kind: 'enum', options: alt }
+  const v = value.trim().toLowerCase()
+  if (v === 'true' || v === 'false') return { kind: 'bool' }
+  if (numberRe.test(value.trim())) return { kind: 'number' }
+  return { kind: 'text' }
+}
+
+const DirectorEditor: React.FC<{
+  kind: FieldKind
+  value: string
+  onChange: (v: string) => void
+}> = ({ kind, value, onChange }) => {
+  if (kind.kind === 'bool') {
+    return (
+      <FieldSelect
+        className="w-full"
+        value={value.trim().toLowerCase()}
+        onChange={onChange}
+        options={['true', 'false']}
+      />
+    )
+  }
+  if (kind.kind === 'enum') {
+    // Keep the current value selectable even if it isn't in the derived option set.
+    const opts = kind.options.includes(value) ? kind.options : [value, ...kind.options]
+    return (
+      <FieldSelect
+        className="w-full"
+        value={value}
+        onChange={onChange}
+        options={opts}
+      />
+    )
+  }
+  if (kind.kind === 'number') {
+    return <FieldInput type="number" className="w-full" value={value} onChange={onChange} />
+  }
+  return <FieldInput className="w-full" value={value} onChange={onChange} />
+}
 
 // DirectorTab (#147): view/edit the Battlegroup Director config
 // (director_config.ini). [InstancingModes] controls map persistence; [Database]
@@ -40,6 +99,14 @@ export const DirectorTab: React.FC = () => {
   useEffect(() => {
     load()
   }, [load])
+
+  // The [InstancingModes] section's keys all share one enum domain (map →
+  // instancing mode), so its distinct values ARE the option set for each key.
+  const instancingOptions = useMemo(() => {
+    const sec = data?.sections.find((s) => s.name === 'InstancingModes')
+    if (!sec) return []
+    return Array.from(new Set(sec.lines.map((l) => l.value.trim()).filter(Boolean)))
+  }, [data])
 
   const pk = (section: string, key: string) => `${section}|${key}`
   const setVal = (section: string, key: string, value: string) =>
@@ -141,10 +208,10 @@ export const DirectorTab: React.FC = () => {
                     </div>
                     {editable
                       ? (
-                          <input
-                            className="w-full bg-surface text-foreground border border-border rounded px-2 py-1 text-sm"
+                          <DirectorEditor
+                            kind={fieldKind(sec.name, line.value, line.comment, instancingOptions)}
                             value={cur}
-                            onChange={(e) => setVal(sec.name, line.key, e.target.value)}
+                            onChange={(v) => setVal(sec.name, line.key, v)}
                           />
                         )
                       : <span className="text-muted font-mono truncate">{line.secret ? '••••••••' : line.value}</span>}

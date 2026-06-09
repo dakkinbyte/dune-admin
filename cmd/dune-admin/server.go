@@ -129,6 +129,10 @@ func startServer(addr string) {
 	mux.HandleFunc("GET /api/v1/scheduled-backups", handleGetScheduledBackups)
 	mux.HandleFunc("PUT /api/v1/scheduled-backups", handleUpdateScheduledBackups)
 
+	// Web interfaces (#155) — operator-configurable links for the Server Health card.
+	mux.HandleFunc("GET /api/v1/web-interfaces", handleGetWebInterfaces)
+	mux.HandleFunc("PUT /api/v1/web-interfaces", handleUpdateWebInterfaces)
+
 	// ── battlegroup ───────────────────────────────────────────────────────────
 	mux.HandleFunc("GET /api/v1/battlegroup/status", handleBGStatus)
 	mux.HandleFunc("POST /api/v1/battlegroup/exec", handleBGExec)

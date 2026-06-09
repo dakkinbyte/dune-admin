@@ -80,7 +80,7 @@ Import shared components from `../dune-ui` when a wrapper exists:
 ```ts
 import {
   DataTable, Icon, PageHeader, Panel, SectionDivider, SectionLabel,
-  InfoCard, Dropzone, SideNav,
+  InfoCard, Dropzone, SideNav, NumberInput, FieldInput, FieldSelect, TimeInput,
 } from '../dune-ui'
 import type { Column } from '../dune-ui'
 ```
@@ -90,11 +90,58 @@ Use `@heroui/react` directly only for primitives not wrapped in `dune-ui`
 
 `StatusChip` was removed — use inline `<Chip size="sm" variant="soft" color={...}>` instead.
 
+### `FieldInput`
+
+Wraps HeroUI `Input` with `size="sm"`. Use for all text, number, password, email, and url inputs.
+
+```tsx
+<FieldInput value={val} onChange={setVal} placeholder="…" aria-label="…" />
+<FieldInput type="number" value={num} onChange={setNum} className="w-32" />
+<FieldInput value={path} onChange={setPath} classNames={{ input: 'font-mono' }} />
+```
+
+### `FieldSelect`
+
+Wraps HeroUI `Select` + `ListBox` for small, fixed option sets (booleans, enums up to ~20 items).
+
+```tsx
+<FieldSelect value={val} onChange={setVal} options={['true', 'false']} />
+<FieldSelect value={mode} onChange={setMode} options={['A', 'B', 'C']} className="w-40" />
+```
+
+For large option sets, `FieldSelect` (and HeroUI `Select` directly) still work — use them
+for visual consistency. `TimezoneSelect` in `components/` wraps HeroUI `Select` for the
+~400-entry IANA list with a host-local sentinel.
+
+### `TimeInput`
+
+Wraps HeroUI `TimeField` with 24-hour segmented input. Accepts and emits `"HH:MM"` strings.
+
+```tsx
+<TimeInput value={rule.time} onChange={(v) => setRuleTime(i, v)} ariaLabel="time" />
+```
+
+### Checkboxes and Toggles
+
+Use HeroUI's `Checkbox` and `Switch` from `@heroui/react` — never native `<input type="checkbox">`:
+
+```tsx
+import { Checkbox, Switch } from '@heroui/react'
+
+// Toggle (on/off) — use Switch
+<Switch isSelected={enabled} onChange={setEnabled} size="sm">{t('enable')}</Switch>
+
+// Checkbox (filter/option) — use Checkbox (no size prop)
+<Checkbox isSelected={isOn} onChange={setOn}>{t('label')}</Checkbox>
+
+// Checkbox with indeterminate state
+<Checkbox isSelected={allOn} isIndeterminate={!allOn && anyOn} onChange={handleChange} />
+```
+
 ## HeroUI v3 limitations
 
-- `Select.Value` has no `placeholder` prop — use a sentinel item or keep native `<select>`
 - HeroUI `Select` has no `<optgroup>` — keep native `<select>` for grouped option lists
-- No equivalent for `<input list="...">` + `<datalist>` — keep native `<input>` with `bg-surface text-foreground border-border`
+- No equivalent for `<input list="...">` + `<datalist>` — keep native `<input>` with `bg-surface text-foreground border border-border rounded`
 
 ## Migration backlog
 

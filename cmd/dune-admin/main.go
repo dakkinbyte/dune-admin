@@ -771,6 +771,9 @@ func main() {
 	loadScheduledBackupConfig()
 	go runBackupScheduler(context.Background())
 
+	// Web interfaces (#155): load the operator-configured Server Health links.
+	loadWebInterfaces()
+
 	initLocationStore()
 	initGivePacksStore()
 
