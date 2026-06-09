@@ -439,6 +439,155 @@ func TestBuyExpiryCutoff(t *testing.T) {
 	}
 }
 
+// --- Player game epoch tests (issue #142) ---
+
+// TestApplyLearnedPlayerEpoch_SkipsOnError verifies that applyLearnedPlayerEpoch
+// does not modify playerGameEpochUnix when fetchRef returns an error.
+func TestApplyLearnedPlayerEpoch_SkipsOnError(t *testing.T) {
+	t.Parallel()
+
+	ex := &Exchange{playerGameEpochUnix: 12345}
+	applyLearnedPlayerEpoch(ex, func() (int64, error) {
+		return 0, errors.New("no rows")
+	})
+	if ex.playerGameEpochUnix != 12345 {
+		t.Errorf("playerGameEpochUnix changed on error: got %d, want 12345", ex.playerGameEpochUnix)
+	}
+}
+
+// TestApplyLearnedPlayerEpoch_SkipsOnZeroRef verifies that applyLearnedPlayerEpoch
+// does not modify playerGameEpochUnix when fetchRef returns 0.
+func TestApplyLearnedPlayerEpoch_SkipsOnZeroRef(t *testing.T) {
+	t.Parallel()
+
+	ex := &Exchange{playerGameEpochUnix: 99}
+	applyLearnedPlayerEpoch(ex, func() (int64, error) { return 0, nil })
+	if ex.playerGameEpochUnix != 99 {
+		t.Errorf("playerGameEpochUnix changed on zero ref: got %d, want 99", ex.playerGameEpochUnix)
+	}
+}
+
+// TestApplyLearnedPlayerEpoch_SkipsSentinel verifies that a ref equal to
+// epochSentinelCutoff does not update playerGameEpochUnix.
+func TestApplyLearnedPlayerEpoch_SkipsSentinel(t *testing.T) {
+	t.Parallel()
+
+	ex := &Exchange{playerGameEpochUnix: 42}
+	applyLearnedPlayerEpoch(ex, func() (int64, error) { return epochSentinelCutoff, nil })
+	if ex.playerGameEpochUnix != 42 {
+		t.Errorf("epoch updated from sentinel ref: got %d, want 42", ex.playerGameEpochUnix)
+	}
+}
+
+// TestApplyLearnedPlayerEpoch_SkipsAboveSentinel verifies that a ref above
+// epochSentinelCutoff does not update playerGameEpochUnix.
+func TestApplyLearnedPlayerEpoch_SkipsAboveSentinel(t *testing.T) {
+	t.Parallel()
+
+	ex := &Exchange{playerGameEpochUnix: 42}
+	applyLearnedPlayerEpoch(ex, func() (int64, error) { return epochSentinelCutoff + 1, nil })
+	if ex.playerGameEpochUnix != 42 {
+		t.Errorf("epoch updated from above-sentinel ref: got %d, want 42", ex.playerGameEpochUnix)
+	}
+}
+
+// TestApplyLearnedPlayerEpoch_SetsEpochFromPlayerListing verifies that a valid
+// player listing expiry sets playerGameEpochUnix so that playerGameNow() returns
+// approximately expiry - orderExpirySecs (i.e. the player market game time).
+// This is the core fix for issue #142: the player clock must be tracked
+// separately from the NPC clock so the buy-side cutoff uses the right timebase.
+func TestApplyLearnedPlayerEpoch_SetsEpochFromPlayerListing(t *testing.T) {
+	t.Parallel()
+
+	const playerExpiry = int64(1_363_606) // example value from issue #142 report
+	ex := newTestExchange(t)
+
+	applyLearnedPlayerEpoch(ex, func() (int64, error) { return playerExpiry, nil })
+
+	if ex.playerGameEpochUnix == 0 {
+		t.Fatal("playerGameEpochUnix should be set after learning from a player listing")
+	}
+	wantPlayerNow := playerExpiry - orderExpirySecs
+	gotPlayerNow := time.Now().Unix() - ex.playerGameEpochUnix
+	if diff := gotPlayerNow - wantPlayerNow; diff < -5 || diff > 5 {
+		t.Errorf("playerGameNow() ≈ %d, want ≈ %d (delta %d seconds)", gotPlayerNow, wantPlayerNow, diff)
+	}
+}
+
+// TestApplyLearnedPlayerEpoch_UpdatesOnChange verifies that playerGameEpochUnix
+// is updated when a new, different expiration_time is observed.
+func TestApplyLearnedPlayerEpoch_UpdatesOnChange(t *testing.T) {
+	t.Parallel()
+
+	ex := newTestExchange(t)
+	ex.playerGameEpochUnix = 100 // stale/initial value
+
+	const newExpiry = int64(1_500_000)
+	applyLearnedPlayerEpoch(ex, func() (int64, error) { return newExpiry, nil })
+
+	wantEpoch := time.Now().Unix() - (newExpiry - orderExpirySecs)
+	if diff := ex.playerGameEpochUnix - wantEpoch; diff < -5 || diff > 5 {
+		t.Errorf("playerGameEpochUnix = %d, want ≈ %d", ex.playerGameEpochUnix, wantEpoch)
+	}
+}
+
+// TestPlayerGameNow_ZeroWhenEpochUnknown verifies that playerGameNow returns 0
+// when playerGameEpochUnix has not been set.
+func TestPlayerGameNow_ZeroWhenEpochUnknown(t *testing.T) {
+	t.Parallel()
+
+	ex := &Exchange{}
+	if got := ex.playerGameNow(); got != 0 {
+		t.Errorf("playerGameNow() = %d, want 0 when playerGameEpochUnix is 0", got)
+	}
+}
+
+// TestPlayerGameNow_ReturnsCurrentPlayerTime verifies that playerGameNow returns
+// approximately the expected player game time based on playerGameEpochUnix.
+func TestPlayerGameNow_ReturnsCurrentPlayerTime(t *testing.T) {
+	t.Parallel()
+
+	const wantGameNow = int64(1_277_206) // inferred player game time from issue #142
+	ex := &Exchange{
+		playerGameEpochUnix: time.Now().Unix() - wantGameNow,
+	}
+	got := ex.playerGameNow()
+	if diff := got - wantGameNow; diff < -2 || diff > 2 {
+		t.Errorf("playerGameNow() = %d, want ≈ %d (delta %d)", got, wantGameNow, diff)
+	}
+}
+
+// TestBuyTickUsesPlayerClockNotNPCClock is the regression test for issue #142.
+// It verifies that the player clock and NPC clock are treated as independent
+// values, so a large gap between the two (as observed in production) does not
+// cause the NPC-derived cutoff to filter out valid player listings.
+//
+// Key invariant: buyExpiryCutoff(playerGameNow) must not be confused with
+// buyExpiryCutoff(npcGameNow). When the player market game clock origin is
+// ~17 days behind the NPC clock, passing npcGameNow as the cutoff makes
+// player listing expiry times (~1.36M) appear already expired relative to the
+// NPC-derived cutoff (~2.75M).
+func TestBuyTickUsesPlayerClockNotNPCClock(t *testing.T) {
+	t.Parallel()
+
+	// Reproduce the exact values from the issue #142 report.
+	const npcGameNow = int64(2_752_244)    // bot's NPC clock
+	const playerGameNow = int64(1_277_206) // player market clock
+	const playerExpiry = int64(1_363_606)  // fresh 1-day player listing (1277206 + 86400)
+
+	// With the NPC cutoff the listing is incorrectly filtered (1363606 > 2752244 = false).
+	if buyExpiryCutoff(npcGameNow) <= playerExpiry {
+		t.Errorf("test precondition: expected npcGameNow cutoff %d to exceed playerExpiry %d",
+			npcGameNow, playerExpiry)
+	}
+
+	// With the player cutoff the listing is correctly included (1363606 > 1277206 = true).
+	if buyExpiryCutoff(playerGameNow) >= playerExpiry {
+		t.Errorf("player cutoff %d should be less than playerExpiry %d (listing is valid)",
+			playerGameNow, playerExpiry)
+	}
+}
+
 func TestCategoryFor_LiveCacheTakesPrecedenceOverComputedMask(t *testing.T) {
 	t.Parallel()
 
