@@ -45,6 +45,7 @@
     }
   },
   "serverHealth": {
+    "directorProxied": "(con proxy)",
     "ifaceLoadFailed": "Error al cargar las interfaces web: {{message}}",
     "ifaceSaveFailed": "Error al guardar: {{message}}",
     "ifaceLabel": "Etiqueta",

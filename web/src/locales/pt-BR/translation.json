@@ -45,6 +45,7 @@
     }
   },
   "serverHealth": {
+    "directorProxied": "(via proxy)",
     "ifaceLoadFailed": "Falha ao carregar as interfaces web: {{message}}",
     "ifaceSaveFailed": "Falha ao salvar: {{message}}",
     "ifaceLabel": "Rótulo",

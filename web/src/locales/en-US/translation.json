@@ -45,6 +45,7 @@
     }
   },
   "serverHealth": {
+    "directorProxied": "(proxied)",
     "ifaceLoadFailed": "Failed to load web interfaces: {{message}}",
     "ifaceSaveFailed": "Save failed: {{message}}",
     "ifaceLabel": "Label",

@@ -45,6 +45,7 @@
     }
   },
   "serverHealth": {
+    "directorProxied": "(プロキシ経由)",
     "ifaceLoadFailed": "Web インターフェースの読み込みに失敗しました: {{message}}",
     "ifaceSaveFailed": "保存に失敗しました: {{message}}",
     "ifaceLabel": "ラベル",

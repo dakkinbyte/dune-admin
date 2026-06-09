@@ -45,6 +45,7 @@
     }
   },
   "serverHealth": {
+    "directorProxied": "(proxy üzerinden)",
     "ifaceLoadFailed": "Web arayüzleri yüklenemedi: {{message}}",
     "ifaceSaveFailed": "Kaydetme başarısız: {{message}}",
     "ifaceLabel": "Etiket",

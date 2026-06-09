@@ -45,6 +45,7 @@
     }
   },
   "serverHealth": {
+    "directorProxied": "(via proxy)",
     "ifaceLoadFailed": "Échec du chargement des interfaces web : {{message}}",
     "ifaceSaveFailed": "Échec de l'enregistrement : {{message}}",
     "ifaceLabel": "Libellé",

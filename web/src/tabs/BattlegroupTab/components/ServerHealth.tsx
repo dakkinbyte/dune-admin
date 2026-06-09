@@ -161,13 +161,44 @@ const InterfaceRow: React.FC<{ item: WebInterface }> = ({ item }) => {
   )
 }
 
-export const WebInterfacesCard: React.FC = () => {
+// DirectorRow is the automatic, read-only entry shown when director_url is set:
+// the Director usually binds to loopback on the host, so "Open" goes through the
+// same-origin /director/ reverse proxy. The configured target is shown for context.
+const DirectorRow: React.FC<{ directorURL: string }> = ({ directorURL }) => {
+  const { t } = useTranslation()
+  const copy = () => {
+    copyText(`${window.location.origin}/director/`).then((ok) =>
+      (ok ? toast.success(t('serverHealth.copied')) : toast.danger(t('serverHealth.copyFailed'))))
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <Icon name="external-link" className="size-4 text-accent" />
+      <div className="flex flex-col min-w-0 flex-1">
+        <span className="text-sm font-semibold">
+          {t('serverHealth.director')}
+          {' '}
+          <span className="text-xs font-normal text-muted">{t('serverHealth.directorProxied')}</span>
+        </span>
+        <span className="text-xs text-muted font-mono truncate">{directorURL}</span>
+      </div>
+      <Button size="sm" variant="ghost" isIconOnly aria-label={t('serverHealth.copy')} onPress={copy}>
+        <Icon name="copy" />
+      </Button>
+      <Button size="sm" variant="outline" onPress={() => window.open('/director/', '_blank', 'noopener')}>
+        {t('serverHealth.open')}
+      </Button>
+    </div>
+  )
+}
+
+export const WebInterfacesCard: React.FC<{ status: Status | null }> = ({ status }) => {
   const { t } = useTranslation()
   const [items, setItems] = useState<WebInterface[]>([])
   const [draft, setDraft] = useState<WebInterface[]>([])
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const director = status?.director_url
 
   const load = useCallback(() => {
     Promise.resolve()
@@ -214,6 +245,8 @@ export const WebInterfacesCard: React.FC = () => {
     <HealthCard title={t('serverHealth.webInterfaces')} icon="layout" accessory={!editing && !loading ? editBtn : undefined}>
       {loading && <div className="py-2 flex justify-center"><Spinner size="sm" color="current" /></div>}
 
+      {!loading && director && <DirectorRow directorURL={director} />}
+
       {!loading && editing && (
         <div className="flex flex-col gap-2">
           {draft.map((row, i) => (
@@ -256,7 +289,7 @@ export const WebInterfacesCard: React.FC = () => {
         </div>
       )}
 
-      {!loading && !editing && items.length === 0 && (
+      {!loading && !editing && !director && items.length === 0 && (
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm text-muted">{t('serverHealth.noInterfaces')}</span>
           <Button size="sm" variant="outline" onPress={startEdit}>
