@@ -114,7 +114,8 @@ function CB({ label, checked, onChange, hint }: CheckboxFieldProps) {
   return (
     <div className="flex flex-col gap-0.5">
       <Checkbox isSelected={!!checked} onChange={onChange}>
-        {label}
+        <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
+        <Checkbox.Content>{label}</Checkbox.Content>
       </Checkbox>
       {hint && <p className="text-xs text-muted ml-6">{hint}</p>}
     </div>

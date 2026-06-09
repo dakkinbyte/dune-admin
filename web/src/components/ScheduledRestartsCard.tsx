@@ -82,7 +82,8 @@ export const ScheduledRestartsCard: React.FC = () => {
       <div className="flex items-center justify-between mb-2">
         <SectionLabel>{t('restarts.title')}</SectionLabel>
         <Switch isSelected={enabled} onChange={setEnabled} size="sm" className="text-xs text-muted">
-          {t('restarts.enable')}
+          <Switch.Control><Switch.Thumb /></Switch.Control>
+          <Switch.Content>{t('restarts.enable')}</Switch.Content>
         </Switch>
       </div>
 

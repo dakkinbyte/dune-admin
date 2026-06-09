@@ -267,7 +267,10 @@ export const LogsTab: React.FC<LogsTabProps> = ({ control }) => {
                         : t('logs.selectSource', { label: itemLabel })}
                   </Chip>
                   <div className="flex-1" />
-                  <Checkbox isSelected={autoScroll} onChange={setAutoScroll}>{t('logs.autoScroll')}</Checkbox>
+                  <Checkbox isSelected={autoScroll} onChange={setAutoScroll}>
+                    <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
+                    <Checkbox.Content>{t('logs.autoScroll')}</Checkbox.Content>
+                  </Checkbox>
                   {selectedPod && connected && (
                     <Button size="sm" variant="danger-soft" onPress={disconnect}>
                       <Icon name="square" />

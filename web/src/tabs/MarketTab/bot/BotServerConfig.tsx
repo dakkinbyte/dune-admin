@@ -64,7 +64,8 @@ export const BotServerConfig: React.FC = () => {
             isSelected={cfg.market_bot_enabled}
             onChange={setBool('market_bot_enabled')}
           >
-            {t('market.bot.serverConfig.enableEmbedded')}
+            <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
+            <Checkbox.Content>{t('market.bot.serverConfig.enableEmbedded')}</Checkbox.Content>
           </Checkbox>
           <span className="text-xs text-muted">{t('market.bot.serverConfig.restartRequired')}</span>
         </div>

@@ -150,7 +150,10 @@ export const BotLogViewer: React.FC<BotLogViewerProps> = ({ active = false }: Bo
       <div className="flex items-center gap-2 shrink-0 flex-wrap">
         <span className={`text-xs font-mono ${stateColor}`}>{stateLabel}</span>
         <div className="flex-1" />
-        <Checkbox isSelected={autoScroll} onChange={setAutoScroll}>{t('market.bot.log.autoScroll')}</Checkbox>
+        <Checkbox isSelected={autoScroll} onChange={setAutoScroll}>
+          <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
+          <Checkbox.Content>{t('market.bot.log.autoScroll')}</Checkbox.Content>
+        </Checkbox>
         {connState !== 'connected'
           ? (
               <Button size="sm" variant="outline" onPress={connect} isDisabled={connState === 'connecting'}>

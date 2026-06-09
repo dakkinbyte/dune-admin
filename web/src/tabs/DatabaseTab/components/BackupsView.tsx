@@ -76,7 +76,8 @@ const ScheduleCard: React.FC = () => {
       <div className="flex items-center justify-between mb-1">
         <SectionLabel>{t('backups.schedule.title')}</SectionLabel>
         <Switch isSelected={enabled} onChange={setEnabled} size="sm" className="text-xs text-muted">
-          {t('backups.schedule.enable')}
+          <Switch.Control><Switch.Thumb /></Switch.Control>
+          <Switch.Content>{t('backups.schedule.enable')}</Switch.Content>
         </Switch>
       </div>
       <p className="text-xs text-muted mb-2">{t('backups.schedule.desc')}</p>
