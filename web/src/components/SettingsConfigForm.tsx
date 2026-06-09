@@ -117,7 +117,7 @@ function CB({ label, checked, onChange, hint }: CheckboxFieldProps) {
         <Switch.Control><Switch.Thumb /></Switch.Control>
         <Switch.Content>{label}</Switch.Content>
       </Switch>
-      {hint && <p className="text-xs text-muted ml-6">{hint}</p>}
+      {hint && <p className="text-xs text-muted ml-10">{hint}</p>}
     </div>
   )
 }

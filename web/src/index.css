@@ -206,14 +206,32 @@ body,
 }
 
 /* ── HeroUI Checkbox + Switch — the root <label> has no position:relative,
-   so the VisuallyHidden <input> (position:absolute, margin:-1px) positions
-   itself relative to the nearest positioned ancestor up the tree — often the
-   scroll container or page root. When focused, the browser scrolls to bring
-   that element into view, producing a jump and a blank gap at the bottom.
-   Fix: establish a containing block so the hidden input stays local.         */
+   so the VisuallyHidden <input> (position:absolute, margin:-1px) can escape
+   its container and cause scroll jumps when focused. We also clamp the
+   VisuallyHidden wrapper span itself to ensure it can never affect layout.   */
 .checkbox,
 .switch {
   position: relative;
+  align-items: center;
+}
+
+/* The VisuallyHidden span wrapping the hidden <input> inside Checkbox/Switch.
+   React Aria renders it as position:absolute with margin:-1px — without a
+   positioned ancestor the margin can still influence scroll-extent calculations
+   in some browsers. Force all layout-affecting properties to be inert.        */
+.checkbox > span[style],
+.switch > span[style] {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  pointer-events: none !important;
 }
 
 /* ── HeroUI Table — compact density. HeroUI doesn't ship a size prop, so
