@@ -205,15 +205,16 @@ body,
   background: var(--accent);
 }
 
-/* ── HeroUI Checkbox + Switch — the root element is a <label> with
-   display:flex/inline-flex. Inside a flex column it stretches to fill all
-   remaining height and the hidden VisuallyHidden <input> (position:absolute,
-   margin:-1px) escapes the container, producing a giant blank gap and scroll
-   jump when clicked. Fix: clamp to content size and contain children.        */
+/* ── HeroUI Checkbox + Switch — the root <label> has no position:relative,
+   so the VisuallyHidden <input> (position:absolute, margin:-1px) positions
+   itself relative to the nearest positioned ancestor up the tree — often the
+   scroll container or page root. When focused, the browser scrolls to bring
+   that element into view, producing a jump and a blank gap at the bottom.
+   Fix: establish a containing block so the hidden input stays local.         */
 .checkbox,
 .switch {
+  position: relative;
   align-self: start !important;
-  overflow: hidden;
 }
 
 /* ── HeroUI Table — compact density. HeroUI doesn't ship a size prop, so
