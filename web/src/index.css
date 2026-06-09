@@ -174,12 +174,6 @@
   --color-rarity-memento: var(--rarity-memento);
 }
 
-html {
-  /* React Aria sets inline overflow: hidden on scroll-lock — !important beats that inline style.
-     Forces the scrollbar to always be present so overlays never cause a layout shift. */
-  overflow-y: scroll !important;
-}
-
 html,
 body,
 #root {
@@ -189,6 +183,10 @@ body,
   font-family: "Duneway", system-ui, sans-serif;
   margin: 0;
   padding: 0;
+  /* Prevent the page itself from scrolling — the app is bounded to h-screen.
+     The !important beats React Aria's inline overflow:hidden on modal scroll-lock,
+     keeping the scrollbar gutter stable so modals don't cause layout shift. */
+  overflow: hidden !important;
 }
 
 /* Scrollbar */

@@ -617,7 +617,7 @@ const AppCore: React.FC<AppCoreProps> = ({ isSignedIn }) => {
                   }}
                 />
               </nav>
-              <main className="flex-1 overflow-hidden min-h-0">
+              <main className="flex-1 flex flex-col overflow-hidden min-h-0">
                 {renderTab('battlegroup', <MBattlegroupTab isActive={currentTab === 'battlegroup'} />)}
                 {renderTab('players', <MPlayersTab isActive={currentTab === 'players'} />)}
                 {renderTab('database', databaseNode)}
@@ -656,8 +656,8 @@ const AppCore: React.FC<AppCoreProps> = ({ isSignedIn }) => {
                 </Tabs.List>
               </Tabs.ListContainer>
             </Tabs>
-            <div className="flex-1 p-3 overflow-hidden min-h-0">
-              <main className="h-full overflow-hidden min-h-0">
+            <div className="flex-1 flex flex-col p-3 overflow-hidden min-h-0">
+              <main className="flex-1 flex flex-col overflow-hidden min-h-0">
                 {renderTab('battlegroup', <MBattlegroupTab isActive={currentTab === 'battlegroup'} />)}
                 {renderTab('players', <MPlayersTab isActive={currentTab === 'players'} />)}
                 {renderTab('database', databaseNode)}
@@ -683,7 +683,7 @@ const AppCore: React.FC<AppCoreProps> = ({ isSignedIn }) => {
 
 function TabPane({ active, children }: TabPaneProps) {
   return (
-    <div className={`h-full min-h-0 ${active ? 'flex flex-col dune-tab-active' : 'hidden'}`}>
+    <div className={`flex-1 min-h-0 ${active ? 'flex flex-col dune-tab-active' : 'hidden'}`}>
       {children}
     </div>
   )
