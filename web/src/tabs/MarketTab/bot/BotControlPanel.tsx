@@ -1,6 +1,6 @@
 import type React from 'react'
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Button, Modal, Spinner, Tabs } from '@heroui/react'
+import { Button, Modal, Spinner, Switch, Tabs } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../../api/client'
 import type { BotStatus, BotConfig } from '../../../api/client'
@@ -170,18 +170,18 @@ function ConfigFooter({ editorRef, initialEnabled, onReload }: ConfigFooterProps
 
   return (
     <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-t border-border">
-      <label className="flex items-center gap-2 text-sm cursor-pointer select-none mr-auto">
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => {
-            setEnabledLocal(e.target.checked)
-            editorRef.current?.setEnabled(e.target.checked)
-          }}
-          className="accent-[var(--color-accent)]"
-        />
-        {t('market.bot.tickingEnabled')}
-      </label>
+      <Switch
+        isSelected={enabled}
+        onChange={(v) => {
+          setEnabledLocal(v)
+          editorRef.current?.setEnabled(v)
+        }}
+        size="sm"
+        className="mr-auto"
+      >
+        <Switch.Control><Switch.Thumb /></Switch.Control>
+        <Switch.Content>{t('market.bot.tickingEnabled')}</Switch.Content>
+      </Switch>
       <Button size="sm" variant="ghost" onPress={() => editorRef.current?.reset()}>
         {t('market.bot.reset')}
       </Button>
