@@ -5639,7 +5639,7 @@ func cmdListStorageContainers() Msg {
 		       END), '') AS name,
 		       p.building_type AS class,
 		       COALESCE(a.map, '') AS map,
-		       COUNT(i.id) AS item_count,
+		       COUNT(DISTINCT i.id) AS item_count,
 		       COALESCE(array_agg(DISTINCT i.template_id) FILTER (WHERE i.template_id IS NOT NULL), '{}') AS item_templates,
 		       COALESCE(MAX(ps.character_name), MAX(convert_from(e.encrypted_funcom_id, 'UTF8')), '') AS owner_name
 		FROM dune.placeables p
