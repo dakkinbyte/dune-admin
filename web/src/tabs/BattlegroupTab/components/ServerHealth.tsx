@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button, Chip, Spinner, toast } from '@heroui/react'
-import { Icon, SectionLabel } from '../../../dune-ui'
+import { Icon, SectionLabel, FieldInput } from '../../../dune-ui'
 import { copyText } from '../../../utils/clipboard'
 import { api } from '../../../api/client'
 import type { Status, WebInterface } from '../../../api/client'
@@ -136,8 +136,6 @@ export const GameReadyCard: React.FC<{ bg?: BGInfo, servers: ServerRow[] }> = ({
 }
 
 // ── Web interfaces (#155: operator-configurable list) ────────────────────────
-const ifaceInputCls = 'bg-surface text-foreground border border-border rounded px-2 py-1 text-sm'
-
 const InterfaceRow: React.FC<{ item: WebInterface }> = ({ item }) => {
   const { t } = useTranslation()
   const copy = () => {
@@ -251,17 +249,19 @@ export const WebInterfacesCard: React.FC<{ status: Status | null }> = ({ status 
         <div className="flex flex-col gap-2">
           {draft.map((row, i) => (
             <div key={i} className="flex items-center gap-2">
-              <input
+              <FieldInput
                 value={row.label}
                 placeholder={t('serverHealth.ifaceLabel')}
-                onChange={(e) => setField(i, 'label', e.target.value)}
-                className={`${ifaceInputCls} w-32`}
+                onChange={(v) => setField(i, 'label', v)}
+                ariaLabel={t('serverHealth.ifaceLabel')}
+                className="w-32"
               />
-              <input
+              <FieldInput
                 value={row.url}
                 placeholder={t('serverHealth.ifaceUrl')}
-                onChange={(e) => setField(i, 'url', e.target.value)}
-                className={`${ifaceInputCls} flex-1 font-mono`}
+                onChange={(v) => setField(i, 'url', v)}
+                ariaLabel={t('serverHealth.ifaceUrl')}
+                className="flex-1 font-mono"
               />
               <Button
                 size="sm"

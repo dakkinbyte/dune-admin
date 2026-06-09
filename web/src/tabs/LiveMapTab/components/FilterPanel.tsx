@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, SearchField } from '@heroui/react'
+import { Button, Checkbox, SearchField } from '@heroui/react'
 import { Icon, Panel, SectionLabel } from '../../../dune-ui'
 import { LIVE_TYPES, CATEGORY_GROUPS, CAT_COLOR, TYPE_LABELS, ICON_POS, HEATMAP_BOUNDS, HEATMAP_TYPES, HEATMAP_COLORS } from '../constants'
 import { filterKey, heatmapFilterKey } from '../utils'
@@ -37,20 +37,18 @@ export function FilterPanel({
   function TypeRow({ typeKey, label, count, category }: TypeRowProps) {
     const isOn = filter[typeKey] ?? false
     return (
-      <label className="flex items-center gap-2 py-1.5 px-3 cursor-pointer hover:bg-surface-secondary rounded-[var(--radius)] select-none">
-        <input
-          type="checkbox"
-          checked={isOn}
-          onChange={() => onToggle(typeKey, isOn)}
-          className="h-3.5 w-3.5 accent-accent shrink-0"
-        />
+      <Checkbox
+        isSelected={isOn}
+        onChange={() => onToggle(typeKey, isOn)}
+        className="flex items-center gap-2 py-1.5 px-3 hover:bg-surface-secondary rounded-[var(--radius)] w-full max-w-none"
+      >
         <SpriteIcon type={typeKey} size={18} />
         {!ICON_POS[typeKey] && (
           <span style={{ color: CAT_COLOR[category] }} className="shrink-0">●</span>
         )}
         <span className="flex-1 text-xs text-foreground truncate">{label}</span>
         <span className="text-xs text-muted tabular-nums shrink-0">{count.toLocaleString()}</span>
-      </label>
+      </Checkbox>
     )
   }
 
@@ -71,15 +69,10 @@ export function FilterPanel({
     return (
       <div className="mb-1">
         <div className="flex items-center gap-1 px-2 py-1.5">
-          <input
-            type="checkbox"
-            checked={allOn}
-            ref={(el) => { if (el) el.indeterminate = !allOn && anyOn }}
-            onChange={(e) => {
-              const target = e.target.checked
-              ;[...items.keys()].forEach((k) => onToggle(k, !target))
-            }}
-            className="h-3.5 w-3.5 accent-accent shrink-0"
+          <Checkbox
+            isSelected={allOn}
+            isIndeterminate={!allOn && anyOn}
+            onChange={(v) => { [...items.keys()].forEach((k) => onToggle(k, !v)) }}
           />
           <button
             type="button"
@@ -126,7 +119,6 @@ export function FilterPanel({
       <div className="px-2 pb-1 shrink-0 flex justify-end">
         <Button
           variant="ghost"
-          size="sm"
           className="text-xs text-muted hover:text-accent px-1 h-auto min-w-0"
           onPress={onClear}
         >
@@ -139,16 +131,15 @@ export function FilterPanel({
           <Panel className="mb-2 mt-1">
             <SectionLabel>{t('liveMap.filterLive')}</SectionLabel>
             {LIVE_TYPES.map((id) => (
-              <label key={id} className="flex items-center gap-2 py-1.5 cursor-pointer hover:bg-surface-secondary rounded-[var(--radius)] select-none px-1">
-                <input
-                  type="checkbox"
-                  checked={filter[id] ?? false}
-                  onChange={() => onToggle(id, filter[id] ?? false)}
-                  className="h-3.5 w-3.5 accent-accent shrink-0"
-                />
+              <Checkbox
+                key={id}
+                isSelected={filter[id] ?? false}
+                onChange={() => onToggle(id, filter[id] ?? false)}
+                className="flex items-center gap-2 py-1.5 px-1 hover:bg-surface-secondary rounded-[var(--radius)] w-full max-w-none"
+              >
                 <span style={{ color: CAT_COLOR[id] }} className="text-xs shrink-0">●</span>
                 <span className="flex-1 text-xs text-foreground">{LIVE_LABELS[id]}</span>
-              </label>
+              </Checkbox>
             ))}
           </Panel>
         )}
@@ -156,16 +147,14 @@ export function FilterPanel({
         {!search && HEATMAP_BOUNDS[mapKey] && (
           <Panel className="mb-2">
             <SectionLabel>{t('liveMap.filterDensity')}</SectionLabel>
-            <label className="flex items-center gap-2 py-1.5 cursor-pointer hover:bg-surface-secondary rounded-[var(--radius)] select-none px-1">
-              <input
-                type="checkbox"
-                checked={heatmapMode}
-                onChange={onHeatmapToggle}
-                className="h-3.5 w-3.5 accent-accent shrink-0"
-              />
+            <Checkbox
+              isSelected={heatmapMode}
+              onChange={onHeatmapToggle}
+              className="flex items-center gap-2 py-1.5 px-1 hover:bg-surface-secondary rounded-[var(--radius)] w-full max-w-none"
+            >
               <Icon name="layers" className="text-accent shrink-0" />
               <span className="flex-1 text-xs text-foreground">{t('liveMap.densityOverlay')}</span>
-            </label>
+            </Checkbox>
             {heatmapMode && (() => {
               const active = (HEATMAP_TYPES[mapKey] ?? []).filter((type) => filter[heatmapFilterKey(type)] ?? false)
               if (!active.length) return (

@@ -4,14 +4,13 @@ import { useTranslation } from 'react-i18next'
 import { Button, Spinner, toast } from '@heroui/react'
 import { api, ApiError } from '../api/client'
 import type { DirectorConfig } from '../api/client'
-import { PageHeader, Panel, SectionLabel, Icon } from '../dune-ui'
+import { PageHeader, Panel, SectionLabel, Icon, FieldInput, FieldSelect } from '../dune-ui'
 
 // ── field-type inference (#157) ──────────────────────────────────────────────
 // The director config is untyped INI text, so we infer an editor from the value
 // + comment (data-driven, no hardcoded enum tables): booleans → a dropdown,
 // numbers → a number input, and enums from either a "Alternatives: a, b, c"
 // comment or the distinct values used across the [InstancingModes] section.
-const fieldCls = 'w-full bg-surface text-foreground border border-border rounded px-2 py-1 text-sm'
 const numberRe = /^-?\d+(\.\d+)?$/
 
 function parseAlternatives(comment?: string): string[] {
@@ -40,25 +39,30 @@ const DirectorEditor: React.FC<{
 }> = ({ kind, value, onChange }) => {
   if (kind.kind === 'bool') {
     return (
-      <select className={fieldCls} value={value.trim().toLowerCase()} onChange={(e) => onChange(e.target.value)}>
-        <option value="true">true</option>
-        <option value="false">false</option>
-      </select>
+      <FieldSelect
+        className="w-full"
+        value={value.trim().toLowerCase()}
+        onChange={onChange}
+        options={['true', 'false']}
+      />
     )
   }
   if (kind.kind === 'enum') {
     // Keep the current value selectable even if it isn't in the derived option set.
     const opts = kind.options.includes(value) ? kind.options : [value, ...kind.options]
     return (
-      <select className={fieldCls} value={value} onChange={(e) => onChange(e.target.value)}>
-        {opts.map((o) => <option key={o} value={o}>{o}</option>)}
-      </select>
+      <FieldSelect
+        className="w-full"
+        value={value}
+        onChange={onChange}
+        options={opts}
+      />
     )
   }
   if (kind.kind === 'number') {
-    return <input type="number" className={fieldCls} value={value} onChange={(e) => onChange(e.target.value)} />
+    return <FieldInput type="number" className="w-full" value={value} onChange={onChange} />
   }
-  return <input className={fieldCls} value={value} onChange={(e) => onChange(e.target.value)} />
+  return <FieldInput className="w-full" value={value} onChange={onChange} />
 }
 
 // DirectorTab (#147): view/edit the Battlegroup Director config

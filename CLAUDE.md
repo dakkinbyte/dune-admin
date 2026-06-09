@@ -258,11 +258,13 @@ Import shared components from `../dune-ui` when a wrapper exists — not directl
 
 ```ts
 import { DataTable, Icon, PageHeader, Panel, SectionDivider, SectionLabel,
-         InfoCard, StatusChip, Dropzone, SideNav } from '../dune-ui'
+         InfoCard, Dropzone, SideNav, NumberInput, FieldInput, FieldSelect } from '../dune-ui'
 import type { Column } from '../dune-ui'
 ```
 
-Use `@heroui/react` directly only for primitives not wrapped in `dune-ui` (Button, Card, Spinner, toast).
+Use `@heroui/react` directly only for primitives not wrapped in `dune-ui` (Button, Card, Chip, Spinner, toast).
+
+`StatusChip` was removed — use `<Chip size="sm" variant="soft" color={...}>` inline instead.
 
 ### Theming
 

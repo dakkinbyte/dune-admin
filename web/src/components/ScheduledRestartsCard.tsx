@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import type React from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, Spinner, toast } from '@heroui/react'
+import { Button, Spinner, Switch, ToggleButton, ToggleButtonGroup, toast } from '@heroui/react'
 import { api } from '../api/client'
 import type { ScheduledRestarts, RestartRule } from '../api/client'
-import { Panel, SectionLabel, Icon } from '../dune-ui'
+import { Panel, SectionLabel, Icon, NumberInput, TimeInput } from '../dune-ui'
 import { TimezoneSelect } from './TimezoneSelect'
 
 const DOW = [0, 1, 2, 3, 4, 5, 6] // Sun..Sat
@@ -70,27 +70,20 @@ export const ScheduledRestartsCard: React.FC = () => {
   const removeRule = (i: number) => setRules((r) => r.filter((_, idx) => idx !== i))
   const setRuleTime = (i: number, time: string) =>
     setRules((r) => r.map((rule, idx) => (idx === i ? { ...rule, time } : rule)))
-  const toggleDay = (i: number, d: number) =>
-    setRules((r) => r.map((rule, idx) => {
-      if (idx !== i) return rule
-      const days = rule.days.includes(d) ? rule.days.filter((x) => x !== d) : [...rule.days, d].sort((a, b) => a - b)
-      return { ...rule, days }
-    }))
+  const setRuleDays = (i: number, days: number[]) =>
+    setRules((r) => r.map((rule, idx) => (idx === i ? { ...rule, days } : rule)))
 
   // Localized short weekday label (Jan 1 2023 was a Sunday = day 0).
   const dowLabel = (d: number) =>
     new Intl.DateTimeFormat(i18n.language, { weekday: 'short' }).format(new Date(Date.UTC(2023, 0, 1 + d)))
 
-  const inputCls = 'bg-surface text-foreground border border-border rounded px-2 py-1 text-sm'
-
   return (
     <Panel>
       <div className="flex items-center justify-between mb-2">
         <SectionLabel>{t('restarts.title')}</SectionLabel>
-        <label className="flex items-center gap-2 text-xs text-muted cursor-pointer">
-          <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
+        <Switch isSelected={enabled} onChange={setEnabled} size="sm" className="text-xs text-muted">
           {t('restarts.enable')}
-        </label>
+        </Switch>
       </div>
 
       {loading
@@ -110,23 +103,20 @@ export const ScheduledRestartsCard: React.FC = () => {
               {rules.length === 0 && <div className="text-xs text-muted mb-2">{t('restarts.noRules')}</div>}
               {rules.map((rule, i) => (
                 <div key={i} className="flex items-center gap-2 mb-2 flex-wrap">
-                  <div className="flex gap-1">
+                  <ToggleButtonGroup
+                    selectionMode="multiple"
+                    selectedKeys={rule.days.map(String)}
+                    onSelectionChange={(keys) => {
+                      const days = [...keys].map(Number).sort((a, b) => a - b)
+                      setRuleDays(i, days)
+                    }}
+                    size="sm"
+                  >
                     {DOW.map((d) => (
-                      <button
-                        key={d}
-                        type="button"
-                        onClick={() => toggleDay(i, d)}
-                        className={`h-7 px-1.5 rounded text-xs transition-colors ${
-                          rule.days.includes(d)
-                            ? 'bg-accent text-accent-foreground'
-                            : 'bg-surface-secondary text-muted hover:text-foreground'
-                        }`}
-                      >
-                        {dowLabel(d)}
-                      </button>
+                      <ToggleButton key={d} id={String(d)}>{dowLabel(d)}</ToggleButton>
                     ))}
-                  </div>
-                  <input type="time" value={rule.time} onChange={(e) => setRuleTime(i, e.target.value)} className={inputCls} />
+                  </ToggleButtonGroup>
+                  <TimeInput value={rule.time} onChange={(v) => setRuleTime(i, v)} ariaLabel="time" />
                   <Button size="sm" variant="ghost" isIconOnly aria-label={t('restarts.removeRule')} onPress={() => removeRule(i)}>
                     <Icon name="x" />
                   </Button>
@@ -142,12 +132,13 @@ export const ScheduledRestartsCard: React.FC = () => {
               <div className="flex items-center gap-4 mb-3 text-sm flex-wrap">
                 <label className="flex items-center gap-2">
                   {t('restarts.warnMinutes')}
-                  <input
-                    type="number"
-                    min={1}
+                  <NumberInput
                     value={warn}
-                    onChange={(e) => setWarn(Number(e.target.value) || 10)}
-                    className={`${inputCls} w-16`}
+                    onChange={(v) => setWarn(v || 10)}
+                    min={1}
+                    ariaLabel={t('restarts.warnMinutes')}
+                    className="w-16"
+                    showButtons={false}
                   />
                 </label>
                 <label className="flex items-center gap-2 flex-1 min-w-[160px]">
