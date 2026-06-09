@@ -121,14 +121,16 @@ export const LiveMapTab: React.FC<LiveMapTabProps> = ({ isActive = true }) => {
 
   const playerCount = markers.filter((m) => m.type === 'player').length
   const vehicleCount = markers.filter((m) => m.type === 'vehicle').length
+  const baseCount = markers.filter((m) => m.type === 'base').length
   const orderedLive = useMemo(
     () => [...markers]
       .sort((a, b) => (a.type === 'player' ? 1 : 0) - (b.type === 'player' ? 1 : 0))
       .map((m) => {
         const isPlayer = m.type === 'player'
-        const size = isPlayer ? 32 : 24
+        const isBase = m.type === 'base'
+        const size = isPlayer ? 32 : isBase ? 28 : 24
         const baseColor = CAT_COLOR[m.type] ?? CAT_COLOR.base
-        const label = isPlayer ? (m.name?.[0]?.toUpperCase() ?? '?') : '🚗'
+        const label = isPlayer ? (m.name?.[0]?.toUpperCase() ?? '?') : isBase ? '🏠' : '🚗'
         const cursor = isPlayer ? 'grab' : 'default'
         const makeHtml = (color: string) =>
           `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2.5px solid #0b0b0b;box-shadow:0 0 0 1.5px ${color}40;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#0b0b0b;line-height:1;cursor:${cursor}">${label}</div>`
@@ -137,6 +139,7 @@ export const LiveMapTab: React.FC<LiveMapTabProps> = ({ isActive = true }) => {
           ...m,
           center: worldToLatLng(m.x, m.y, effCfg) as L.LatLngTuple,
           isPlayer,
+          isBase,
           size,
           icon: L.divIcon({ ...iconOpts, html: makeHtml(baseColor) }),
           selectedIcon: L.divIcon({ ...iconOpts, html: makeHtml('#f59e0b') }),
@@ -341,6 +344,13 @@ export const LiveMapTab: React.FC<LiveMapTabProps> = ({ isActive = true }) => {
               {vehicleCount}
             </span>
             <span>
+              <span style={{ color: CAT_COLOR.base }}>●</span>
+              {' '}
+              {t('liveMap.filterBases')}
+              {': '}
+              {baseCount}
+            </span>
+            <span>
               {t('liveMap.total')}
               {': '}
               {markers.length}
@@ -466,7 +476,7 @@ export const LiveMapTab: React.FC<LiveMapTabProps> = ({ isActive = true }) => {
                   />
 
                   {(filter.players || filter.vehicles) && orderedLive
-                    .filter((m) => m.type === 'player' ? filter.players : filter.vehicles)
+                    .filter((m) => m.type === 'player' ? filter.players : m.type === 'vehicle' ? filter.vehicles : false)
                     .map((m) => {
                       const { center, isPlayer, size, icon, selectedIcon } = m
                       const isSelected = m.fls_id === selectedFlsId
@@ -512,6 +522,29 @@ export const LiveMapTab: React.FC<LiveMapTabProps> = ({ isActive = true }) => {
                               {Math.round(m.y)}
                             </div>
                             {isPlayer && <div className="text-xs text-accent mt-0.5">Drag to teleport</div>}
+                          </Tooltip>
+                        </Marker>
+                      )
+                    })}
+
+                  {filter.bases && orderedLive
+                    .filter((m) => m.type === 'base')
+                    .map((m) => {
+                      const { center, size, icon } = m
+                      return (
+                        <Marker
+                          key={`base-${m.id}`}
+                          position={center}
+                          icon={icon}
+                        >
+                          <Tooltip direction="top" offset={[0, -(size / 2)]}>
+                            <div className="font-medium">{m.name || `Base ${m.id}`}</div>
+                            <div className="text-xs opacity-70">base</div>
+                            <div className="text-xs font-mono">
+                              {Math.round(m.x)}
+                              {', '}
+                              {Math.round(m.y)}
+                            </div>
                           </Tooltip>
                         </Marker>
                       )

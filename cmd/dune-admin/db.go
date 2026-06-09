@@ -5596,7 +5596,51 @@ func cmdFetchMapMarkers(ctx context.Context, pool *pgxpool.Pool, mapKey string) 
 		return nil, fmt.Errorf("iterate vehicle markers: %w", err)
 	}
 
+	bases, err := cmdFetchBaseMarkers(ctx, pool, mapKey)
+	if err != nil {
+		return nil, err
+	}
+	markers = append(markers, bases...)
+
 	return markers, nil
+}
+
+// cmdFetchBaseMarkers returns base-totem map markers for the given map. Each
+// building's canonical totem actor (lowest owner_entity_id) is joined to
+// permission_actor for the display name, mirroring cmdListBases.
+func cmdFetchBaseMarkers(ctx context.Context, pool *pgxpool.Pool, mapKey string) ([]mapMarker, error) {
+	rows, err := pool.Query(ctx, `
+		SELECT b.id,
+		       COALESCE(NULLIF(pa.actor_name, ''), 'Base') AS name,
+		       ((t.transform).location).x,
+		       ((t.transform).location).y,
+		       ((t.transform).location).z
+		FROM dune.buildings b
+		JOIN (
+		    SELECT building_id, MIN(owner_entity_id) AS owner_entity_id
+		    FROM dune.building_instances
+		    GROUP BY building_id
+		) first_inst ON first_inst.building_id = b.id
+		JOIN dune.actor_fgl_entities afe ON afe.entity_id = first_inst.owner_entity_id
+		JOIN dune.actors t ON t.id = afe.actor_id AND t.class ILIKE '%Totem%'
+		LEFT JOIN dune.permission_actor pa ON pa.actor_id = t.id
+		WHERE t.map = $1 AND t.transform IS NOT NULL`, mapKey)
+	if err != nil {
+		return nil, fmt.Errorf("query base markers: %w", err)
+	}
+	defer rows.Close()
+	var out []mapMarker
+	for rows.Next() {
+		m := mapMarker{Type: "base", Map: mapKey}
+		if err := rows.Scan(&m.ID, &m.Name, &m.X, &m.Y, &m.Z); err != nil {
+			return nil, fmt.Errorf("scan base marker: %w", err)
+		}
+		out = append(out, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate base markers: %w", err)
+	}
+	return out, nil
 }
 
 // ── storage container commands ────────────────────────────────────────────────
