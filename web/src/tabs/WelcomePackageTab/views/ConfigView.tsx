@@ -14,6 +14,9 @@ type ConfigViewProps = Pick<
   | 'welcomeMessageEnabled' | 'setWelcomeMessageEnabled'
   | 'welcomeMessage' | 'setWelcomeMessage'
   | 'welcomeWhisperSourcePlayer' | 'setWelcomeWhisperSourcePlayer'
+  | 'motdEnabled' | 'setMotdEnabled'
+  | 'motdMessage' | 'setMotdMessage'
+  | 'motdSourcePlayer' | 'setMotdSourcePlayer'
   | 'save' | 'saving'
   | 'runNow' | 'running'
   | 'load' | 'loading'
@@ -28,6 +31,9 @@ export const ConfigView: React.FC<ConfigViewProps> = ({
   welcomeMessageEnabled, setWelcomeMessageEnabled,
   welcomeMessage, setWelcomeMessage,
   welcomeWhisperSourcePlayer, setWelcomeWhisperSourcePlayer,
+  motdEnabled, setMotdEnabled,
+  motdMessage, setMotdMessage,
+  motdSourcePlayer, setMotdSourcePlayer,
   save, saving,
   runNow, running,
   load, loading,
@@ -134,6 +140,43 @@ export const ConfigView: React.FC<ConfigViewProps> = ({
               value={welcomeWhisperSourcePlayer}
               disabled={!welcomeMessageEnabled}
               onChange={(e) => setWelcomeWhisperSourcePlayer(e.target.value)}
+            />
+          </div>
+        </div>
+      </Panel>
+
+      {/* MOTD panel — a per-join message, independent of the package. */}
+      <Panel className="shrink-0">
+        <SectionLabel>{t('welcome.motd.title')}</SectionLabel>
+
+        <Switch isSelected={motdEnabled} onChange={setMotdEnabled} size="sm">
+          <Switch.Control><Switch.Thumb /></Switch.Control>
+          <Switch.Content>{t('welcome.motd.enabledLabel')}</Switch.Content>
+        </Switch>
+        <p className="text-xs text-muted mt-1 mb-3">
+          {t('welcome.motd.enabledHint')}
+        </p>
+
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted">{t('welcome.motd.messageLabel')}</span>
+            <textarea
+              className="w-full rounded-[var(--radius)] border border-border bg-surface text-foreground text-sm px-3 py-2 resize-none focus:outline-none focus:border-accent disabled:opacity-50"
+              rows={3}
+              placeholder={t('welcome.motd.messagePlaceholder')}
+              value={motdMessage}
+              disabled={!motdEnabled}
+              onChange={(e) => setMotdMessage(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1 max-w-md">
+            <span className="text-xs text-muted">{t('welcome.motd.senderLabel')}</span>
+            <input
+              className="w-full rounded-[var(--radius)] border border-border bg-surface text-foreground text-sm px-3 py-2 focus:outline-none focus:border-accent disabled:opacity-50"
+              placeholder={t('welcome.motd.senderPlaceholder')}
+              value={motdSourcePlayer}
+              disabled={!motdEnabled}
+              onChange={(e) => setMotdSourcePlayer(e.target.value)}
             />
           </div>
         </div>
