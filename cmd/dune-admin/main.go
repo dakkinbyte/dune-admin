@@ -556,6 +556,7 @@ func runCleanMarketMode() error {
 	defer cancel()
 
 	cacheDB, itemDataForBot, _ := resolveEmbeddedMarketBotPaths(loadedConfig, itemDataPath)
+	itemDataForBot = usableItemDataPath(itemDataForBot)
 	inst, err := marketbot.Run(ctx, marketbot.BotConfig{
 		DBPool:       globalDB,
 		DBHost:       dbHost,
@@ -679,6 +680,39 @@ func resolveEmbeddedMarketBotPaths(cfg appConfig, fallbackItemDataPath string) (
 	return cacheDB, itemDataForBot, statePath
 }
 
+// itemDataPathResolvable reports whether path points to (or contains) a readable
+// item-data.json, mirroring marketbot.loadCatalog's resolution (a directory is
+// resolved to item-data.json inside it).
+func itemDataPathResolvable(path string) bool {
+	if path == "" {
+		return false
+	}
+	if info, err := os.Stat(path); err == nil && info.IsDir() {
+		path = filepath.Join(path, "item-data.json")
+	}
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
+}
+
+// usableItemDataPath returns configured if it resolves to a readable
+// item-data.json; otherwise it falls back to the standard search locations so a
+// stale or mistyped market_bot_item_data (e.g. "optional", #136) doesn't crash
+// bot startup with a cryptic "open <path>" error. If item-data.json can't be
+// found anywhere either, the original value is returned so loadCatalog surfaces
+// a clear not-found error.
+func usableItemDataPath(configured string) string {
+	if itemDataPathResolvable(configured) {
+		return configured
+	}
+	if fb := resolveItemDataPath(); itemDataPathResolvable(fb) {
+		if configured != "" {
+			log.Printf("market-bot: item-data path %q not found; falling back to %q", configured, fb)
+		}
+		return fb
+	}
+	return configured
+}
+
 func startEmbeddedMarketBotIfEnabled(cfg appConfig) context.CancelFunc {
 	if !marketBotEnabled(cfg) {
 		return nil
@@ -686,6 +720,7 @@ func startEmbeddedMarketBotIfEnabled(cfg appConfig) context.CancelFunc {
 	embeddedBotConfigured = true
 	botCtx, botCancel := context.WithCancel(context.Background())
 	cacheDB, itemDataForBot, statePath := resolveEmbeddedMarketBotPaths(cfg, itemDataPath)
+	itemDataForBot = usableItemDataPath(itemDataForBot)
 	inst, err := marketbot.Run(botCtx, marketbot.BotConfig{
 		DBPool:       globalDB,
 		DBHost:       dbHost,
