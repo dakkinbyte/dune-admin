@@ -1066,6 +1066,12 @@ export const api = {
         package_version: packageVersion,
         account_id: accountId,
       }),
+    revoke: (flsId: string, packageVersion: string, accountId: number) =>
+      req<{ revoked: number }>('POST', '/welcome-package/revoke', {
+        fls_id: flsId,
+        package_version: packageVersion,
+        account_id: accountId,
+      }),
     run: () => req<{ granted: number, failed: number, skipped: number }>('POST', '/welcome-package/run'),
   },
 

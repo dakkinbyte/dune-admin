@@ -1367,6 +1367,9 @@
       "grants": "Attributions",
       "packages": "Paquets"
     },
-    "title": "Kits de bienvenue"
+    "title": "Kits de bienvenue",
+    "revoke": "Révoquer",
+    "revoked": "Attribution révoquée — le pack peut être attribué à nouveau",
+    "revokeFailed": "Échec de la révocation : {{message}}"
   }
 }

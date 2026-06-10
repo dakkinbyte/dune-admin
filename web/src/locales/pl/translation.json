@@ -1390,6 +1390,9 @@
       "grants": "Przyznania",
       "packages": "Pakiety"
     },
-    "title": "Zestawy powitalne"
+    "title": "Zestawy powitalne",
+    "revoke": "Cofnij",
+    "revoked": "Przyznanie cofnięte — pakiet można przyznać ponownie",
+    "revokeFailed": "Cofnięcie nie powiodło się: {{message}}"
   }
 }

@@ -37,6 +37,7 @@ export interface WelcomeSharedProps {
   // grants
   grants: WelcomeGrantRecord[]
   retry: (g: WelcomeGrantRecord) => Promise<void>
+  revoke: (g: WelcomeGrantRecord) => Promise<void>
   // templates (packages view)
   templates: { id: string, name: string }[]
   // unsaved-changes diff

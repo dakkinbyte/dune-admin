@@ -1344,6 +1344,9 @@
       "grants": "Zuweisungen",
       "packages": "Pakete"
     },
-    "title": "Willkommenspakete"
+    "title": "Willkommenspakete",
+    "revoke": "Widerrufen",
+    "revoked": "Vergabe widerrufen — das Paket kann erneut vergeben werden",
+    "revokeFailed": "Widerruf fehlgeschlagen: {{message}}"
   }
 }

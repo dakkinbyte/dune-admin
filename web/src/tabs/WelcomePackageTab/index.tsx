@@ -132,6 +132,17 @@ export const WelcomePackageTab: React.FC<WelcomePackageTabProps> = ({ showSubnav
     }
   }
 
+  const revoke = async (g: WelcomeGrantRecord) => {
+    try {
+      await api.welcomePackage.revoke(g.fls_id, g.package_version, g.account_id)
+      toast.success(t('welcome.revoked'))
+      setGrants(await api.welcomePackage.grants(100))
+    }
+    catch (e) {
+      toast.danger(t('welcome.revokeFailed', { message: e instanceof Error ? e.message : String(e) }))
+    }
+  }
+
   const configDiff = useMemo((): WelcomeConfigDiff => {
     if (!savedConfig) {
       return { packageAdded: 0, packageRemoved: 0, packageUpdated: 0, settingsChanged: false, isDirty: false }
@@ -211,7 +222,7 @@ export const WelcomePackageTab: React.FC<WelcomePackageTabProps> = ({ showSubnav
           />
         )
       case 'grants':
-        return <GrantsView grants={grants} retry={retry} load={load} loading={loading} />
+        return <GrantsView grants={grants} retry={retry} revoke={revoke} load={load} loading={loading} />
     }
   }
 

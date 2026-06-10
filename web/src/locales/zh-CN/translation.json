@@ -1344,6 +1344,9 @@
       "grants": "授予记录",
       "packages": "礼包"
     },
-    "title": "欢迎礼包"
+    "title": "欢迎礼包",
+    "revoke": "撤销",
+    "revoked": "已撤销发放 — 可再次发放该礼包",
+    "revokeFailed": "撤销失败：{{message}}"
   }
 }

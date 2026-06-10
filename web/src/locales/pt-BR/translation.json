@@ -1367,6 +1367,9 @@
       "grants": "Concessões",
       "packages": "Pacotes"
     },
-    "title": "Kits de boas-vindas"
+    "title": "Kits de boas-vindas",
+    "revoke": "Revogar",
+    "revoked": "Concessão revogada — o pacote pode ser concedido novamente",
+    "revokeFailed": "Falha ao revogar: {{message}}"
   }
 }

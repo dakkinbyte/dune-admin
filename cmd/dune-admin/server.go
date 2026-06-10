@@ -300,6 +300,7 @@ func startServer(addr string) {
 	mux.HandleFunc("PUT /api/v1/welcome-package/config", handlePutWelcomeConfig)
 	mux.HandleFunc("GET /api/v1/welcome-package/grants", handleGetWelcomeGrants)
 	mux.HandleFunc("POST /api/v1/welcome-package/retry", handleRetryWelcomeGrant)
+	mux.HandleFunc("POST /api/v1/welcome-package/revoke", handleRevokeWelcomeGrant)
 	mux.HandleFunc("POST /api/v1/welcome-package/run", handleRunWelcomePackage)
 
 	// ── give-items packs (operator-configurable pack library) ─────────────────

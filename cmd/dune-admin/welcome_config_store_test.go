@@ -54,6 +54,45 @@ func TestWelcomeConfigStore_LoadMissingReturnsNotOK(t *testing.T) {
 	}
 }
 
+// deleteGrant is an explicit revoke: it removes a ledger row regardless of
+// status (granted or failed) so the same package can be granted again (#162).
+func TestWelcomeStore_DeleteGrant(t *testing.T) {
+	t.Parallel()
+	s := openMemWelcomeStore(t)
+	if err := s.insertGranted("FLS1", "v1", 1, "Paul"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.insertFailed("FLS2", "v1", 2, "Chani", "boom"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Revoking a GRANTED row removes it so the account becomes re-grantable.
+	n, err := s.deleteGrant("FLS1", "v1", 1)
+	if err != nil {
+		t.Fatalf("deleteGrant: %v", err)
+	}
+	if n != 1 {
+		t.Fatalf("deleted %d, want 1", n)
+	}
+	if ex, _ := s.grantExists("FLS1", "v1", 1); ex {
+		t.Fatal("granted row should be gone after revoke")
+	}
+
+	// Revoke is status-agnostic: it also clears a failed row.
+	if n2, _ := s.deleteGrant("FLS2", "v1", 2); n2 != 1 {
+		t.Fatalf("deleted failed %d, want 1", n2)
+	}
+
+	// Absent row is a no-op (0 deleted, no error).
+	n3, err := s.deleteGrant("NOPE", "v1", 9)
+	if err != nil {
+		t.Fatalf("deleteGrant absent: %v", err)
+	}
+	if n3 != 0 {
+		t.Fatalf("deleted %d, want 0 for absent row", n3)
+	}
+}
+
 func TestWelcomeConfigStore_WelcomeMessageFieldsRoundTrip(t *testing.T) {
 	t.Parallel()
 	s := openMemWelcomeStore(t)

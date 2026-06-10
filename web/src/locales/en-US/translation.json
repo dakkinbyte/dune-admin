@@ -1344,6 +1344,9 @@
       "grants": "Grants",
       "packages": "Packages"
     },
-    "title": "Welcome Kits"
+    "title": "Welcome Kits",
+    "revoke": "Revoke",
+    "revoked": "Grant revoked — the package can be granted again",
+    "revokeFailed": "Revoke failed: {{message}}"
   }
 }

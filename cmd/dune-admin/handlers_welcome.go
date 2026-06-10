@@ -272,6 +272,41 @@ func handleRetryWelcomeGrant(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]any{"cleared": n})
 }
 
+// @Summary Revoke a welcome-package grant (clears the ledger row so the same package can be granted again)
+// @Tags welcome-package
+// @Accept json
+// @Produce json
+// @Param body body object true "fls_id, package_version, account_id"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 503 {object} map[string]string
+// @Router /api/v1/welcome-package/revoke [post]
+func handleRevokeWelcomeGrant(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		FlsID          string `json:"fls_id"`
+		PackageVersion string `json:"package_version"`
+		AccountID      int64  `json:"account_id"`
+	}
+	if err := decode(r, &req); err != nil {
+		jsonErr(w, err, http.StatusBadRequest)
+		return
+	}
+	if welcomeStoreDB == nil {
+		jsonErr(w, fmt.Errorf("welcome package store not available"), http.StatusServiceUnavailable)
+		return
+	}
+	if req.FlsID == "" || req.PackageVersion == "" {
+		jsonErr(w, fmt.Errorf("fls_id and package_version required"), http.StatusBadRequest)
+		return
+	}
+	n, err := welcomeStoreDB.deleteGrant(req.FlsID, req.PackageVersion, req.AccountID)
+	if err != nil {
+		jsonErr(w, err, http.StatusInternalServerError)
+		return
+	}
+	jsonOK(w, map[string]any{"revoked": n})
+}
+
 // @Summary Run a welcome-package scan now (one-off, regardless of enabled)
 // @Tags welcome-package
 // @Produce json

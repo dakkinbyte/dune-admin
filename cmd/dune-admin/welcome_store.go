@@ -203,6 +203,22 @@ func (s *welcomeStore) deleteFailed(flsID, version string, accountID int64) (int
 	return n, nil
 }
 
+// deleteGrant removes a ledger row regardless of status (granted or failed). It
+// backs the explicit "revoke" action: unlike deleteFailed (which retries a
+// failed grant), this clears a SUCCESSFUL grant so the same package can be
+// granted to that account again on the next scan (#162). Returns rows deleted.
+func (s *welcomeStore) deleteGrant(flsID, version string, accountID int64) (int64, error) {
+	res, err := s.db.Exec(
+		`DELETE FROM welcome_grants
+		 WHERE fls_id = ? AND package_version = ? AND account_id = ?`,
+		flsID, version, accountID)
+	if err != nil {
+		return 0, fmt.Errorf("delete grant: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	return n, nil
+}
+
 func (s *welcomeStore) listGrants(limit int) ([]welcomeGrantRecord, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 100

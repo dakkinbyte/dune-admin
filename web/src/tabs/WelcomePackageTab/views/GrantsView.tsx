@@ -7,7 +7,7 @@ import type { WelcomeSharedProps } from '../types'
 
 type GrantKey = 'character' | 'fls' | 'version' | 'status' | 'attempts' | 'updated' | 'error' | 'actions'
 
-type GrantsViewProps = Pick<WelcomeSharedProps, 'grants' | 'retry' | 'load' | 'loading'>
+type GrantsViewProps = Pick<WelcomeSharedProps, 'grants' | 'retry' | 'revoke' | 'load' | 'loading'>
 
 function fmtTime(s: string): string {
   if (!s) return '—'
@@ -15,7 +15,7 @@ function fmtTime(s: string): string {
   return Number.isNaN(d.getTime()) ? s : d.toLocaleString()
 }
 
-export const GrantsView: React.FC<GrantsViewProps> = ({ grants, retry, load, loading }) => {
+export const GrantsView: React.FC<GrantsViewProps> = ({ grants, retry, revoke, load, loading }) => {
   const { t } = useTranslation()
 
   const GRANT_COLUMNS: Column<GrantKey>[] = [
@@ -97,7 +97,13 @@ export const GrantsView: React.FC<GrantsViewProps> = ({ grants, retry, load, loa
                       {t('welcome.retry')}
                     </Button>
                   )
-                : null
+                : (
+                    <Button size="sm" variant="ghost" className="w-full" onPress={() => revoke(g)}>
+                      <Icon name="rotate-ccw" />
+                      {' '}
+                      {t('welcome.revoke')}
+                    </Button>
+                  )
           }
         }}
       />

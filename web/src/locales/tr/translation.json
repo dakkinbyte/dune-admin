@@ -1344,6 +1344,9 @@
       "grants": "Verilmişler",
       "packages": "Paketler"
     },
-    "title": "Karşılama Kitleri"
+    "title": "Karşılama Kitleri",
+    "revoke": "Geri al",
+    "revoked": "Verme geri alındı — paket tekrar verilebilir",
+    "revokeFailed": "Geri alma başarısız: {{message}}"
   }
 }
