@@ -86,7 +86,7 @@ export type ServerSetting = {
   category: string
   current: string
   is_overridden: boolean
-  source: 'userGame' | 'userGameOverrides' | 'userEngine' | 'defaultGame' | 'defaultEngine' | ''
+  source: 'userGame' | 'userGameOverrides' | 'userEngine' | 'defaultGame' | 'defaultEngine' | 'amp' | ''
   layers: SettingLayer[]
   // Present for curated settings only — its presence marks the setting as
   // AMP-managed (written via the AMP API under the AMP control plane).
