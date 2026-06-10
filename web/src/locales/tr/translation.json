@@ -1344,6 +1344,8 @@
       "grants": "Verilmişler",
       "packages": "Paketler"
     },
-    "title": "Karşılama Kitleri"
+    "title": "Karşılama Kitleri",
+    "runConfirmTitle": "Karşılama paketi şimdi verilsin mi?",
+    "runConfirmBody": "Bu, {{versions}} paket(ler)ini uygun tüm çevrimiçi oyunculara hemen verir. Devam edilsin mi?"
   }
 }

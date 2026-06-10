@@ -1344,6 +1344,8 @@
       "grants": "Zuweisungen",
       "packages": "Pakete"
     },
-    "title": "Willkommenspakete"
+    "title": "Willkommenspakete",
+    "runConfirmTitle": "Willkommenspaket jetzt vergeben?",
+    "runConfirmBody": "Dies vergibt das/die Paket(e) {{versions}} sofort an alle berechtigten Online-Spieler. Fortfahren?"
   }
 }

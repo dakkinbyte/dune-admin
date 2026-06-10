@@ -1344,6 +1344,8 @@
       "grants": "授予记录",
       "packages": "礼包"
     },
-    "title": "欢迎礼包"
+    "title": "欢迎礼包",
+    "runConfirmTitle": "立即发放欢迎礼包？",
+    "runConfirmBody": "这将立即向所有符合条件的在线玩家发放礼包 {{versions}}。是否继续？"
   }
 }

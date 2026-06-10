@@ -1390,6 +1390,8 @@
       "grants": "Przyznania",
       "packages": "Pakiety"
     },
-    "title": "Zestawy powitalne"
+    "title": "Zestawy powitalne",
+    "runConfirmTitle": "Przyznać pakiet powitalny teraz?",
+    "runConfirmBody": "Spowoduje to natychmiastowe przyznanie pakietu(ów) {{versions}} wszystkim kwalifikującym się graczom online. Kontynuować?"
   }
 }

@@ -1344,6 +1344,8 @@
       "grants": "Grants",
       "packages": "Packages"
     },
-    "title": "Welcome Kits"
+    "title": "Welcome Kits",
+    "runConfirmTitle": "Grant welcome package now?",
+    "runConfirmBody": "This grants package(s) {{versions}} to all eligible online players right now. Continue?"
   }
 }

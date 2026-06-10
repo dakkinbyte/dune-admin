@@ -1367,6 +1367,8 @@
       "grants": "Attributions",
       "packages": "Paquets"
     },
-    "title": "Kits de bienvenue"
+    "title": "Kits de bienvenue",
+    "runConfirmTitle": "Attribuer le pack de bienvenue maintenant ?",
+    "runConfirmBody": "Ceci attribue le(s) pack(s) {{versions}} à tous les joueurs en ligne éligibles immédiatement. Continuer ?"
   }
 }

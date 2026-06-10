@@ -1367,6 +1367,8 @@
       "grants": "Concesiones",
       "packages": "Paquetes"
     },
-    "title": "Kits de bienvenida"
+    "title": "Kits de bienvenida",
+    "runConfirmTitle": "¿Otorgar paquete de bienvenida ahora?",
+    "runConfirmBody": "Esto otorga el/los paquete(s) {{versions}} a todos los jugadores en línea elegibles ahora mismo. ¿Continuar?"
   }
 }
